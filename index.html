@@ -1003,7 +1003,6 @@
     // 8. DATA ACQUISITION & DATABASE INTERFACE (CRUD)
     async function apiFetchInitialState() {
       try {
-        // Fetch RDDs
         let { data: rdds, error: e1 } = await supabaseClient.from('rdds').select('*').order('rdd_date', { ascending: false });
         if (e1) throw e1;
         state.rdds = rdds || [];
@@ -1012,7 +1011,6 @@
           state.selectedRDDId = state.rdds[0].id;
         }
 
-        // Fetch Trucks Fleet
         let { data: trucks, error: e2 } = await supabaseClient.from('trucks').select('*').order('series_name');
         if (e2) throw e2;
         state.trucks = trucks || [];
@@ -1595,31 +1593,35 @@
         });
       });
 
-      // Compute historically active truck snapshot counts per time-bin index
+      // Compute timeline-based truck availability per hour bin
       const rddParts = referenceTargetRDD.rdd_date.split('-');
       const rddY = parseInt(rddParts[0]);
       const rddM = parseInt(rddParts[1]) - 1;
       const rddD = parseInt(rddParts[2]);
 
       for (let i = 0; i < 25; i++) {
-        const hourStartMarker = new Date(rddY, rddM, rddD, 5 + i, 0, 0);
-        
+        const hrVal = (5 + i) % 24;
+        const dayOffset = (5 + i) >= 24 ? 1 : 0;
+        const hourStartMarker = new Date(rddY, rddM, rddD + dayOffset, hrVal, 0, 0);
+
         let availableCount = 0;
         state.trucks.forEach(t => {
           const addedAtDate = new Date(t.added_at);
           if (addedAtDate <= hourStartMarker) {
-            if (t.is_available) {
-              availableCount++;
-            } else if (t.assigned_dispatch_id) {
-              const matchDisp = displayScopeArray.find(d => d.id === t.assigned_dispatch_id);
-              if (matchDisp && matchDisp.loaded_timestamp) {
-                const loadedTime = new Date(matchDisp.loaded_timestamp);
-                if (loadedTime >= hourStartMarker) {
-                  availableCount++;
-                }
+            // Find if this specific vehicle was loaded within the current active RDD scope
+            const matchDisp = displayScopeArray.find(d => d.assigned_truck_id === t.id);
+            
+            if (matchDisp && matchDisp.loaded && matchDisp.loaded_timestamp) {
+              const loadedTime = new Date(matchDisp.loaded_timestamp);
+              // If it departed before the current hour bin started, it is no longer available in the yard
+              if (loadedTime < hourStartMarker) {
+                // Departed -> Drop availability flag
               } else {
                 availableCount++;
               }
+            } else {
+              // Not loaded yet or not assigned to an active route, so it remains available
+              availableCount++;
             }
           }
         });
