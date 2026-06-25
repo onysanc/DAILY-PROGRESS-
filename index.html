@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Dispatch Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .hidden { display: none !important; }
+        .disabled-checkbox { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-slate-900 text-white flex flex-col">
+        <div class="p-6 text-2xl font-bold border-b border-slate-700">Dispatch App</div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="w-full text-left p-3 bg-blue-600 rounded">Dispatch Activity</button>
+            <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="w-full text-left p-3 hover:bg-slate-800 rounded">Available Trucks</button>
+            <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="w-full text-left p-3 hover:bg-slate-800 rounded">Dashboard</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-8 relative">
+
+        <section id="tab-dispatch" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold">Dispatch Activity</h1>
+                <div class="flex space-x-4 items-center">
+                    <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded shadow-sm focus:ring">
+                        <option value="">Select RDD...</option>
+                    </select>
+                    <button onclick="App.openModal('rdd-modal')" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">+ Create RDD</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded shadow mb-6">
+                <h2 class="text-xl font-bold mb-4">Add Dispatches</h2>
+                <div class="grid grid-cols-2 gap-8">
+                    <form onsubmit="App.addSingleDispatch(event)" class="space-y-4">
+                        <h3 class="font-semibold">Single Entry</h3>
+                        <div class="flex space-x-2">
+                            <select id="single-truck-type" class="p-2 border rounded w-1/3" required>
+                                <option value="">Type</option>
+                                <option value="AUV">AUV</option><option value="4W">4W</option>
+                                <option value="6W">6W</option><option value="10W">10W</option>
+                                <option value="20F">20F</option><option value="40F">40F</option>
+                            </select>
+                            <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border rounded flex-1" required>
+                            <button type="submit" class="bg-blue-600 text-white px-4 rounded hover:bg-blue-700">Add</button>
+                        </div>
+                    </form>
+                    <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
+                        <h3 class="font-semibold">Mass Paste</h3>
+                        <textarea id="mass-dispatch-input" rows="3" placeholder="AUV&#9;12345678&#10;4W&#9;87654321" class="w-full p-2 border rounded font-mono text-sm"></textarea>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Mass Add</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="bg-white rounded shadow overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-3">Type</th>
+                            <th class="p-3">Dispatch No.</th>
+                            <th class="p-3 text-center">Pick</th>
+                            <th class="p-3 text-center">PGI</th>
+                            <th class="p-3 text-center">Invoiced</th>
+                            <th class="p-3 text-center">DS Printed</th>
+                            <th class="p-3 text-center">Checking</th>
+                            <th class="p-3 text-center">Loaded</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dispatch-tbody" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="tab-trucks" class="tab-content hidden">
+            <h1 class="text-3xl font-bold mb-6">Available Trucks Management</h1>
+            <div class="bg-white p-6 rounded shadow mb-6 flex space-x-4 items-end">
+                <div class="w-1/4">
+                    <label class="block text-sm font-semibold mb-1">Truck Type</label>
+                    <select id="truck-type-input" class="w-full p-2 border rounded">
+                        <option value="AUV">AUV</option><option value="4W">4W</option>
+                        <option value="6W">6W</option><option value="10W">10W</option>
+                        <option value="20F">20F</option><option value="40F">40F</option>
+                    </select>
+                </div>
+                <div class="w-1/4">
+                    <label class="block text-sm font-semibold mb-1">Plate Number</label>
+                    <input type="text" id="truck-plate-input" class="w-full p-2 border rounded" placeholder="ABC 123">
+                </div>
+                <button onclick="App.addTruck()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Add Truck</button>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-6" id="trucks-grid">
+                </div>
+        </section>
+
+        <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
+            <h1 class="text-3xl font-bold mb-6">Daily Accomplishment Dashboard (5 AM - 5 AM)</h1>
+            <div class="bg-white p-6 rounded shadow flex-1 relative">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <div id="rdd-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Create New RDD</h2>
+            <input type="date" id="new-rdd-date" class="w-full p-2 border rounded mb-4">
+            <input type="number" id="new-rdd-count" placeholder="Initial Planning Count" class="w-full p-2 border rounded mb-4">
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.createRDD()" class="px-4 py-2 bg-green-600 text-white rounded">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pick-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Assign Picker</h2>
+            <select id="pick-name" class="w-full p-2 border rounded mb-4">
+                <option value="R. ISUGA">R. ISUGA</option>
+                <option value="E. ISIGE">E. ISIGE</option>
+            </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="checking-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Checking Details</h2>
+            <label class="block text-sm mb-1">Checkers (Comma separated, max 6)</label>
+            <input type="text" id="checking-names" placeholder="Name 1, Name 2..." class="w-full p-2 border rounded mb-4">
+            <label class="block text-sm mb-1">Bay Location</label>
+            <select id="checking-bay" class="w-full p-2 border rounded mb-4">
+                <script>
+                    for(let i=1; i<=8; i++) {
+                        document.write(`<option value="${i}A">${i}A</option>`);
+                        document.write(`<option value="${i}B">${i}B</option>`);
+                        document.write(`<option value="${i}C">${i}C</option>`);
+                    }
+                </script>
+                <option value="Extended">Extended</option>
+            </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loaded-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Assign Truck (Loaded)</h2>
+            <select id="loaded-truck" class="w-full p-2 border rounded mb-4">
+                </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SUPABASE CONFIGURATION
+        const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co/rest/v1/';
+        const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const App = {
+            state: {
+                currentRddId: null,
+                dispatches: [],
+                trucks: [],
+                pendingMilestoneUpdate: null, 
+                milestoneFlow: ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
+                chartInstance: null
+            },
+
+            // --- INITIALIZATION ---
+            async init() {
+                await this.loadRDDs();
+                await this.loadTrucks();
+                this.setupRealtimeSubscriptions();
+            },
+
+            // --- UI & TABS ---
+            switchTab(tabId) {
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.getElementById(tabId).classList.remove('hidden');
+                
+                // Reset tab colors
+                ['dispatch', 'trucks', 'analytics'].forEach(t => {
+                    document.getElementById(`btn-tab-${t}`).classList.remove('bg-blue-600');
+                    document.getElementById(`btn-tab-${t}`).classList.add('hover:bg-slate-800');
+                });
+                document.getElementById(`btn-tab-${tabId.replace('tab-', '')}`).classList.add('bg-blue-600');
+                document.getElementById(`btn-tab-${tabId.replace('tab-', '')}`).classList.remove('hover:bg-slate-800');
+
+                if (tabId === 'tab-analytics') this.renderChart();
+            },
+
+            openModal(id) { document.getElementById(id).classList.remove('hidden'); },
+            closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+
+            // --- DATA LOADING ---
+            async loadRDDs() {
+                const { data, error } = await supabase.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
+                if (error) return console.error(error);
+                
+                const selector = document.getElementById('rdd-selector');
+                selector.innerHTML = '<option value="">Select RDD...</option>';
+                data.forEach(rdd => {
+                    const opt = document.createElement('option');
+                    opt.value = rdd.id;
+                    opt.textContent = `${rdd.rdd_date} (Plan: ${rdd.initial_planning_count})`;
+                    selector.appendChild(opt);
+                });
+            },
+
+            async selectRDD(id) {
+                this.state.currentRddId = id;
+                if(!id) {
+                    document.getElementById('dispatch-tbody').innerHTML = '';
+                    return;
+                }
+                await this.loadDispatches();
+            },
+
+            async loadDispatches() {
+                const { data, error } = await supabase.from('dispatches')
+                    .select('*').eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
+                if (error) return console.error(error);
+                
+                this.state.dispatches = data;
+                this.renderDispatches();
+            },
+
+            async loadTrucks() {
+                const { data, error } = await supabase.from('available_trucks').select('*').order('created_at', { ascending: true });
+                if (error) return console.error(error);
+                
+                this.state.trucks = data;
+                this.renderTrucks();
+            },
+
+            // --- DISPATCH RENDERING & LOGIC ---
+            renderDispatches() {
+                const tbody = document.getElementById('dispatch-tbody');
+                tbody.innerHTML = '';
+                
+                this.state.dispatches.forEach(d => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+
+                    // Define checkbox states based on chronology rules
+                    let html = `<td class="p-3 font-semibold">${d.truck_type}</td>
+                                <td class="p-3">${d.dispatch_number}</td>`;
+                    
+                    this.state.milestoneFlow.forEach((step, index) => {
+                        const isChecked = d[`${step}_checked`];
+                        const prevStep = index === 0 ? null : this.state.milestoneFlow[index - 1];
+                        const isEnabled = prevStep === null ? true : d[`${prevStep}_checked`];
+                        
+                        html += `
+                            <td class="p-3 text-center">
+                                <input type="checkbox" class="w-5 h-5 cursor-pointer ${!isEnabled ? 'disabled-checkbox' : ''}" 
+                                       ${isChecked ? 'checked' : ''} 
+                                       ${!isEnabled ? 'disabled' : ''}
+                                       onclick="App.handleMilestoneClick(event, '${d.id}', '${step}')">
+                            </td>`;
+                    });
+
+                    html += `
+                        <td class="p-3">
+                            <span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">${d.status}</span>
+                        </td>
+                        <td class="p-3">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${d.progress}%"></div>
+                            </div>
+                        </td>`;
+                    
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            handleMilestoneClick(event, dispatchId, step) {
+                event.preventDefault(); // Stop default toggle, handle state manually
+                const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
+                const isCurrentlyChecked = dispatch[`${step}_checked`];
+
+                if (isCurrentlyChecked) {
+                    // Unchecking: Cascades down to subsequent milestones
+                    this.uncheckMilestoneCascade(dispatch, step);
+                } else {
+                    // Checking: Opens modal if needed, or just checks
+                    this.state.pendingMilestoneUpdate = { dispatch, step, checkboxElement: event.target };
+                    if (step === 'pick') this.openModal('pick-modal');
+                    else if (step === 'checking') this.openModal('checking-modal');
+                    else if (step === 'loaded') this.openLoadedModal(dispatch);
+                    else this.confirmMilestone(step); // PGI, Invoiced, DS Printed
+                }
+            },
+
+            openLoadedModal(dispatch) {
+                const select = document.getElementById('loaded-truck');
+                select.innerHTML = '<option value="">Select a truck...</option>';
+                
+                const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
+                if(available.length === 0) {
+                    alert(`No available ${dispatch.truck_type} trucks! Please add one in Available Trucks.`);
+                    return;
+                }
+                
+                available.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.plate_number;
+                    select.appendChild(opt);
+                });
+                this.openModal('loaded-modal');
+            },
+
+            cancelMilestone() {
+                this.state.pendingMilestoneUpdate = null;
+                document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
+            },
+
+            async confirmMilestone(step) {
+                const { dispatch } = this.state.pendingMilestoneUpdate;
+                const updatePayload = { 
+                    [`${step}_checked`]: true, 
+                    [`${step}_timestamp`]: new Date().toISOString() 
+                };
+
+                // Form extractions
+                if (step === 'pick') {
+                    updatePayload.pick_assigned_name = document.getElementById('pick-name').value;
+                } else if (step === 'checking') {
+                    const names = document.getElementById('checking-names').value.split(',').map(n => n.trim()).filter(n => n);
+                    if (names.length < 1 || names.length > 6) return alert('Enter 1 to 6 names.');
+                    updatePayload.checking_assigned_names = names;
+                    updatePayload.bay_location = document.getElementById('checking-bay').value;
+                } else if (step === 'loaded') {
+                    const truckId = document.getElementById('loaded-truck').value;
+                    if (!truckId) return alert('Select a truck.');
+                    updatePayload.assigned_truck_id = truckId;
+                    
+                    // Update truck status in DB
+                    await supabase.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
+                }
+
+                this.finalizeMilestoneUpdate(dispatch, updatePayload, step);
+                this.cancelMilestone(); // closes modals
+            },
+
+            async uncheckMilestoneCascade(dispatch, step) {
+                const startIndex = this.state.milestoneFlow.indexOf(step);
+                const stepsToUncheck = this.state.milestoneFlow.slice(startIndex);
+                
+                const updatePayload = {};
+                stepsToUncheck.forEach(s => {
+                    updatePayload[`${s}_checked`] = false;
+                    updatePayload[`${s}_timestamp`] = null;
+                    if(s === 'pick') updatePayload.pick_assigned_name = null;
+                    if(s === 'checking') { updatePayload.checking_assigned_names = null; updatePayload.bay_location = null; }
+                    if(s === 'loaded' && dispatch.assigned_truck_id) {
+                        // Return truck to available status
+                        supabase.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
+                        updatePayload.assigned_truck_id = null;
+                    }
+                });
+
+                // Calculate Status
+                const prevStepIndex = startIndex - 1;
+                let newStatus = 'Pending';
+                if (prevStepIndex >= 0) newStatus = this.formatStatus(this.state.milestoneFlow[prevStepIndex]);
+                updatePayload.status = newStatus;
+                
+                // Calculate Progress
+                const tickedCount = this.state.milestoneFlow.filter(s => dispatch[`${s}_checked`] && !stepsToUncheck.includes(s)).length;
+                updatePayload.progress = (tickedCount / 6) * 100;
+
+                await supabase.from('dispatches').update(updatePayload).eq('id', dispatch.id);
+                await this.loadDispatches();
+                await this.loadTrucks();
+            },
+
+            async finalizeMilestoneUpdate(dispatch, payload, currentStep) {
+                // Calculate status and progress based on updated logic
+                payload.status = this.formatStatus(currentStep);
+                
+                let tickedCount = 0;
+                this.state.milestoneFlow.forEach(s => {
+                    if (dispatch[`${s}_checked`] || s === currentStep) tickedCount++;
+                });
+                payload.progress = (tickedCount / 6) * 100;
+
+                await supabase.from('dispatches').update(payload).eq('id', dispatch.id);
+                await this.loadDispatches();
+                await this.loadTrucks();
+            },
+
+            formatStatus(step) {
+                const map = {
+                    'pick': 'Picked', 'pgi': 'PGI Done', 'invoiced': 'Invoiced', 
+                    'ds_printed': 'DS Printed', 'checking': 'Checked', 'loaded': 'Loaded'
+                };
+                return map[step] || 'Pending';
+            },
+
+            // --- DATA ENTRY (CREATE) ---
+            async createRDD() {
+                const rdd_date = document.getElementById('new-rdd-date').value;
+                const count = document.getElementById('new-rdd-count').value;
+                if(!rdd_date || !count) return alert("Fill all fields");
+
+                const { error } = await supabase.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count) });
+                if(error) return alert(error.message);
+                
+                this.closeModal('rdd-modal');
+                await this.loadRDDs();
+            },
+
+            async addSingleDispatch(e) {
+                e.preventDefault();
+                if(!this.state.currentRddId) return alert("Select an RDD first!");
+                
+                const truck_type = document.getElementById('single-truck-type').value;
+                const dispatch_number = document.getElementById('single-dispatch-no').value;
+
+                await supabase.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
+                e.target.reset();
+                await this.loadDispatches();
+            },
+
+            async addMassDispatch(e) {
+                e.preventDefault();
+                if(!this.state.currentRddId) return alert("Select an RDD first!");
+
+                const text = document.getElementById('mass-dispatch-input').value;
+                const lines = text.split('\n');
+                const inserts = [];
+
+                lines.forEach(line => {
+                    // matches space or tab separator
+                    const parts = line.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                        inserts.push({
+                            rdd_id: this.state.currentRddId,
+                            truck_type: parts[0],
+                            dispatch_number: parts[1]
+                        });
+                    }
+                });
+
+                if(inserts.length > 0) {
+                    await supabase.from('dispatches').insert(inserts);
+                    document.getElementById('mass-dispatch-input').value = '';
+                    await this.loadDispatches();
+                }
+            },
+
+            // --- TRUCK MANAGEMENT ---
+            async addTruck() {
+                const truck_type = document.getElementById('truck-type-input').value;
+                const plate_number = document.getElementById('truck-plate-input').value.toUpperCase();
+                if(!plate_number) return;
+
+                const { error } = await supabase.from('available_trucks').insert({ truck_type, plate_number });
+                if(error) alert(error.message);
+                else {
+                    document.getElementById('truck-plate-input').value = '';
+                    await this.loadTrucks();
+                }
+            },
+
+            renderTrucks() {
+                const grid = document.getElementById('trucks-grid');
+                grid.innerHTML = '';
+                const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+                
+                types.forEach(type => {
+                    const available = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available');
+                    
+                    let html = `<div class="bg-gray-50 border rounded p-4">
+                                    <h3 class="font-bold text-lg mb-2 border-b pb-1">${type} Series</h3>
+                                    <ul class="space-y-1">`;
+                    
+                    available.forEach((t, i) => {
+                        html += `<li class="flex justify-between text-sm">
+                                    <span>${type} ${i+1}: <b>${t.plate_number}</b></span>
+                                 </li>`;
+                    });
+
+                    if(available.length === 0) html += `<li class="text-sm text-gray-400 italic">No trucks available</li>`;
+                    html += `</ul></div>`;
+                    grid.innerHTML += html;
+                });
+            },
+
+            // --- ANALYTICS DASHBOARD ---
+            async renderChart() {
+                const ctx = document.getElementById('activityChart').getContext('2d');
+                if (this.state.chartInstance) this.state.chartInstance.destroy();
+
+                // Mock data extraction logic for the 5AM to 5AM shift
+                // In a production environment, you would query Supabase for data between [SelectedDate 05:00] and [SelectedDate+1 04:59]
+                
+                const labels = Array.from({length: 24}, (_, i) => {
+                    let h = (i + 5) % 24;
+                    return h + ':00';
+                });
+
+                // Generate dummy aggregation (For demonstration purposes on UI layout)
+                // Real implementation iterates through this.state.dispatches checking timestamp hours
+                const makeMockData = (base) => labels.map(() => Math.floor(Math.random() * base));
+
+                const config = {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Pick', data: makeMockData(20), backgroundColor: '#3b82f6' },
+                            { label: 'PGI', data: makeMockData(18), backgroundColor: '#8b5cf6' },
+                            { label: 'Invoice', data: makeMockData(15), backgroundColor: '#ec4899' },
+                            { label: 'Check', data: makeMockData(12), backgroundColor: '#f59e0b' },
+                            { label: 'Loaded', data: makeMockData(10), backgroundColor: '#10b981' },
+                            {
+                                label: 'Available Trucks',
+                                data: makeMockData(30),
+                                type: 'line',
+                                borderColor: '#ef4444',
+                                tension: 0.1,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true, beginAtZero: true }
+                        }
+                    }
+                };
+
+                this.state.chartInstance = new Chart(ctx, config);
+            },
+
+            // --- REALTIME ---
+            setupRealtimeSubscriptions() {
+                // Listen to table changes to keep multiple clients in sync
+                supabase.channel('custom-all-channel')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, payload => {
+                        if (this.state.currentRddId) this.loadDispatches();
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, payload => {
+                        this.loadTrucks();
+                    })
+                    .subscribe();
+            }
+        };
+
+        // Initialize App on Load
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
