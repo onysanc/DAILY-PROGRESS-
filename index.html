@@ -1,19 +1,280 @@
-<script>
-        // SUPABASE CONFIGURATION
-        const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co/rest/v1/'; // <-- Paste your URL here
-        const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc'; // <-- Paste your Key here
-        
-        // FIX: Renamed the initialized client to 'supabaseClient' to avoid naming collisions
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Dispatch Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .hidden { display: none !important; }
+        .disabled-checkbox { opacity: 0.4; cursor: not-allowed; filter: grayscale(100%); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden relative">
+
+    <div id="login-screen" class="absolute inset-0 bg-slate-900 z-[100] flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+            <h1 class="text-2xl font-bold mb-6 text-center text-slate-800">Dispatch Login</h1>
+            <form onsubmit="App.login(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Username</label>
+                    <input type="text" id="login-username" class="w-full p-2 border rounded focus:ring" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Password</label>
+                    <input type="password" id="login-password" class="w-full p-2 border rounded focus:ring" required>
+                </div>
+                <div id="login-error" class="text-red-600 text-sm hidden font-semibold">Invalid username or password.</div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition">Log In</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-wrapper" class="hidden flex h-full">
+        <aside class="w-64 bg-slate-900 text-white flex flex-col">
+            <div class="p-6 border-b border-slate-700">
+                <div class="text-2xl font-bold mb-2">Dispatch App</div>
+                <div class="text-sm text-slate-400">User: <span id="display-username" class="font-bold text-white"></span></div>
+                <button onclick="App.logout()" class="text-xs mt-2 text-red-400 hover:text-red-300 underline">Logout</button>
+            </div>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="w-full text-left p-3 bg-blue-600 rounded">Dispatch Activity</button>
+                <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="w-full text-left p-3 hover:bg-slate-800 rounded">Available Trucks</button>
+                <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="w-full text-left p-3 hover:bg-slate-800 rounded">Dashboard</button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8 relative">
+            <section id="tab-dispatch" class="tab-content">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Dispatch Activity</h1>
+                    <div class="flex space-x-4 items-center">
+                        <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded shadow-sm focus:ring">
+                            <option value="">Select RDD...</option>
+                        </select>
+                        <button onclick="App.openModal('rdd-modal')" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">+ Create RDD</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded shadow mb-6">
+                    <h2 class="text-xl font-bold mb-4">Add Dispatches</h2>
+                    <div class="grid grid-cols-2 gap-8">
+                        <form onsubmit="App.addSingleDispatch(event)" class="space-y-4">
+                            <h3 class="font-semibold">Single Entry</h3>
+                            <div class="flex space-x-2">
+                                <select id="single-truck-type" class="p-2 border rounded w-1/3" required>
+                                    <option value="">Type</option>
+                                    <option value="AUV">AUV</option><option value="4W">4W</option>
+                                    <option value="6W">6W</option><option value="10W">10W</option>
+                                    <option value="20F">20F</option><option value="40F">40F</option>
+                                </select>
+                                <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border rounded flex-1" required>
+                                <button type="submit" class="bg-blue-600 text-white px-4 rounded hover:bg-blue-700">Add</button>
+                            </div>
+                        </form>
+                        <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
+                            <h3 class="font-semibold">Mass Paste</h3>
+                            <textarea id="mass-dispatch-input" rows="3" placeholder="AUV&#9;12345678&#10;4W&#9;87654321" class="w-full p-2 border rounded font-mono text-sm"></textarea>
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Mass Add</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded shadow overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-3">Type</th>
+                                <th class="p-3">Dispatch No.</th>
+                                <th class="p-3 text-center">Pick</th>
+                                <th class="p-3 text-center">PGI</th>
+                                <th class="p-3 text-center">Invoiced</th>
+                                <th class="p-3 text-center">DS Printed</th>
+                                <th class="p-3 text-center">Checking</th>
+                                <th class="p-3 text-center">Loaded</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dispatch-tbody" class="divide-y divide-gray-100">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="tab-trucks" class="tab-content hidden">
+                <h1 class="text-3xl font-bold mb-6">Available Trucks Management</h1>
+                <div class="bg-white p-6 rounded shadow mb-6 flex space-x-4 items-end">
+                    <div class="w-1/4">
+                        <label class="block text-sm font-semibold mb-1">Truck Type</label>
+                        <select id="truck-type-input" class="w-full p-2 border rounded">
+                            <option value="AUV">AUV</option><option value="4W">4W</option>
+                            <option value="6W">6W</option><option value="10W">10W</option>
+                            <option value="20F">20F</option><option value="40F">40F</option>
+                        </select>
+                    </div>
+                    <div class="w-1/4">
+                        <label class="block text-sm font-semibold mb-1">Plate Number</label>
+                        <input type="text" id="truck-plate-input" class="w-full p-2 border rounded" placeholder="ABC 123">
+                    </div>
+                    <button onclick="App.addTruck()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Add Truck</button>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-6" id="trucks-grid">
+                    </div>
+            </section>
+
+            <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
+                <h1 class="text-3xl font-bold mb-6">Daily Accomplishment Dashboard (5 AM - 5 AM)</h1>
+                <div class="bg-white p-6 rounded shadow flex-1 relative">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="rdd-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Create New RDD</h2>
+            <input type="date" id="new-rdd-date" class="w-full p-2 border rounded mb-4">
+            <input type="number" id="new-rdd-count" placeholder="Initial Planning Count" class="w-full p-2 border rounded mb-4">
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.createRDD()" class="px-4 py-2 bg-green-600 text-white rounded">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pick-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Assign Picker</h2>
+            <select id="pick-name" class="w-full p-2 border rounded mb-4">
+                <option value="R. ISUGA">R. ISUGA</option>
+                <option value="E. ISIGE">E. ISIGE</option>
+            </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="checking-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Checking Details</h2>
+            <label class="block text-sm mb-1">Checkers (Comma separated, max 6)</label>
+            <input type="text" id="checking-names" placeholder="Name 1, Name 2..." class="w-full p-2 border rounded mb-4">
+            <label class="block text-sm mb-1">Bay Location</label>
+            <select id="checking-bay" class="w-full p-2 border rounded mb-4">
+                <script>
+                    for(let i=1; i<=8; i++) {
+                        document.write(`<option value="${i}A">${i}A</option>`);
+                        document.write(`<option value="${i}B">${i}B</option>`);
+                        document.write(`<option value="${i}C">${i}C</option>`);
+                    }
+                </script>
+                <option value="Extended">Extended</option>
+            </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loaded-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Assign Truck (Loaded)</h2>
+            <select id="loaded-truck" class="w-full p-2 border rounded mb-4">
+                </select>
+            <div class="flex justify-end space-x-2">
+                <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded shadow-lg w-[450px]">
+            <h2 class="text-xl font-bold mb-2 text-red-600">Admin Override</h2>
+            <p class="text-sm text-gray-600 mb-4">Modify the completion time or completely untick this step.</p>
+            
+            <label class="block text-sm font-semibold mb-1">Timestamp</label>
+            <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded mb-6">
+            
+            <div class="flex justify-between items-center">
+                <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded shadow">Untick & Clear</button>
+                <div class="space-x-2">
+                    <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                    <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-bold rounded">Save Time</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // SUPABASE CONFIGURATION - DO NOT FORGET TO PASTE YOUR KEYS HERE!
+        const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co/rest/v1/'; 
+        const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- AUTHENTICATION & ROLE CONFIGURATION ---
+        const USERS = {
+            'admin': { password: 'superadmin', role: 'admin' },
+            'outbound': { password: 'outbound', role: 'outbound' },
+            'pgi': { password: 'pgi', role: 'pgi' },
+            'invoice': { password: 'invoice', role: 'invoice' },
+            'transport': { password: 'transport', role: 'transport' }
+        };
+
+        const ROLE_PERMISSIONS = {
+            'admin': ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
+            'outbound': ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
+            'pgi': ['pgi'],
+            'invoice': ['invoiced'],
+            'transport': ['ds_printed', 'loaded']
+        };
 
         const App = {
             state: {
+                currentUser: null,
                 currentRddId: null,
                 dispatches: [],
                 trucks: [],
                 pendingMilestoneUpdate: null, 
                 milestoneFlow: ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
                 chartInstance: null
+            },
+
+            // --- AUTHENTICATION LOGIC ---
+            login(e) {
+                e.preventDefault();
+                const user = document.getElementById('login-username').value.toLowerCase().trim();
+                const pass = document.getElementById('login-password').value;
+
+                if (USERS[user] && USERS[user].password === pass) {
+                    this.state.currentUser = { username: user, role: USERS[user].role };
+                    document.getElementById('login-error').classList.add('hidden');
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-wrapper').classList.remove('hidden');
+                    document.getElementById('display-username').textContent = user.toUpperCase();
+                    
+                    // Boot up app data
+                    this.init();
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            },
+
+            logout() {
+                this.state.currentUser = null;
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+                document.getElementById('app-wrapper').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
             },
 
             // --- INITIALIZATION ---
@@ -28,7 +289,6 @@
                 document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
                 document.getElementById(tabId).classList.remove('hidden');
                 
-                // Reset tab colors
                 ['dispatch', 'trucks', 'analytics'].forEach(t => {
                     document.getElementById(`btn-tab-${t}`).classList.remove('bg-blue-600');
                     document.getElementById(`btn-tab-${t}`).classList.add('hover:bg-slate-800');
@@ -87,6 +347,7 @@
             renderDispatches() {
                 const tbody = document.getElementById('dispatch-tbody');
                 tbody.innerHTML = '';
+                const userPermissions = ROLE_PERMISSIONS[this.state.currentUser.role] || [];
                 
                 this.state.dispatches.forEach(d => {
                     const tr = document.createElement('tr');
@@ -98,13 +359,21 @@
                     this.state.milestoneFlow.forEach((step, index) => {
                         const isChecked = d[`${step}_checked`];
                         const prevStep = index === 0 ? null : this.state.milestoneFlow[index - 1];
-                        const isEnabled = prevStep === null ? true : d[`${prevStep}_checked`];
                         
+                        // Guardrails: Prev step must be done AND user must have role permission
+                        const isChronologyMet = prevStep === null ? true : d[`${prevStep}_checked`];
+                        const hasRolePermission = userPermissions.includes(step);
+                        
+                        // If it's already checked, Admin can click it to edit. Others are locked out.
+                        const isClickable = isChecked 
+                                ? (this.state.currentUser.role === 'admin') // Admin can click checked to edit
+                                : (isChronologyMet && hasRolePermission);   // Unchecked logic
+
                         html += `
                             <td class="p-3 text-center">
-                                <input type="checkbox" class="w-5 h-5 cursor-pointer ${!isEnabled ? 'disabled-checkbox' : ''}" 
+                                <input type="checkbox" class="w-5 h-5 cursor-pointer ${!isClickable ? 'disabled-checkbox' : ''}" 
                                        ${isChecked ? 'checked' : ''} 
-                                       ${!isEnabled ? 'disabled' : ''}
+                                       ${!isClickable ? 'disabled' : ''}
                                        onclick="App.handleMilestoneClick(event, '${d.id}', '${step}')">
                             </td>`;
                     });
@@ -130,8 +399,15 @@
                 const isCurrentlyChecked = dispatch[`${step}_checked`];
 
                 if (isCurrentlyChecked) {
-                    this.uncheckMilestoneCascade(dispatch, step);
+                    // It is checked. Only Admin could have clicked this based on rendering rules.
+                    if (this.state.currentUser.role === 'admin') {
+                        this.openAdminEditModal(dispatch, step);
+                    } else {
+                        // Failsafe backup
+                        alert("You do not have permission to untick or edit completed timestamps.");
+                    }
                 } else {
+                    // It is unchecked, user is trying to tick it.
                     this.state.pendingMilestoneUpdate = { dispatch, step, checkboxElement: event.target };
                     if (step === 'pick') this.openModal('pick-modal');
                     else if (step === 'checking') this.openModal('checking-modal');
@@ -182,7 +458,6 @@
                     const truckId = document.getElementById('loaded-truck').value;
                     if (!truckId) return alert('Select a truck.');
                     updatePayload.assigned_truck_id = truckId;
-                    
                     await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
                 }
 
@@ -190,7 +465,34 @@
                 this.cancelMilestone(); 
             },
 
-            async uncheckMilestoneCascade(dispatch, step) {
+            // --- ADMIN SPECIFIC LOGIC ---
+            openAdminEditModal(dispatch, step) {
+                this.state.pendingMilestoneUpdate = { dispatch, step };
+                const currentTime = dispatch[`${step}_timestamp`];
+                
+                // Format for datetime-local input (YYYY-MM-DDThh:mm)
+                if (currentTime) {
+                    const dt = new Date(currentTime);
+                    dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+                    document.getElementById('admin-edit-time').value = dt.toISOString().slice(0, 16);
+                }
+                this.openModal('admin-edit-modal');
+            },
+
+            async adminUpdateTimestamp() {
+                const { dispatch, step } = this.state.pendingMilestoneUpdate;
+                const newTime = document.getElementById('admin-edit-time').value;
+                if (!newTime) return alert("Please select a valid date/time.");
+
+                const updatePayload = { [`${step}_timestamp`]: new Date(newTime).toISOString() };
+                
+                await supabaseClient.from('dispatches').update(updatePayload).eq('id', dispatch.id);
+                this.cancelMilestone();
+                await this.loadDispatches();
+            },
+
+            async adminUntickMilestone() {
+                const { dispatch, step } = this.state.pendingMilestoneUpdate;
                 const startIndex = this.state.milestoneFlow.indexOf(step);
                 const stepsToUncheck = this.state.milestoneFlow.slice(startIndex);
                 
@@ -215,6 +517,7 @@
                 updatePayload.progress = (tickedCount / 6) * 100;
 
                 await supabaseClient.from('dispatches').update(updatePayload).eq('id', dispatch.id);
+                this.cancelMilestone();
                 await this.loadDispatches();
                 await this.loadTrucks();
             },
@@ -243,8 +546,6 @@
 
             // --- DATA ENTRY (CREATE) ---
             async createRDD() {
-                // Changed from 'new-rdd-date' to accommodate text if you altered it earlier, 
-                // but if using the original HTML, it relies on standard date picker.
                 const rdd_date = document.getElementById('new-rdd-date').value;
                 const count = document.getElementById('new-rdd-count').value;
                 if(!rdd_date || !count) return alert("Fill all fields");
@@ -390,6 +691,7 @@
             }
         };
 
-        // Initialize App on Load
-        document.addEventListener('DOMContentLoaded', () => App.init());
+        // No longer auto-init, user must log in first.
     </script>
+</body>
+</html>
