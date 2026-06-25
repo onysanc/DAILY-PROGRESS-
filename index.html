@@ -289,6 +289,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
+      margin-bottom: 1.5rem;
     }
 
     table {
@@ -345,6 +346,19 @@
       font-size: 0.75rem;
       font-weight: 600;
       background-color: var(--border);
+    }
+
+    /* Custom Color Indicators for UI Status Matrix Mapping */
+    .status-done-green {
+      color: var(--success) !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+    }
+    
+    .status-pending-yellow {
+      color: var(--warning) !important;
+      font-weight: 600 !important;
+      text-transform: uppercase;
     }
 
     /* Custom Steps & Workflow Checkboxes */
@@ -664,9 +678,11 @@
 
     <!-- Navigation Tab Bar -->
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('tracker')">📋 Dispatch Tracker</button>
-      <button class="tab-btn" onclick="switchTab('trucks')">🚛 Available Trucks</button>
-      <button class="tab-btn" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn active" id="tab-link-tracker" onclick="switchTab('tracker')">📋 Dispatch Tracker</button>
+      <button class="tab-btn" id="tab-link-trucks" onclick="switchTab('trucks')">🚛 Available Trucks</button>
+      <button class="tab-btn" id="tab-link-dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn hidden" id="tab-link-personnel" onclick="switchTab('personnel')">👥 Personnel List</button>
+      <button class="tab-btn hidden" id="tab-link-users" onclick="switchTab('users')">🔐 User Management</button>
     </div>
 
     <!-- TAB 1: TRACKER PANEL -->
@@ -808,6 +824,86 @@
         <canvas id="hourlyActivityChart" style="max-height: 480px; width:100%;"></canvas>
       </div>
     </div>
+
+    <!-- TAB 4: PERSONNEL TAB (Admin & Outbound Only) -->
+    <div id="panel-personnel" class="tab-panel hidden">
+      <div class="add-dispatch-box" style="max-width: 600px; margin-bottom: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.1rem;">Add New Operational Personnel</h3>
+        <div class="entry-form-inline">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="per-name" class="form-control" style="width: 220px; text-transform: uppercase;" placeholder="e.g. J. DOE">
+          </div>
+          <div class="form-group">
+            <label>Workplace Role Designation</label>
+            <select id="per-role" class="form-control" style="width: 160px;">
+              <option value="picker">Picker</option>
+              <option value="checker">Checker</option>
+            </select>
+          </div>
+          <button class="btn" onclick="submitNewPersonnelAsset()">Save Personnel</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Personnel Name</th>
+              <th>Workflow Capability Assignment</th>
+              <th style="width: 180px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="personnel-table-body">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: USER MANAGEMENT TAB (Admin Only) -->
+    <div id="panel-users" class="tab-panel hidden">
+      <div class="add-dispatch-box" style="max-width: 700px; margin-bottom: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.1rem;">Provision New Access Profile</h3>
+        <div class="entry-form-inline">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="usr-name" class="form-control" style="width: 160px;" placeholder="Username">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="text" id="usr-pass" class="form-control" style="width: 160px;" placeholder="Password">
+          </div>
+          <div class="form-group">
+            <label>System Role Mapping</label>
+            <select id="usr-role" class="form-control" style="width: 140px;">
+              <option value="admin">Admin</option>
+              <option value="outbound">Outbound</option>
+              <option value="pgi">PGI Unit</option>
+              <option value="invoice">Invoice Unit</option>
+              <option value="transport">Transport</option>
+            </select>
+          </div>
+          <button class="btn" onclick="submitNewSystemUser()">Create Account</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Username Profile</th>
+              <th>System Role Mapping</th>
+              <th>Security Access Key (Cleartext)</th>
+              <th style="width: 150px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== MODALS INFRASTRUCTURE ==================== -->
@@ -911,8 +1007,8 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. HARDCODED USER AUTHORIZATION DIRECTORY
-    const USER_DIRECTORY = {
+    // 2. HARDCODED SYSTEM SECURITY CONFIGURATION FALLBACKS
+    const RUNTIME_STATIC_USERS = {
       'admin': { pass: 'superadmin', role: 'admin' },
       'outbound': { pass: 'outbound', role: 'outbound' },
       'pgi': { pass: 'pgi', role: 'pgi' },
@@ -920,18 +1016,7 @@
       'transport': { pass: 'transport', role: 'transport' }
     };
 
-    // 3. ALLOWED LIST ARRAY DATA FOR VALIDATION
-    const PICK_ALLOWED_NAMES = [
-      'R. ISUGA', 'E. ISIGE', 'A. MERCADO', 'M. VALENZUELA', 
-      'J. RAMIREZ', 'D. BAUTISTA', 'S. MENDOZA', 'L. GONZALES'
-    ];
-    
-    const CHECKING_ALLOWED_NAMES = [
-      'K. ILAGAN', 'C. SANTIAGO', 'M. DE CASTRO', 'J. ALVAREZ', 
-      'R. AQUINO', 'F. ESPIRITU', 'P. TORRES', 'G. CORPUZ'
-    ];
-
-    // 4. RUNTIME MEMORY CLIENT STATE
+    // 3. RUNTIME MEMORY CLIENT STATE
     let state = {
       currentUser: null,
       currentRole: null,
@@ -939,12 +1024,14 @@
       selectedRDDId: null,
       dispatches: [],
       trucks: [],
+      personnel: [],
+      userAccounts: [],
       activeContextDispatchId: null,
       selectedBayCode: null,
       chartInstance: null
     };
 
-    // 5. STEP SPECIFICATIONS SCHEMA INDEX
+    // 4. STEP SPECIFICATIONS SCHEMA INDEX
     const WORKFLOW_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
     
     const ROLE_PERMISSIONS = {
@@ -956,7 +1043,7 @@
       'loaded': ['admin', 'transport']
     };
 
-    // 6. TOAST MESSAGING ENGINE
+    // 5. TOAST MESSAGING ENGINE
     function showToast(message, type = 'success') {
       const container = document.getElementById('toast-container');
       const element = document.createElement('div');
@@ -966,15 +1053,34 @@
       setTimeout(() => { if(element.parentNode) element.remove(); }, 3500);
     }
 
-    // 7. ACCOUNT AUTHENTICATION LIFECYCLE HANDLERS
-    function handleLogin() {
+    // 6. ACCOUNT AUTHENTICATION LIFECYCLE HANDLERS
+    async function handleLogin() {
       const u = document.getElementById('login-user').value.trim();
       const p = document.getElementById('login-pass').value;
       
-      if (USER_DIRECTORY[u] && USER_DIRECTORY[u].pass === p) {
+      let authenticated = false;
+      let matchedRole = null;
+
+      // Try reading dynamic DB accounts first
+      try {
+        let { data, error } = await supabaseClient.from('user_accounts').select('*').eq('username', u).eq('password', p).single();
+        if (!error && data) {
+          authenticated = true;
+          matchedRole = data.role;
+        }
+      } catch (e) { /* Fallback to local index definitions */ }
+
+      if (!authenticated && RUNTIME_STATIC_USERS[u] && RUNTIME_STATIC_USERS[u].pass === p) {
+        authenticated = true;
+        matchedRole = RUNTIME_STATIC_USERS[u].role;
+      }
+
+      if (authenticated) {
         sessionStorage.setItem('dispatch_tracker_user', u);
-        sessionStorage.setItem('dispatch_tracker_role', USER_DIRECTORY[u].role);
-        initializeAuthenticatedSession();
+        sessionStorage.setItem('dispatch_tracker_role', matchedRole);
+        state.currentUser = u;
+        state.currentRole = matchedRole;
+        await initializeAuthenticatedSession();
         showToast(`Welcome back, Operational Unit: ${u}`);
       } else {
         showToast('Invalid profile credentials provided.', 'error');
@@ -1000,7 +1106,7 @@
       return false;
     }
 
-    // 8. DATA ACQUISITION & DATABASE INTERFACE (CRUD)
+    // 7. DATA ACQUISITION & DATABASE INTERFACE (CRUD)
     async function apiFetchInitialState() {
       try {
         let { data: rdds, error: e1 } = await supabaseClient.from('rdds').select('*').order('rdd_date', { ascending: false });
@@ -1014,6 +1120,10 @@
         let { data: trucks, error: e2 } = await supabaseClient.from('trucks').select('*').order('series_name');
         if (e2) throw e2;
         state.trucks = trucks || [];
+
+        // Dynamic lookup tables data acquisition
+        await apiFetchPersonnelData();
+        await apiFetchSystemUsersData();
 
         if (state.selectedRDDId) {
           await apiFetchDispatches();
@@ -1037,7 +1147,22 @@
       }
     }
 
-    // 9. DYNAMIC RENDER PIPELINES
+    async function apiFetchPersonnelData() {
+      try {
+        let { data, error } = await supabaseClient.from('personnel').select('*').order('name');
+        if (!error) state.personnel = data || [];
+      } catch (e) { console.error(e); }
+    }
+
+    async function apiFetchSystemUsersData() {
+      if (state.currentRole !== 'admin') return;
+      try {
+        let { data, error } = await supabaseClient.from('user_accounts').select('*').order('username');
+        if (!error) state.userAccounts = data || [];
+      } catch (e) { console.error(e); }
+    }
+
+    // 8. DYNAMIC RENDER PIPELINES
     function populateRDDDropdowns() {
       const d1 = document.getElementById('rdd-dropdown');
       const d2 = document.getElementById('db-rdd-dropdown');
@@ -1185,7 +1310,64 @@
       });
     }
 
-    // 10. INTERACTIVE USER WORKFLOW ACTION MANAGEMENT HANDLERS
+    function renderPersonnelTable() {
+      const tbody = document.getElementById('personnel-table-body');
+      tbody.innerHTML = '';
+
+      if (state.personnel.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:2rem;">No personnel registered in the manifest database.</td></tr>`;
+        return;
+      }
+
+      state.personnel.forEach(p => {
+        const tr = document.createElement('tr');
+        
+        // Contextual actions check: Deletion restricted strictly to Admin role
+        let actionsMarkup = '';
+        if (state.currentRole === 'admin') {
+          actionsMarkup = `
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
+            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeletePersonnel('${p.id}')">Remove</button>
+          `;
+        } else {
+          actionsMarkup = `
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
+          `;
+        }
+
+        tr.innerHTML = `
+          <td style="font-weight:600;">${p.name}</td>
+          <td><span class="status-pill">${p.role.toUpperCase()}</span></td>
+          <td>${actionsMarkup}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = '';
+
+      if (state.userAccounts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem;">No customizable secondary profile overrides loaded.</td></tr>`;
+        return;
+      }
+
+      state.userAccounts.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="monospace" style="font-weight:600;">${u.username}</td>
+          <td><span class="badge" style="background:#475569;">${u.role.toUpperCase()}</span></td>
+          <td class="monospace">${u.password}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeleteSystemUser('${u.id}')">Revoke</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 9. INTERACTIVE USER WORKFLOW ACTION MANAGEMENT HANDLERS
     function checkStepDisabledLockState(dispatch, stepName) {
       if (!ROLE_PERMISSIONS[stepName].includes(state.currentRole)) return true;
       
@@ -1299,7 +1481,7 @@
       }
     }
 
-    // 11. ADMINISTRATIVE REVERSIONS & INTERFACES (OVERRIDE ENGINES)
+    // 10. ADMINISTRATIVE REVERSIONS & INTERFACES (OVERRIDE ENGINES)
     async function handleAdminCheckboxToggle(dispatchId, stepName, element) {
       const targetDispatch = state.dispatches.find(d => d.id === dispatchId);
       if (!targetDispatch) return;
@@ -1415,13 +1597,12 @@
       }
     }
 
-    // 12. DATA FORMS SUBMISSION ACTIONS (MANUAL & BULK IMPORTS)
+    // 11. DATA FORMS SUBMISSION ACTIONS (MANUAL & BULK IMPORTS)
     async function submitNewRDD() {
       const rawDate = document.getElementById('m-rdd-date').value;
       const count = parseInt(document.getElementById('m-rdd-count').value) || 0;
       
       if (!rawDate) { showToast('Select operational validation target calendar date.', 'error'); return; }
-      
       const rddLabelText = formatPostgresDateToRDDLabel(rawDate);
 
       try {
@@ -1445,7 +1626,6 @@
 
     async function submitSingleDispatch() {
       if (!state.selectedRDDId) { showToast('Instantiate or select active operational RDD first.', 'warning'); return; }
-      
       const type = document.getElementById('disp-truck-type').value;
       const num = document.getElementById('disp-number').value.trim();
 
@@ -1470,7 +1650,6 @@
 
     async function submitMassDispatch() {
       if (!state.selectedRDDId) { showToast('No active target RDD configuration parameters loaded.', 'warning'); return; }
-      
       const textarea = document.getElementById('disp-mass-text');
       const text = textarea.value.trim();
       if (!text) return;
@@ -1541,7 +1720,83 @@
       }
     }
 
-    // 13. DATA ANALYTICS & DASHBOARD METRICS GENERATOR ENGINE
+    async function submitNewPersonnelAsset() {
+      const name = document.getElementById('per-name').value.trim().toUpperCase();
+      const role = document.getElementById('per-role').value;
+
+      if (!name) { showToast('Personnel assignment identifier token missing.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('personnel').insert({ name, role });
+        if (error) throw error;
+        showToast(`Personnel entry tracking record created for: ${name}`);
+        document.getElementById('per-name').value = '';
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleEditPersonnel(id, currentName) {
+      const updatedName = prompt('Modify operator asset description token:', currentName);
+      if (updatedName === null) return; // User tracking cancel sequence
+      const normalizedValue = updatedName.trim().toUpperCase();
+      if (!normalizedValue) { showToast('Personnel description name element cannot map blank.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('personnel').update({ name: normalizedValue }).eq('id', id);
+        if (error) throw error;
+        showToast(`Operational manifest updated mapping identifier to: ${normalizedValue}`);
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleDeletePersonnel(id) {
+      // Security role gate validation backup check
+      if (state.currentRole !== 'admin') {
+        showToast('Restricted operation. Deletion authorization tied directly to administrative nodes.', 'error');
+        return;
+      }
+      if (!confirm('Are you sure you want to remove this operator asset?')) return;
+      try {
+        let { error } = await supabaseClient.from('personnel').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Personnel asset profile successfully terminated.');
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function submitNewSystemUser() {
+      const username = document.getElementById('usr-name').value.trim();
+      const password = document.getElementById('usr-pass').value.trim();
+      const role = document.getElementById('usr-role').value;
+
+      if (!username || !password) { showToast('Account creation requirements unfulfilled.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('user_accounts').insert({ username, password, role });
+        if (error) throw error;
+        showToast(`Access credentials provisioned for account node [${username}].`);
+        document.getElementById('usr-name').value = '';
+        document.getElementById('usr-pass').value = '';
+        await apiFetchSystemUsersData();
+        renderUsersTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleDeleteSystemUser(id) {
+      if (!confirm('Permanently revoke this account profile access authorization token?')) return;
+      try {
+        let { error } = await supabaseClient.from('user_accounts').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Access privileges successfully terminated.');
+        await apiFetchSystemUsersData();
+        renderUsersTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // 12. HARD-PRUNED REAL-TIME GRAPH ANALYTICS IMPLEMENTATION ENGINE
     function calculateAndRenderOperationalMetricsDashboard() {
       const activeRDDId = document.getElementById('db-rdd-dropdown').value;
       const referenceTargetRDD = state.rdds.find(r => r.id === activeRDDId);
@@ -1549,19 +1804,13 @@
 
       const displayScopeArray = state.dispatches; 
 
-      const mTotal = displayScopeArray.length;
-      const mPick = displayScopeArray.filter(d => d.pick).length;
-      const mPgi = displayScopeArray.filter(d => d.pgi).length;
-      const mInv = displayScopeArray.filter(d => d.invoiced).length;
-      const mChk = displayScopeArray.filter(d => d.checking).length;
-      const mLoad = displayScopeArray.filter(d => d.loaded).length;
-
-      document.getElementById('stat-total').innerText = mTotal;
-      document.getElementById('stat-picked').innerText = mPick;
-      document.getElementById('stat-pgi').innerText = mPgi;
-      document.getElementById('stat-invoiced').innerText = mInv;
-      document.getElementById('stat-checked').innerText = mChk;
-      document.getElementById('stat-loaded').innerText = mLoad;
+      // Summary Cards calculations
+      document.getElementById('stat-total').innerText = displayScopeArray.length;
+      document.getElementById('stat-picked').innerText = displayScopeArray.filter(d => d.pick).length;
+      document.getElementById('stat-pgi').innerText = displayScopeArray.filter(d => d.pgi).length;
+      document.getElementById('stat-invoiced').innerText = displayScopeArray.filter(d => d.invoiced).length;
+      document.getElementById('stat-checked').innerText = displayScopeArray.filter(d => d.checking).length;
+      document.getElementById('stat-loaded').innerText = displayScopeArray.filter(d => d.loaded).length;
 
       const operationalHoursMatrixIndexLabels = [];
       const binData = { 
@@ -1573,11 +1822,27 @@
         trucks: Array(25).fill(0)
       };
 
+      const rightNowTimeMarker = new Date(); // Accurate system reference clock context
+
+      // Construct precise timeline array mapping architecture
+      const rddParts = referenceTargetRDD.rdd_date.split('-');
+      const rddY = parseInt(rddParts[0]);
+      const rddM = parseInt(rddParts[1]) - 1;
+      const rddD = parseInt(rddParts[2]);
+
+      const hourlyStartMarkersList = [];
+
       for (let i = 0; i < 25; i++) {
         const hrVal = (5 + i) % 24;
+        const dayOffset = (5 + i) >= 24 ? 1 : 0;
+        
+        // Compute precise date-time wall clock coordinates for this specific evaluation bin
+        const binDateTimeStartMarker = new Date(rddY, rddM, rddD + dayOffset, hrVal, 0, 0);
+        hourlyStartMarkersList.push(binDateTimeStartMarker);
         operationalHoursMatrixIndexLabels.push(`${String(hrVal).padStart(2, '0')}:00`);
       }
 
+      // Populate activity counts inside past or currently running active execution window only
       displayScopeArray.forEach(d => {
         WORKFLOW_STEPS.forEach(st => {
           if (st === 'ds_printed') return; 
@@ -1585,44 +1850,56 @@
           if (d[st] && d[tsField]) {
             const dateObj = new Date(d[tsField]);
             const targetBinIdx = computeOperationalHourBinIndexIndex(dateObj);
+            
             if (targetBinIdx >= 0 && targetBinIdx < 25) {
-              const bKey = st === 'checking' ? 'checking' : (st === 'invoiced' ? 'invoiced' : st);
-              if (binData[bKey]) binData[bKey][targetBinIdx]++;
+              const binTimeLocation = hourlyStartMarkersList[targetBinIdx];
+              // Block projection calculation if history element has not eventuated yet
+              if (binTimeLocation <= rightNowTimeMarker) {
+                const bKey = st === 'checking' ? 'checking' : (st === 'invoiced' ? 'invoiced' : st);
+                if (binData[bKey]) binData[bKey][targetBinIdx]++;
+              }
             }
           }
         });
       });
 
-      // Compute timeline-based truck availability per hour bin
-      const rddParts = referenceTargetRDD.rdd_date.split('-');
-      const rddY = parseInt(rddParts[0]);
-      const rddM = parseInt(rddParts[1]) - 1;
-      const rddD = parseInt(rddParts[2]);
-
+      // COMPUTE FLEET ASSET AVAILABILITY TIMELINE 
       for (let i = 0; i < 25; i++) {
-        const hrVal = (5 + i) % 24;
-        const dayOffset = (5 + i) >= 24 ? 1 : 0;
-        const hourStartMarker = new Date(rddY, rddM, rddD + dayOffset, hrVal, 0, 0);
+        const hourStartMarker = hourlyStartMarkersList[i];
+
+        // STRICT REAL-TIME BOUNDARY: If hour bin window is ahead of real time, data stays hidden/zero
+        if (hourStartMarker > rightNowTimeMarker) {
+          binData.trucks[i] = 0;
+          // Clean dependencies arrays out to prevent data leaked into future projections
+          binData.pick[i] = 0;
+          binData.pgi[i] = 0;
+          binData.invoiced[i] = 0;
+          binData.checking[i] = 0;
+          binData.loaded[i] = 0;
+          continue;
+        }
 
         let availableCount = 0;
         state.trucks.forEach(t => {
           const addedAtDate = new Date(t.added_at);
-          if (addedAtDate <= hourStartMarker) {
-            // Find if this specific vehicle was loaded within the current active RDD scope
-            const matchDisp = displayScopeArray.find(d => d.assigned_truck_id === t.id);
-            
-            if (matchDisp && matchDisp.loaded && matchDisp.loaded_timestamp) {
-              const loadedTime = new Date(matchDisp.loaded_timestamp);
-              // If it departed before the current hour bin started, it is no longer available in the yard
-              if (loadedTime < hourStartMarker) {
-                // Departed -> Drop availability flag
-              } else {
-                availableCount++;
-              }
+          
+          // RULE 1: If truck added_at timestamp is later than this hour bin, it cannot exist yet here
+          if (addedAtDate > hourStartMarker) {
+            return; 
+          }
+
+          // RULE 2: Evaluate operational loading metrics constraints
+          const matchDisp = displayScopeArray.find(d => d.assigned_truck_id === t.id);
+          if (matchDisp && matchDisp.loaded && matchDisp.loaded_timestamp) {
+            const loadedTime = new Date(matchDisp.loaded_timestamp);
+            // If asset departed before this hour bin started, it's no longer in the terminal yard
+            if (loadedTime < hourStartMarker) {
+              // Asset is down the road -> excluded
             } else {
-              // Not loaded yet or not assigned to an active route, so it remains available
               availableCount++;
             }
+          } else {
+            availableCount++;
           }
         });
         binData.trucks[i] = availableCount;
@@ -1664,14 +1941,8 @@
               align: 'top',
               color: '#f1f5f9',
               offset: 2,
-              font: {
-                weight: 'bold',
-                family: 'JetBrains Mono',
-                size: 10
-              },
-              formatter: function(value) {
-                return value > 0 ? value : '';
-              }
+              font: { weight: 'bold', family: 'JetBrains Mono', size: 10 },
+              formatter: function(value) { return value > 0 ? value : ''; }
             }
           }
         }
@@ -1685,11 +1956,11 @@
       return calculatedBin;
     }
 
-    // 14. REALTIME SYNC SUBSCRIPTION CHANNELS LAYERS ENGINE
+    // 13. REALTIME SYNC SUBSCRIPTION CHANNELS LAYERS ENGINE
     function connectSupabaseRealtimeSyncChannels() {
       supabaseClient
-        .channel('schema-db-dispatches-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, async (payload) => {
+        .channel('schema-db-dispatches-changes-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, async () => {
           if (state.selectedRDDId) {
             await apiFetchDispatches();
             renderTrackerTable();
@@ -1701,24 +1972,22 @@
         .subscribe();
     }
 
-    // 15. INTERFACES NAVIGATION LAYOUT CONTROL MODALITY UTILS
+    // 14. INTERFACES NAVIGATION LAYOUT CONTROL MODALITY UTILS
     function switchTab(targetTabId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
 
-      if (targetTabId === 'tracker') {
-        document.querySelector('.tab-bar .tab-btn:nth-child(1)').classList.add('active');
-        document.getElementById('panel-tracker').classList.remove('hidden');
-        renderTrackerTable();
-      } else if (targetTabId === 'trucks') {
-        document.querySelector('.tab-bar .tab-btn:nth-child(2)').classList.add('active');
-        document.getElementById('panel-trucks').classList.remove('hidden');
-        renderTrucksInventoryTable();
-      } else if (targetTabId === 'dashboard') {
-        document.querySelector('.tab-bar .tab-btn:nth-child(3)').classList.add('active');
-        document.getElementById('panel-dashboard').classList.remove('hidden');
-        calculateAndRenderOperationalMetricsDashboard();
-      }
+      const activeBtnElement = document.getElementById(`tab-link-${targetTabId}`);
+      if (activeBtnElement) activeBtnElement.classList.add('active');
+
+      const activePanelElement = document.getElementById(`panel-${targetTabId}`);
+      if (activePanelElement) activePanelElement.classList.remove('hidden');
+
+      if (targetTabId === 'tracker') renderTrackerTable();
+      else if (targetTabId === 'trucks') renderTrucksInventoryTable();
+      else if (targetTabId === 'dashboard') calculateAndRenderOperationalMetricsDashboard();
+      else if (targetTabId === 'personnel') renderPersonnelTable();
+      else if (targetTabId === 'users') renderUsersTable();
     }
 
     function toggleAddMode() {
@@ -1739,7 +2008,7 @@
       if (modalId === 'modal-pick') {
         const sel = document.getElementById('m-pick-name');
         sel.innerHTML = '';
-        PICK_ALLOWED_NAMES.forEach(n => sel.add(new Option(n, n)));
+        state.personnel.filter(p => p.role === 'picker').forEach(n => sel.add(new Option(n.name, n.name)));
       } else if (modalId === 'modal-checking') {
         state.selectedBayCode = null;
         document.getElementById('checker-names-container').innerHTML = '';
@@ -1776,7 +2045,7 @@
       const sel = document.createElement('select');
       sel.className = 'form-control m-checker-sel';
       sel.add(new Option('-- Select Checker Asset Personnel --', ''));
-      CHECKING_ALLOWED_NAMES.forEach(name => sel.add(new Option(name, name)));
+      state.personnel.filter(p => p.role === 'checker').forEach(p => sel.add(new Option(p.name, p.name)));
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'btn btn-danger';
@@ -1828,7 +2097,7 @@
       calculateAndRenderOperationalMetricsDashboard();
     }
 
-    // 16. FORMATTING TOOLS STRUCTURAL CONVERSION COMPONENT MACROS
+    // 15. FORMATTING TOOLS STRUCTURAL CONVERSION COMPONENT MACROS
     function formatPostgresDateToRDDLabel(dateInputString) {
       if(!dateInputString) return '';
       const d = new Date(dateInputString);
@@ -1863,16 +2132,19 @@
     }
 
     function computeStatusBadgeText(dispatch) {
-      if (dispatch.loaded) return '🟢 LOADED';
-      if (dispatch.checking) return '⏳ LOADED';
-      if (dispatch.ds_printed) return '⏳ CHECKING';
+      // Priority 1 Status Layout Matrix Overrides (Checking Done vs Pending Status Colors)
+      if (dispatch.loaded) return '<span class="status-done-green">DONE</span>';
+      if (dispatch.checking) return '<span class="status-done-green">DONE</span>';
+      
+      // Step dependency indicators inside workflow checklist pipelines
+      if (dispatch.ds_printed) return '<span class="status-pending-yellow">PENDING</span>';
       if (dispatch.invoiced) return '⏳ DS PRINT';
       if (dispatch.pgi) return '⏳ INVOICE';
       if (dispatch.pick) return '⏳ PGI';
       return '⏳ PICK';
     }
 
-    // 17. REPOSITORY SECURITY LOG AUDIT INFRASTRUCTURE WRAPPER ENGINE
+    // 16. REPOSITORY SECURITY LOG AUDIT INFRASTRUCTURE WRAPPER ENGINE
     async function logToAuditTrail(dispatchId, action, field, oldVal, newVal) {
       try {
         await supabaseClient.from('audit_logs').insert({
@@ -1883,12 +2155,10 @@
           new_value: newVal,
           performed_by: state.currentUser
         });
-      } catch (err) {
-        console.error('Audit trail mapping context trace failure:', err);
-      }
+      } catch (err) { console.error('Audit trace logging exception caught:', err); }
     }
 
-    // 18. APPLICATION SYSTEM LIFECYCLE INITIALIZER ENTRY POINT
+    // 17. APPLICATION SYSTEM LIFECYCLE INITIALIZER ENTRY POINT
     async function initializeAuthenticatedSession() {
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app-shell').classList.remove('hidden');
@@ -1896,16 +2166,25 @@
       document.getElementById('display-username').innerText = state.currentUser;
       document.getElementById('display-role').innerText = state.currentRole;
 
+      // Handle visibility vectors based on authentication matrix roles
       if (state.currentRole === 'admin') {
         document.getElementById('th-actions').classList.remove('hidden');
+        document.getElementById('tab-link-personnel').classList.remove('hidden');
+        document.getElementById('tab-link-users').classList.remove('hidden');
+      } else if (state.currentRole === 'outbound') {
+        document.getElementById('th-actions').classList.add('hidden');
+        document.getElementById('tab-link-personnel').classList.remove('hidden');
+        document.getElementById('tab-link-users').classList.add('hidden');
       } else {
         document.getElementById('th-actions').classList.add('hidden');
+        document.getElementById('tab-link-personnel').classList.add('hidden');
+        document.getElementById('tab-link-users').classList.add('hidden');
       }
 
       await apiFetchInitialState();
       populateRDDDropdowns();
       renderSummaryBanner();
-      renderTrackerTable();
+      switchTab('tracker');
       connectSupabaseRealtimeSyncChannels();
     }
 
