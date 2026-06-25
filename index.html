@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logistics Outbound Tracker</title>
-    <!-- Tailwind CSS for Dark Theme styling matching your UI -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Chart.js for your hourly metrics chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase CDN (Adjust version if necessary for your client setup) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -30,7 +27,6 @@
 </head>
 <body class="min-h-screen flex flex-col font-sans antialiased">
 
-    <!-- TOP NAVIGATION BAR -->
     <header class="bg-card-header px-6 py-4 flex justify-between items-center border-b border-gray-800">
         <h1 class="text-xl font-bold text-gray-100 tracking-wide">Logistics Outbound Tracker</h1>
         <div class="flex items-center gap-4">
@@ -44,7 +40,6 @@
         </div>
     </header>
 
-    <!-- TAB SELECTION MENU -->
     <nav class="bg-card px-6 border-b border-gray-800 flex gap-6 text-sm font-medium">
         <button onclick="switchTab('dispatch')" id="tab-dispatch" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 active-tab">
             📑 Dispatch Tracker
@@ -63,15 +58,12 @@
         </button>
     </nav>
 
-    <!-- MAIN VIEW CONTENT CONTAINER -->
     <main class="flex-1 p-6">
         
-        <!-- 1. DISPATCH TRACKER TAB VIEW -->
         <div id="view-dispatch" class="tab-view space-y-4">
             <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <label for="tracker-rdd-select" class="text-sm font-semibold text-gray-300">Select Active RDD:</label>
-                    <!-- This control acts as the single source of truth for your date state -->
                     <select id="tracker-rdd-select" onchange="handleRddChange(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sky-500">
                         <option value="2026-06-25">JUN 25, 2026</option>
                         <option value="2026-06-26" selected>JUN 26, 2026</option>
@@ -81,7 +73,6 @@
                 <span class="text-xs text-sky-400 font-mono">Controls data filters for all tabs</span>
             </div>
 
-            <!-- Table Container -->
             <div class="bg-card rounded-lg border border-gray-800 overflow-hidden">
                 <table class="w-full text-left text-sm border-collapse">
                     <thead class="bg-gray-900 text-gray-300 font-semibold border-b border-gray-800">
@@ -98,39 +89,31 @@
                         </tr>
                     </thead>
                     <tbody id="dispatch-table-body" class="divide-y divide-gray-800 text-gray-300">
-                        <!-- Dynamic table rows inject here -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- 2. AVAILABLE TRUCKS TAB VIEW -->
         <div id="view-trucks" class="tab-view hidden space-y-4">
             <div class="bg-card p-4 rounded-lg border border-gray-800">
                 <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
                     🚚 Available Trucks for RDD: <span id="trucks-active-date-display" class="text-sky-400 font-mono">...</span>
                 </h2>
             </div>
-            <!-- Your Trucks Table Markup Here -->
             <div class="bg-card p-6 rounded-lg border border-gray-800 text-center text-gray-500">
                 Truck logs filtered by the active tracker RDD dataset will render here.
             </div>
         </div>
 
-        <!-- 3. DASHBOARD TAB VIEW -->
         <div id="view-dashboard" class="tab-view hidden space-y-6">
             
-            <!-- Notice: Standalone Reference Dropdown element has been completely removed from here -->
             <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-100">
-                    📊 Metrics Analysis Dashboard
-                </h2>
+                <h2 class="text-lg font-bold text-gray-100">📊 Metrics Analysis Dashboard</h2>
                 <div class="text-sm">
                     Filtering Data Target: <span id="dashboard-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
                 </div>
             </div>
 
-            <!-- METRIC CARD GRID -->
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
                     <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Dispatches</p>
@@ -158,208 +141,222 @@
                 </div>
             </div>
 
-            <!-- HOURLY ANALYTICS CHART CONTAINER -->
-            <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md">
-                <div class="h-80 w-full relative">
-                    <canvas id="analyticsChart"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md lg:col-span-2">
+                    <div class="h-80 w-full relative">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md flex flex-col">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">What Is Checked In</h3>
+                    <div id="checked-in-list" class="space-y-3 overflow-y-auto max-h-80 pr-1">
+                        </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. PERSONNEL LIST TAB VIEW -->
         <div id="view-personnel" class="tab-view hidden">
             <div class="bg-card p-6 rounded-lg border border-gray-800">
                 <h2 class="text-lg font-bold text-gray-100 mb-2">Personnel Management Table</h2>
-                <!-- Table entries go here -->
             </div>
         </div>
 
-        <!-- 5. USER MANAGEMENT TAB VIEW -->
         <div id="view-user-mgmt" class="tab-view hidden">
             <div class="bg-card p-6 rounded-lg border border-gray-800">
                 <h2 class="text-lg font-bold text-gray-100 mb-2">System User Configurations</h2>
-                <!-- Configuration items go here -->
             </div>
         </div>
 
     </main>
 
-    <!-- CORE REFACTORED APPLICATION STATE LOGIC -->
     <script>
         // Initialize Supabase Connection Client
         const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
         const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
         const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        // 1. APPLICATION CENTRAL SOURCE OF TRUTH (STATE)
-        // Default initialized directly to match the UI element value
+        // APPLICATION STATE
         let currentGlobalRdd = "2026-06-26"; 
         let currentActiveTab = "dispatch";
         let trackingChartInstance = null;
 
-        // 2. TRIGGERED WHENEVER THE USER CHANGES THE RDD ON DISPATCH TRACKER VIEW
         function handleRddChange(newRddValue) {
             currentGlobalRdd = newRddValue;
-            console.log(`Global RDD State updated to: ${currentGlobalRdd}`);
-
-            // Automatically re-fire operational loaders for data freshness
             loadTrackerData();
-            
-            // If the user happens to switch back to background tabs, data stays matching
             updateTabDataView(currentActiveTab);
         }
 
-        // 3. TAB CONTROLLER ROUTING LOGIC
         function switchTab(targetTabId) {
             currentActiveTab = targetTabId;
-
-            // Update DOM Tab button active states visually
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-tab'));
             document.getElementById(`tab-${targetTabId}`).classList.add('active-tab');
 
-            // Toggle view visibility panes
             document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
             document.getElementById(`view-${targetTabId}`).classList.remove('hidden');
 
-            // Route data payload fetching triggers
             updateTabDataView(targetTabId);
         }
 
-        // Direct wrapper logic executing data queries depending on active view configurations
         function updateTabDataView(tabId) {
             if (tabId === 'dispatch') {
                 loadTrackerData();
             } else if (tabId === 'trucks') {
                 document.getElementById('trucks-active-date-display').textContent = formatDisplayDate(currentGlobalRdd);
-                loadAvailableTrucksData();
             } else if (tabId === 'dashboard') {
-                // Dynamically assign target state labels in line view layouts
                 document.getElementById('dashboard-active-date-display').textContent = formatDisplayDate(currentGlobalRdd);
                 loadDashboardMetricsAndChart();
             }
         }
 
-        // Helper string decorator for visual context headers
         function formatDisplayDate(isoDateStr) {
             if(!isoDateStr) return "...";
             const parts = isoDateStr.split('-');
             if(parts.length !== 3) return isoDateStr;
-            
             const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            const year = parts[0];
-            const monthIdx = parseInt(parts[1], 10) - 1;
-            const day = parts[2];
-            
-            return `${months[monthIdx]} ${day}, ${year}`;
+            return `${months[parseInt(parts[1], 10) - 1]} ${parts[2]}, ${parts[0]}`;
         }
 
-        // 4. SUPABASE OPERATIONS & DASHBOARD CALCULATIONS
         async function loadTrackerData() {
-            console.log(`Querying Dispatch Tracker table where rdd = ${currentGlobalRdd}`);
             if(!supabase) return;
-
-            // Main filter criteria query using shared global state variable
-            const { data, error } = await supabase
-                .from('dispatches')
-                .select('*')
-                .eq('rdd', currentGlobalRdd);
-
-            if(error) {
-                console.error("Error pulling dispatch logs:", error);
-                return;
-            }
-            
-            renderTrackerTable(data);
+            const { data, error } = await supabase.from('dispatches').select('*').eq('rdd', currentGlobalRdd);
+            if(!error) renderTrackerTable(data);
         }
 
         function renderTrackerTable(rows) {
             const container = document.getElementById('dispatch-table-body');
             container.innerHTML = "";
-            
             if(!rows || rows.length === 0) {
-                container.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-500 font-medium">No logistics tracking data recorded for this RDD block.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-500 font-medium">No records found.</td></tr>`;
                 return;
             }
-
             rows.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-950 transition";
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-sky-400">${row.type || 'N/A'}</td>
+                    <td class="p-3 font-semibold text-sky-400">${row.type || 'AUV'}</td>
                     <td class="p-3 font-mono font-medium">${row.trip_number || 'N/A'}</td>
-                    <td class="p-3"><input type="checkbox" ${row.picked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500 focus:ring-0"></td>
-                    <td class="p-3"><input type="checkbox" ${row.pgi ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500 focus:ring-0"></td>
-                    <td class="p-3"><input type="checkbox" ${row.invoiced ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500 focus:ring-0"></td>
-                    <td class="p-3"><input type="checkbox" ${row.checked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500 focus:ring-0"></td>
-                    <td class="p-3"><input type="checkbox" ${row.loaded ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500 focus:ring-0"></td>
+                    <td class="p-3"><input type="checkbox" ${row.picked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
+                    <td class="p-3"><input type="checkbox" ${row.pgi ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
+                    <td class="p-3"><input type="checkbox" ${row.invoiced ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
+                    <td class="p-3"><input type="checkbox" ${row.checked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
+                    <td class="p-3"><input type="checkbox" ${row.loaded ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
                     <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${row.status === 'DONE' ? 'bg-green-950 text-green-400 border border-green-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">${row.status || 'PENDING'}</span></td>
-                    <td class="p-3 text-right"><button class="text-xs bg-red-950 text-red-400 border border-red-900 hover:bg-red-900 hover:text-white px-2.5 py-1 rounded transition">Delete</button></td>
+                    <td class="p-3 text-right"><button class="text-xs bg-red-950 text-red-400 border border-red-900 px-2.5 py-1 rounded">Delete</button></td>
                 `;
                 container.appendChild(tr);
             });
         }
 
-        async function loadAvailableTrucksData() {
-            if(!supabase) return;
-            // Add your available trucks specific database lookup logic here if tracking metrics by RDD
-        }
-
         async function loadDashboardMetricsAndChart() {
-            console.log(`Executing Dashboard calculations linked directly to active RDD state: ${currentGlobalRdd}`);
             if(!supabase) return;
+            const { data, error } = await supabase.from('dispatches').select('*').eq('rdd', currentGlobalRdd);
+            if(error) return;
 
-            // Fetch rows bound to tracker's active target RDD
-            const { data, error } = await supabase
-                .from('dispatches')
-                .select('*')
-                .eq('rdd', currentGlobalRdd);
-
-            if(error) {
-                console.error("Dashboard calculation breakdown stopped:", error);
-                return;
-            }
-
-            // Perform calculations to update numerical card metric readouts
-            calculateMetricCards(data);
-            
-            // Re-render chart layout configurations
-            buildMetricsChart(data);
-        }
-
-        function calculateMetricCards(data) {
-            if(!data) return;
+            // 1. Update Card Summaries
             document.getElementById('metric-total').textContent = data.length;
             document.getElementById('metric-picked').textContent = data.filter(r => r.picked).length;
             document.getElementById('metric-pgi').textContent = data.filter(r => r.pgi).length;
             document.getElementById('metric-invoiced').textContent = data.filter(r => r.invoiced).length;
             document.getElementById('metric-checked').textContent = data.filter(r => r.checked).length;
             document.getElementById('metric-loaded').textContent = data.filter(r => r.loaded).length;
+
+            // 2. Build Monitor Sidebar List
+            renderCheckedInMonitor(data);
+
+            // 3. Process and Build Graph Engine
+            buildMetricsChart(data);
+        }
+
+        function renderCheckedInMonitor(data) {
+            const container = document.getElementById('checked-in-list');
+            container.innerHTML = "";
+
+            // Filters logs that contain an assigned active trip number
+            const activeDispatches = data.filter(r => r.trip_number);
+
+            if(activeDispatches.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">No active checks.</p>`;
+                return;
+            }
+
+            activeDispatches.forEach(row => {
+                const isDone = row.status === 'DONE';
+                const badgeStyle = isDone ? 'bg-green-950 text-green-400 border-green-800' : 'bg-amber-950 text-amber-400 border-amber-800';
+                
+                const item = document.createElement('div');
+                item.className = "bg-gray-900 border border-gray-800 rounded p-3 flex justify-between items-center shadow-sm";
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-950 text-purple-400 border border-purple-800 font-mono">${row.type || 'AUV'}</span>
+                        <span class="font-mono text-gray-200 font-bold tracking-wide">${row.trip_number}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeStyle}">${row.status || 'PENDING'}</span>
+                `;
+                container.appendChild(item);
+            });
         }
 
         function buildMetricsChart(data) {
             const ctx = document.getElementById('analyticsChart').getContext('2d');
-            
-            // Clean up legacy chart rendering blocks to avoid context memory leak overflows
             if (trackingChartInstance) {
                 trackingChartInstance.destroy();
             }
 
-            // Generate hourly labels 05:00 through 05:00 matching your interface requirements
-            const hoursLabels = ["05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "00:00", "01:00", "02:00", "03:00", "04:00", "05:00"];
+            // Custom timeline shift range: 05:00 through 04:00
+            const hoursLabels = ["05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "00:00", "01:00", "02:00", "03:00", "04:00"];
             
-            // Mock empty arrays ready to gather data from your parsed database timestamp arrays
-            const sampleDataset = hoursLabels.map(() => 0); 
+            // Generate clean frequency tracks for chart lines
+            const pickData = new Array(24).fill(0);
+            const pgiData = new Array(24).fill(0);
+            const invoiceData = new Array(24).fill(0);
+            const checkData = new Array(24).fill(0);
+            const loadData = new Array(24).fill(0);
+
+            // Time helper to convert timestamp string to our 24-position index array
+            function getTimelineIndex(timestampStr) {
+                if(!timestampStr) return -1;
+                const d = new Date(timestampStr);
+                if(isNaN(d.getTime())) return -1;
+                
+                const hr = d.getHours(); // Reads local standard client hour
+                return (hr >= 5) ? (hr - 5) : (hr + 19);
+            }
+
+            // Iterate and map items to correct hour buckets
+            data.forEach(row => {
+                if(row.picked && row.picked_timestamp) {
+                    const idx = getTimelineIndex(row.picked_timestamp);
+                    if(idx !== -1) pickData[idx]++;
+                }
+                if(row.pgi && row.pgi_timestamp) {
+                    const idx = getTimelineIndex(row.pgi_timestamp);
+                    if(idx !== -1) pgiData[idx]++;
+                }
+                if(row.invoiced && row.invoiced_timestamp) {
+                    const idx = getTimelineIndex(row.invoiced_timestamp);
+                    if(idx !== -1) invoiceData[idx]++;
+                }
+                if(row.checked && row.checked_timestamp) {
+                    const idx = getTimelineIndex(row.checked_timestamp);
+                    if(idx !== -1) checkData[idx]++;
+                }
+                if(row.loaded && row.loaded_timestamp) {
+                    const idx = getTimelineIndex(row.loaded_timestamp);
+                    if(idx !== -1) loadData[idx]++;
+                }
+            });
 
             trackingChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: hoursLabels,
                     datasets: [
-                        { label: 'Pick Count', data: [...sampleDataset], backgroundColor: '#a855f7' },
-                        { label: 'PGI Count', data: [...sampleDataset], backgroundColor: '#0ea5e9' },
-                        { label: 'Invoiced Count', data: [...sampleDataset], backgroundColor: '#10b981' },
-                        { label: 'Checking Completed', data: [...sampleDataset], backgroundColor: '#f59e0b' },
-                        { label: 'Loaded / Dispatched', data: [...sampleDataset], backgroundColor: '#22c55e' }
+                        { label: 'Pick Count', data: pickData, backgroundColor: '#a855f7' },
+                        { label: 'PGI Count', data: pgiData, backgroundColor: '#0ea5e9' },
+                        { label: 'Invoiced Count', data: invoiceData, backgroundColor: '#10b981' },
+                        { label: 'Checking Completed', data: checkData, backgroundColor: '#f59e0b' },
+                        { label: 'Loaded / Dispatched', data: loadData, backgroundColor: '#22c55e' }
                     ]
                 },
                 options: {
@@ -367,7 +364,7 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 }, min: 0, max: 2 }
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 }, min: 0 }
                     },
                     plugins: {
                         legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
@@ -376,9 +373,7 @@
             });
         }
 
-        // 5. INITIAL SYSTEM RUNTIME BOOTSTRAP
         window.addEventListener('DOMContentLoaded', () => {
-            // Read whatever value is defaulted in select markdown container on startup
             currentGlobalRdd = document.getElementById('tracker-rdd-select').value;
             loadTrackerData();
         });
