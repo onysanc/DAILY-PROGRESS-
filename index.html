@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Logistics Outbound Dispatch Tracker</title>
   
-  <!-- CDN Links -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2 family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -642,10 +641,8 @@
 </head>
 <body>
 
-  <!-- TOAST CONTAINER -->
   <div id="toast-container"></div>
 
-  <!-- LOGIN SCREEN -->
   <div id="login-screen">
     <div class="login-card">
       <h2>Outbound Dispatch System</h2>
@@ -661,7 +658,6 @@
     </div>
   </div>
 
-  <!-- APP SHELL -->
   <div id="app-shell" class="hidden">
     <header>
       <div class="brand-section">
@@ -676,7 +672,6 @@
       </div>
     </header>
 
-    <!-- Navigation Tab Bar -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-link-tracker" onclick="switchTab('tracker')">📋 Dispatch Tracker</button>
       <button class="tab-btn" id="tab-link-trucks" onclick="switchTab('trucks')">🚛 Available Trucks</button>
@@ -685,7 +680,6 @@
       <button class="tab-btn hidden" id="tab-link-users" onclick="switchTab('users')">🔐 User Management</button>
     </div>
 
-    <!-- TAB 1: TRACKER PANEL -->
     <div id="panel-tracker" class="tab-panel">
       <div class="control-row">
         <div class="selector-container">
@@ -752,13 +746,11 @@
             </tr>
           </thead>
           <tbody id="dispatch-table-body">
-            <!-- Dynamic Injection -->
-          </tbody>
+            </tbody>
         </table>
       </div>
     </div>
 
-    <!-- TAB 2: TRUCKS PANEL -->
     <div id="panel-trucks" class="tab-panel hidden">
       <div class="add-dispatch-box" style="max-width: 600px; margin-bottom: 2rem;">
         <h3 style="margin-bottom:1rem; font-size:1.1rem;">Register Fleet Asset</h3>
@@ -796,13 +788,11 @@
             </tr>
           </thead>
           <tbody id="truck-table-body">
-            <!-- Dynamic Injection -->
-          </tbody>
+            </tbody>
         </table>
       </div>
     </div>
 
-    <!-- TAB 3: DASHBOARD PANEL -->
     <div id="panel-dashboard" class="tab-panel hidden">
       <div class="control-row">
         <div class="selector-container">
@@ -825,7 +815,6 @@
       </div>
     </div>
 
-    <!-- TAB 4: PERSONNEL TAB (Admin & Outbound Only) -->
     <div id="panel-personnel" class="tab-panel hidden">
       <div class="add-dispatch-box" style="max-width: 600px; margin-bottom: 2rem;">
         <h3 style="margin-bottom:1rem; font-size:1.1rem;">Add New Operational Personnel</h3>
@@ -851,17 +840,15 @@
             <tr>
               <th>Personnel Name</th>
               <th>Workflow Capability Assignment</th>
-              <th style="width: 180px;">Actions</th>
+              <th style="width: 150px;">Actions</th>
             </tr>
           </thead>
           <tbody id="personnel-table-body">
-            <!-- Dynamic Rows -->
-          </tbody>
+            </tbody>
         </table>
       </div>
     </div>
 
-    <!-- TAB 5: USER MANAGEMENT TAB (Admin Only) -->
     <div id="panel-users" class="tab-panel hidden">
       <div class="add-dispatch-box" style="max-width: 700px; margin-bottom: 2rem;">
         <h3 style="margin-bottom:1rem; font-size:1.1rem;">Provision New Access Profile</h3>
@@ -899,16 +886,12 @@
             </tr>
           </thead>
           <tbody id="users-table-body">
-            <!-- Dynamic Rows -->
-          </tbody>
+            </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ==================== MODALS INFRASTRUCTURE ==================== -->
-
-  <!-- Modal: New RDD -->
   <div class="modal" id="modal-rdd">
     <div class="modal-card">
       <div class="modal-header">
@@ -932,7 +915,6 @@
     </div>
   </div>
 
-  <!-- Modal: Pick Assignment -->
   <div class="modal" id="modal-pick">
     <div class="modal-card">
       <div class="modal-header">
@@ -952,7 +934,6 @@
     </div>
   </div>
 
-  <!-- Modal: Checking Configuration -->
   <div class="modal" id="modal-checking" style="max-width: 100%;">
     <div class="modal-card" style="max-width: 550px;">
       <div class="modal-header">
@@ -962,15 +943,13 @@
       <div class="modal-body">
         <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.5rem; color:var(--text-muted);">Assigned Checking Operators (1 - 6)</label>
         <div id="checker-names-container">
-          <!-- Dynamic Input Rows inserted here -->
-        </div>
+          </div>
         <button class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem; margin-bottom:1.25rem;" onclick="addCheckerSelectionRow()">+ Add Checker Personnel</button>
 
         <div class="form-group">
           <label>Operational Bay Assignment</label>
           <div class="bay-grid" id="bay-selection-grid">
-            <!-- Injected via JavaScript Loop -->
-          </div>
+            </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -980,7 +959,6 @@
     </div>
   </div>
 
-  <!-- Modal: Loaded / Truck Assignment -->
   <div class="modal" id="modal-loaded">
     <div class="modal-card">
       <div class="modal-header">
@@ -1000,7 +978,6 @@
     </div>
   </div>
 
-  <!-- ==================== LOGIC ENGINES & SCRIPTS ==================== -->
   <script>
     // 1. PROJECT DATA CONNECTION INITIALIZATION
     const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
@@ -1321,24 +1298,12 @@
 
       state.personnel.forEach(p => {
         const tr = document.createElement('tr');
-        
-        // Contextual actions check: Deletion restricted strictly to Admin role
-        let actionsMarkup = '';
-        if (state.currentRole === 'admin') {
-          actionsMarkup = `
-            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
-            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeletePersonnel('${p.id}')">Remove</button>
-          `;
-        } else {
-          actionsMarkup = `
-            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
-          `;
-        }
-
         tr.innerHTML = `
           <td style="font-weight:600;">${p.name}</td>
           <td><span class="status-pill">${p.role.toUpperCase()}</span></td>
-          <td>${actionsMarkup}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeletePersonnel('${p.id}')">Remove</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -1736,32 +1701,12 @@
       } catch (e) { showToast(e.message, 'error'); }
     }
 
-    async function handleEditPersonnel(id, currentName) {
-      const updatedName = prompt('Modify operator asset description token:', currentName);
-      if (updatedName === null) return; // User tracking cancel sequence
-      const normalizedValue = updatedName.trim().toUpperCase();
-      if (!normalizedValue) { showToast('Personnel description name element cannot map blank.', 'error'); return; }
-
-      try {
-        let { error } = await supabaseClient.from('personnel').update({ name: normalizedValue }).eq('id', id);
-        if (error) throw error;
-        showToast(`Operational manifest updated mapping identifier to: ${normalizedValue}`);
-        await apiFetchPersonnelData();
-        renderPersonnelTable();
-      } catch (e) { showToast(e.message, 'error'); }
-    }
-
     async function handleDeletePersonnel(id) {
-      // Security role gate validation backup check
-      if (state.currentRole !== 'admin') {
-        showToast('Restricted operation. Deletion authorization tied directly to administrative nodes.', 'error');
-        return;
-      }
       if (!confirm('Are you sure you want to remove this operator asset?')) return;
       try {
         let { error } = await supabaseClient.from('personnel').delete().eq('id', id);
         if (error) throw error;
-        showToast('Personnel asset profile successfully terminated.');
+        showToast('Personnel asset profile deleted.');
         await apiFetchPersonnelData();
         renderPersonnelTable();
       } catch (e) { showToast(e.message, 'error'); }
