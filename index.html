@@ -1,566 +1,2204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Outbound Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        body {
-            background-color: #0f111a;
-            color: #94a3b8;
-        }
-        .bg-card {
-            background-color: #161925;
-        }
-        .bg-card-header {
-            background-color: #1e2235;
-        }
-        .active-tab {
-            color: #38bdf8;
-            border-bottom: 2px solid #38bdf8;
-        }
-        /* Custom scrollbar adjustments for sub-grids */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f111a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #334155;
-        }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logistics Outbound Dispatch Tracker</title>
+  
+  <!-- CDN Links -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
-    <header class="bg-card-header px-6 py-4 flex justify-between items-center border-b border-gray-800 shadow-lg z-10">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl">📦</span>
-            <h1 class="text-xl font-bold text-gray-100 tracking-wide">Logistics Outbound Tracker</h1>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f1f5f9;
+      --text-muted: #64748b;
+      
+      /* Badge Colors */
+      --badge-auv: #8b5cf6;
+      --badge-4w: #0ea5e9;
+      --badge-6w: #14b8a6;
+      --badge-10w: #f97316;
+      --badge-20f: #f43f5e;
+      --badge-40f: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Utilities */
+    .hidden { display: none !important; }
+    .monospace { font-family: 'JetBrains Mono', monospace; }
+    
+    /* Login Screen */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: var(--bg);
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .login-card h2 {
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--text-muted);
+    }
+
+    .form-control {
+      width: 100%;
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary { background-color: var(--border); color: var(--text); }
+    .btn-danger { background-color: var(--danger); }
+    .btn-block { width: 100%; }
+
+    /* App Shell Layout */
+    #app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-section h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-info {
+      text-align: right;
+    }
+
+    .user-name { font-weight: 600; font-size: 0.9rem; }
+    .user-role { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Sticky Tab Bar */
+    .tab-bar {
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      padding: 0 2rem;
+      gap: 2rem;
+      position: sticky;
+      top: 65px;
+      z-index: 99;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 1rem 0;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--primary); }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary);
+    }
+
+    /* Main Container & Panelling */
+    .tab-panel {
+      padding: 2rem;
+      flex: 1;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Top Controls Structure */
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      background: var(--surface);
+      padding: 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .selector-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .rdd-meta {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .rdd-meta strong { color: var(--text); }
+
+    /* Add Dispatch Segment */
+    .add-dispatch-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      background: var(--bg);
+      padding: 0.25rem;
+      border-radius: 6px;
+      margin-bottom: 1.25rem;
+      border: 1px solid var(--border);
+    }
+
+    .mode-label {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 4px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .mode-toggle input[type="radio"] { display: none; }
+    .mode-toggle input[type="radio"]:checked + .mode-label {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .entry-form-inline {
+      display: flex;
+      align-items: flex-end;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .entry-form-inline .form-group { margin-bottom: 0; }
+
+    /* Data Presentation Grid / Tables */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background-color: rgba(0,0,0,0.15);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:nth-child(even) { background-color: rgba(255,255,255,0.01); }
+    tr:hover { background-color: rgba(255,255,255,0.02); }
+    tr.loaded-row { border-left: 3px solid var(--success); }
+
+    /* Badges Layout */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+    .badge-auv { background-color: var(--badge-auv); }
+    .badge-4w { background-color: var(--badge-4w); }
+    .badge-6w { background-color: var(--badge-6w); }
+    .badge-10w { background-color: var(--badge-10w); }
+    .badge-20f { background-color: var(--badge-20f); }
+    .badge-40f { background-color: var(--badge-40f); color: #000; }
+
+    .status-pill {
+      display: inline-flex;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background-color: var(--border);
+    }
+
+    /* Custom Color Indicators for UI Status Matrix Mapping */
+    .status-done-green {
+      color: var(--success) !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+    }
+    
+    .status-pending-yellow {
+      color: var(--warning) !important;
+      font-weight: 600 !important;
+      text-transform: uppercase;
+    }
+
+    /* Custom Steps & Workflow Checkboxes */
+    .step-cell {
+      min-width: 130px;
+    }
+
+    .workflow-check-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .custom-checkbox-wrapper {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .custom-checkbox {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg);
+      margin-right: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .custom-checkbox-wrapper input[type="checkbox"] { display: none; }
+    .custom-checkbox-wrapper input[type="checkbox"]:checked + .custom-checkbox {
+      background-color: var(--success);
+      border-color: var(--success);
+    }
+    .custom-checkbox-wrapper input[type="checkbox"]:checked + .custom-checkbox::after {
+      content: '✓';
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .custom-checkbox-wrapper.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .step-meta-text {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Mini Progress Bar styling */
+    .mini-progress-container {
+      width: 80px;
+      height: 6px;
+      background-color: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .mini-progress-bar {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Operational Modals Architecture */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 17, 23, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+      transform: translateY(-20px);
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+
+    .modal.active .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 { font-size: 1.1rem; font-weight: 600; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    /* Bay Grid Presentation layout */
+    .bay-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .bay-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+
+    .bay-btn:hover { border-color: var(--primary); }
+    .bay-btn.selected {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    .bay-btn.extended-bay {
+      grid-column: span 4;
+      background-color: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+    .bay-btn.extended-bay.selected {
+      background-color: var(--primary);
+    }
+
+    /* Dynamic Multi-checker configuration */
+    .checker-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Dashboard Layout components */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+    .stat-card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; color: var(--text); }
+
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      position: relative;
+      width: 100%;
+    }
+
+    /* Toast Notification Elements */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .toast {
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      color: var(--text);
+      padding: 1rem 1.25rem;
+      border-radius: 4px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      font-size: 0.9rem;
+      font-weight: 500;
+      min-width: 280px;
+      max-width: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      animation: slideIn 0.2s ease forwards;
+    }
+
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.warning { border-left-color: var(--warning); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* CSS Loader spinner */
+    .spinner {
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top: 2px solid var(--primary);
+      width: 16px;
+      height: 16px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Admin Timestamp editor fields */
+    .inline-ts-edit {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.1rem 0.25rem;
+      border-radius: 4px;
+      width: 140px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <h2>Outbound Dispatch System</h2>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-user" class="form-control" autocomplete="off" placeholder="Enter username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" class="form-control" placeholder="••••••••">
+      </div>
+      <button class="btn btn-block" onclick="handleLogin()">Sign In</button>
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
+  <div id="app-shell" class="hidden">
+    <header>
+      <div class="brand-section">
+        <h1>Logistics Outbound Tracker</h1>
+      </div>
+      <div class="user-profile">
+        <div class="user-info">
+          <div class="user-name" id="display-username">Admin</div>
+          <div class="user-role" id="display-role">superadmin</div>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-right">
-                <p class="text-sm font-semibold text-gray-200">admin</p>
-                <p class="text-xs text-emerald-400 font-mono flex items-center gap-1 justify-end">
-                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE
-                </p>
-            </div>
-            <button class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm py-1.5 px-4 rounded border border-gray-700 transition active:scale-95">
-                Logout
-            </button>
-        </div>
+        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="handleLogout()">Logout</button>
+      </div>
     </header>
 
-    <nav class="bg-card px-6 border-b border-gray-800 flex gap-6 text-sm font-medium shadow-sm">
-        <button onclick="switchTab('dispatch')" id="tab-dispatch" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 active-tab cursor-pointer">
-            📑 Dispatch Tracker
-        </button>
-        <button onclick="switchTab('trucks')" id="tab-trucks" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
-            🚚 Available Trucks
-        </button>
-        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
-            📊 Dashboard
-        </button>
-        <button onclick="switchTab('personnel')" id="tab-personnel" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
-            👥 Personnel List
-        </button>
-        <button onclick="switchTab('user-mgmt')" id="tab-user-mgmt" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
-            🔐 User Management
-        </button>
-    </nav>
+    <!-- Navigation Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-link-tracker" onclick="switchTab('tracker')">📋 Dispatch Tracker</button>
+      <button class="tab-btn" id="tab-link-trucks" onclick="switchTab('trucks')">🚛 Available Trucks</button>
+      <button class="tab-btn" id="tab-link-dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="tab-btn hidden" id="tab-link-personnel" onclick="switchTab('personnel')">👥 Personnel List</button>
+      <button class="tab-btn hidden" id="tab-link-users" onclick="switchTab('users')">🔐 User Management</button>
+    </div>
 
-    <main class="flex-1 p-6 max-w-[1600px] w-full mx-auto">
-        
-        <div id="view-dispatch" class="tab-view space-y-4">
-            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
-                <div class="flex items-center gap-4">
-                    <label for="tracker-rdd-select" class="text-sm font-semibold text-gray-300">Active Reference Date (RDD):</label>
-                    <select id="tracker-rdd-select" onchange="handleRddChange(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:border-sky-500 cursor-pointer">
-                        <option value="2026-06-25">JUN 25, 2026</option>
-                        <option value="2026-06-26" selected>JUN 26, 2026</option>
-                        <option value="2026-06-27">JUN 27, 2026</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded border border-slate-800">
-                    <span class="text-xs text-sky-400 font-mono">⚠️ Shared Context State Engine Active</span>
-                </div>
-            </div>
+    <!-- TAB 1: TRACKER PANEL -->
+    <div id="panel-tracker" class="tab-panel">
+      <div class="control-row">
+        <div class="selector-container">
+          <select id="rdd-dropdown" class="form-control" style="width: 200px;" onchange="onRDDChange()"></select>
+          <button class="btn" onclick="openModal('modal-rdd')">[+ New RDD]</button>
+        </div>
+        <div class="rdd-meta" id="rdd-summary-text">
+          RDD: -- | Planning: 0 dispatches | Total Loaded: 0
+        </div>
+      </div>
 
-            <div class="bg-card rounded-lg border border-gray-800 overflow-hidden shadow-xl">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead class="bg-gray-900 text-gray-300 font-semibold border-b border-gray-800 uppercase tracking-wider">
-                            <tr>
-                                <th class="p-3.5 text-center w-12">No</th>
-                                <th class="p-3.5 w-20">Type</th>
-                                <th class="p-3.5 w-32">Trip Number</th>
-                                <th class="p-3.5 min-w-[140px]">Pick</th>
-                                <th class="p-3.5 min-w-[140px]">PGI</th>
-                                <th class="p-3.5 min-w-[140px]">Invoiced</th>
-                                <th class="p-3.5 min-w-[140px]">Checked</th>
-                                <th class="p-3.5 min-w-[140px]">Loaded</th>
-                                <th class="p-3.5 w-28 text-center">Status</th>
-                                <th class="p-3.5 w-36 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dispatch-table-body" class="divide-y divide-gray-800 text-gray-300">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
+      <div class="add-dispatch-box">
+        <div class="mode-toggle">
+          <input type="radio" id="mode-single" name="add-mode" value="single" checked onchange="toggleAddMode()">
+          <label for="mode-single" class="mode-label">Single Entry</label>
+          <input type="radio" id="mode-mass" name="add-mode" value="mass" onchange="toggleAddMode()">
+          <label for="mode-mass" class="mode-label">Mass Paste</label>
         </div>
 
-        <div id="view-trucks" class="tab-view hidden space-y-4">
-            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
-                <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-                    🚚 Fleet Availability Logs
-                </h2>
-                <div class="text-sm bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
-                    Inherited Target Date: <span id="trucks-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
-                </div>
-            </div>
-            <div class="bg-card p-8 rounded-lg border border-gray-800 text-center text-gray-500">
-                <p class="font-medium">Truck records are automatically synchronized with the chosen RDD above.</p>
-                <p class="text-xs mt-1 text-gray-600">Database queries auto-refresh on layout navigation selections.</p>
-            </div>
+        <div id="entry-single" class="entry-form-inline">
+          <div class="form-group">
+            <label>Truck Type</label>
+            <select id="disp-truck-type" class="form-control" style="width: 140px;">
+              <option value="AUV">AUV</option>
+              <option value="4W">4W</option>
+              <option value="6W">6W</option>
+              <option value="10W">10W</option>
+              <option value="20F">20F</option>
+              <option value="40F">40F</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dispatch Number</label>
+            <input type="text" id="disp-number" class="form-control" style="width: 220px;" autocomplete="off" placeholder="e.g. 10043821">
+          </div>
+          <button class="btn" onclick="submitSingleDispatch()">Add Dispatch</button>
         </div>
 
-        <div id="view-dashboard" class="tab-view hidden space-y-6">
-            
-            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
-                <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-                    📊 Metrics Analysis Dashboard
-                </h2>
-                <div class="text-sm bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
-                    Data Query Target: <span id="dashboard-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Dispatches</p>
-                    <p id="metric-total" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Picked</p>
-                    <p id="metric-picked" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total PGI</p>
-                    <p id="metric-pgi" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Invoiced</p>
-                    <p id="metric-invoiced" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Checked</p>
-                    <p id="metric-checked" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-                <div class="bg-card p-4 rounded-lg border border-gray-800 shadow-md">
-                    <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Total Loaded</p>
-                    <p id="metric-loaded" class="text-3xl font-extrabold text-gray-100 mt-1">0</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md lg:col-span-2 flex flex-col justify-between">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">Hourly Output Tracking Breakdown</h3>
-                    <div class="h-80 w-full relative">
-                        <canvas id="analyticsChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md flex flex-col">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">What Is Checked In</h3>
-                    <div id="checked-in-list" class="space-y-3 overflow-y-auto max-h-80 pr-1 flex-1">
-                        </div>
-                </div>
-                
-            </div>
+        <div id="entry-mass" class="hidden">
+          <div class="form-group">
+            <label>Paste Data (Format: Type [Tab/Space] Number per line)</label>
+            <textarea id="disp-mass-text" class="form-control" rows="4" placeholder="AUV&#9;12345678&#10;4W&#9;87654321"></textarea>
+          </div>
+          <button class="btn" onclick="submitMassDispatch()">Import Mass Rows</button>
         </div>
+      </div>
 
-        <div id="view-personnel" class="tab-view hidden space-y-4">
-            <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md">
-                <h2 class="text-lg font-bold text-gray-100 mb-4">Personnel Management Registry</h2>
-                <div class="text-sm text-gray-400 max-w-xl">
-                    Add and look up authorized pickers or checking floor staff configured inside your database profile records.
-                </div>
-            </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th style="width: 100px;">Truck Type</th>
+              <th>Dispatch No.</th>
+              <th class="step-cell">Pick</th>
+              <th class="step-cell">PGI</th>
+              <th class="step-cell">Invoiced</th>
+              <th class="step-cell">DS Printed</th>
+              <th class="step-cell">Checking</th>
+              <th class="step-cell">Loaded</th>
+              <th style="width: 120px;">Status</th>
+              <th style="width: 100px;">Progress</th>
+              <th id="th-actions" style="width: 80px;" class="hidden">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="dispatch-table-body">
+            <!-- Dynamic Injection -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: TRUCKS PANEL -->
+    <div id="panel-trucks" class="tab-panel hidden">
+      <div class="add-dispatch-box" style="max-width: 600px; margin-bottom: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.1rem;">Register Fleet Asset</h3>
+        <div class="entry-form-inline">
+          <div class="form-group">
+            <label>Truck Type</label>
+            <select id="truck-asset-type" class="form-control" style="width: 140px;">
+              <option value="AUV">AUV</option>
+              <option value="4W">4W</option>
+              <option value="6W">6W</option>
+              <option value="10W">10W</option>
+              <option value="20F">20F</option>
+              <option value="40F">40F</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Plate Number</label>
+            <input type="text" id="truck-plate" class="form-control" style="width: 200px; text-transform: uppercase;" placeholder="XYZ 1234">
+          </div>
+          <button class="btn" onclick="submitTruckAsset()">Add Truck</button>
         </div>
+      </div>
 
-        <div id="view-user-mgmt" class="tab-view hidden space-y-4">
-            <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md">
-                <h2 class="text-lg font-bold text-gray-100 mb-4">System User Configuration Tables</h2>
-                <div class="text-sm text-gray-400 max-w-xl">
-                    Administrative credentials management, security roles allocations, and token authorization adjustments.
-                </div>
-            </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Series Name</th>
+              <th>Truck Type</th>
+              <th>Plate Number</th>
+              <th>Status</th>
+              <th>Added At</th>
+              <th>Assigned To (Dispatch)</th>
+              <th>Management Actions</th>
+            </tr>
+          </thead>
+          <tbody id="truck-table-body">
+            <!-- Dynamic Injection -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: DASHBOARD PANEL -->
+    <div id="panel-dashboard" class="tab-panel hidden">
+      <div class="control-row">
+        <div class="selector-container">
+          <label style="font-size:0.9rem; color:var(--text-muted);">Dashboard Reference:</label>
+          <select id="db-rdd-dropdown" class="form-control" style="width: 200px;" onchange="onDashboardRDDChange()"></select>
         </div>
+      </div>
 
-    </main>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total Dispatches</div><div class="value" id="stat-total">0</div></div>
+        <div class="stat-card"><div class="label">Total Picked</div><div class="value" id="stat-picked">0</div></div>
+        <div class="stat-card"><div class="label">Total PGI</div><div class="value" id="stat-pgi">0</div></div>
+        <div class="stat-card"><div class="label">Total Invoiced</div><div class="value" id="stat-invoiced">0</div></div>
+        <div class="stat-card"><div class="label">Total Checked</div><div class="value" id="stat-checked">0</div></div>
+        <div class="stat-card"><div class="label">Total Loaded</div><div class="value" id="stat-loaded">0</div></div>
+      </div>
 
-    <script>
-        // --- CLIENT KEYS CONFIGURATION CONFIG ---
-        const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
-        const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
-        const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+      <div class="chart-container">
+        <canvas id="hourlyActivityChart" style="max-height: 480px; width:100%;"></canvas>
+      </div>
+    </div>
 
-        // APPLICATION SHARED CONTEXT STATES
-        let currentGlobalRdd = "2026-06-26"; 
-        let currentActiveTab = "dispatch";
-        let trackingChartInstance = null;
+    <!-- TAB 4: PERSONNEL TAB (Admin & Outbound Only) -->
+    <div id="panel-personnel" class="tab-panel hidden">
+      <div class="add-dispatch-box" style="max-width: 600px; margin-bottom: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.1rem;">Add New Operational Personnel</h3>
+        <div class="entry-form-inline">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="per-name" class="form-control" style="width: 220px; text-transform: uppercase;" placeholder="e.g. J. DOE">
+          </div>
+          <div class="form-group">
+            <label>Workplace Role Designation</label>
+            <select id="per-role" class="form-control" style="width: 160px;">
+              <option value="picker">Picker</option>
+              <option value="checker">Checker</option>
+            </select>
+          </div>
+          <button class="btn" onclick="submitNewPersonnelAsset()">Save Personnel</button>
+        </div>
+      </div>
 
-        // GLOBAL DATE CHANGE LISTENERS
-        function handleRddChange(newRddValue) {
-            currentGlobalRdd = newRddValue;
-            console.log(`Global context shifted: ${currentGlobalRdd}`);
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Personnel Name</th>
+              <th>Workflow Capability Assignment</th>
+              <th style="width: 180px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="personnel-table-body">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-            // Force query reload across operational scopes
-            loadTrackerData();
-            updateTabDataView(currentActiveTab);
+    <!-- TAB 5: USER MANAGEMENT TAB (Admin Only) -->
+    <div id="panel-users" class="tab-panel hidden">
+      <div class="add-dispatch-box" style="max-width: 700px; margin-bottom: 2rem;">
+        <h3 style="margin-bottom:1rem; font-size:1.1rem;">Provision New Access Profile</h3>
+        <div class="entry-form-inline">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="usr-name" class="form-control" style="width: 160px;" placeholder="Username">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="text" id="usr-pass" class="form-control" style="width: 160px;" placeholder="Password">
+          </div>
+          <div class="form-group">
+            <label>System Role Mapping</label>
+            <select id="usr-role" class="form-control" style="width: 140px;">
+              <option value="admin">Admin</option>
+              <option value="outbound">Outbound</option>
+              <option value="pgi">PGI Unit</option>
+              <option value="invoice">Invoice Unit</option>
+              <option value="transport">Transport</option>
+            </select>
+          </div>
+          <button class="btn" onclick="submitNewSystemUser()">Create Account</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Username Profile</th>
+              <th>System Role Mapping</th>
+              <th>Security Access Key (Cleartext)</th>
+              <th style="width: 150px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <!-- Dynamic Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS INFRASTRUCTURE ==================== -->
+
+  <!-- Modal: New RDD -->
+  <div class="modal" id="modal-rdd">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create Run Delivery Date (RDD)</h3>
+        <button class="modal-close" onclick="closeModal('modal-rdd')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Target Date</label>
+          <input type="date" id="m-rdd-date" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Initial Planning Count</label>
+          <input type="number" id="m-rdd-count" class="form-control" min="0" value="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-rdd')">Cancel</button>
+        <button class="btn" onclick="submitNewRDD()">Save Operational Plan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pick Assignment -->
+  <div class="modal" id="modal-pick">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Select Picker Operator</h3>
+        <button class="modal-close" onclick="closeModal('modal-pick')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Personnel List</label>
+          <select id="m-pick-name" class="form-control"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-pick')">Cancel</button>
+        <button class="btn" onclick="confirmPickStep()">Confirm Pick</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Checking Configuration -->
+  <div class="modal" id="modal-checking" style="max-width: 100%;">
+    <div class="modal-card" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3>Staging & Checking Parameters</h3>
+        <button class="modal-close" onclick="closeModal('modal-checking')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.5rem; color:var(--text-muted);">Assigned Checking Operators (1 - 6)</label>
+        <div id="checker-names-container">
+          <!-- Dynamic Input Rows inserted here -->
+        </div>
+        <button class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem; margin-bottom:1.25rem;" onclick="addCheckerSelectionRow()">+ Add Checker Personnel</button>
+
+        <div class="form-group">
+          <label>Operational Bay Assignment</label>
+          <div class="bay-grid" id="bay-selection-grid">
+            <!-- Injected via JavaScript Loop -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-checking')">Cancel</button>
+        <button class="btn" onclick="confirmCheckingStep()">Commit Audit Parameters</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Loaded / Truck Assignment -->
+  <div class="modal" id="modal-loaded">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Assign Logistics Equipment Asset</h3>
+        <button class="modal-close" onclick="closeModal('modal-loaded')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Available Compatible Vehicles</label>
+          <select id="m-load-truck-select" class="form-control"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-loaded')">Cancel</button>
+        <button class="btn" onclick="confirmLoadedStep()">Dispatch Manifest Asset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LOGIC ENGINES & SCRIPTS ==================== -->
+  <script>
+    // 1. PROJECT DATA CONNECTION INITIALIZATION
+    const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. HARDCODED SYSTEM SECURITY CONFIGURATION FALLBACKS
+    const RUNTIME_STATIC_USERS = {
+      'admin': { pass: 'superadmin', role: 'admin' },
+      'outbound': { pass: 'outbound', role: 'outbound' },
+      'pgi': { pass: 'pgi', role: 'pgi' },
+      'invoice': { pass: 'invoice', role: 'invoice' },
+      'transport': { pass: 'transport', role: 'transport' }
+    };
+
+    // 3. RUNTIME MEMORY CLIENT STATE
+    let state = {
+      currentUser: null,
+      currentRole: null,
+      rdds: [],
+      selectedRDDId: null,
+      dispatches: [],
+      trucks: [],
+      personnel: [],
+      userAccounts: [],
+      activeContextDispatchId: null,
+      selectedBayCode: null,
+      chartInstance: null
+    };
+
+    // 4. STEP SPECIFICATIONS SCHEMA INDEX
+    const WORKFLOW_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    
+    const ROLE_PERMISSIONS = {
+      'pick': ['admin', 'outbound'],
+      'pgi': ['admin', 'outbound', 'pgi'],
+      'invoiced': ['admin', 'invoice'],
+      'ds_printed': ['admin', 'outbound', 'transport'],
+      'checking': ['admin', 'outbound'],
+      'loaded': ['admin', 'transport']
+    };
+
+    // 5. TOAST MESSAGING ENGINE
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const element = document.createElement('div');
+      element.className = `toast ${type}`;
+      element.innerHTML = `<span>${message}</span><span style="cursor:pointer;margin-left:1rem;" onclick="this.parentElement.remove()">&times;</span>`;
+      container.appendChild(element);
+      setTimeout(() => { if(element.parentNode) element.remove(); }, 3500);
+    }
+
+    // 6. ACCOUNT AUTHENTICATION LIFECYCLE HANDLERS
+    async function handleLogin() {
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value;
+      
+      let authenticated = false;
+      let matchedRole = null;
+
+      // Try reading dynamic DB accounts first
+      try {
+        let { data, error } = await supabaseClient.from('user_accounts').select('*').eq('username', u).eq('password', p).single();
+        if (!error && data) {
+          authenticated = true;
+          matchedRole = data.role;
+        }
+      } catch (e) { /* Fallback to local index definitions */ }
+
+      if (!authenticated && RUNTIME_STATIC_USERS[u] && RUNTIME_STATIC_USERS[u].pass === p) {
+        authenticated = true;
+        matchedRole = RUNTIME_STATIC_USERS[u].role;
+      }
+
+      if (authenticated) {
+        sessionStorage.setItem('dispatch_tracker_user', u);
+        sessionStorage.setItem('dispatch_tracker_role', matchedRole);
+        state.currentUser = u;
+        state.currentRole = matchedRole;
+        await initializeAuthenticatedSession();
+        showToast(`Welcome back, Operational Unit: ${u}`);
+      } else {
+        showToast('Invalid profile credentials provided.', 'error');
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.clear();
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      state.currentUser = null;
+      state.currentRole = null;
+    }
+
+    function checkSession() {
+      const savedUser = sessionStorage.getItem('dispatch_tracker_user');
+      const savedRole = sessionStorage.getItem('dispatch_tracker_role');
+      if (savedUser && savedRole) {
+        state.currentUser = savedUser;
+        state.currentRole = savedRole;
+        return true;
+      }
+      return false;
+    }
+
+    // 7. DATA ACQUISITION & DATABASE INTERFACE (CRUD)
+    async function apiFetchInitialState() {
+      try {
+        let { data: rdds, error: e1 } = await supabaseClient.from('rdds').select('*').order('rdd_date', { ascending: false });
+        if (e1) throw e1;
+        state.rdds = rdds || [];
+
+        if (state.rdds.length > 0 && !state.selectedRDDId) {
+          state.selectedRDDId = state.rdds[0].id;
         }
 
-        // NAVIGATION TAB ROUTING HANDLERS
-        function switchTab(targetTabId) {
-            currentActiveTab = targetTabId;
+        let { data: trucks, error: e2 } = await supabaseClient.from('trucks').select('*').order('series_name');
+        if (e2) throw e2;
+        state.trucks = trucks || [];
 
-            // DOM Visual active assignment updates
-            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-tab'));
-            document.getElementById(`tab-${targetTabId}`).classList.add('active-tab');
+        // Dynamic lookup tables data acquisition
+        await apiFetchPersonnelData();
+        await apiFetchSystemUsersData();
 
-            // View toggle container frames
-            document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
-            document.getElementById(`view-${targetTabId}`).classList.remove('hidden');
-
-            // Dispatch targeted data payloads
-            updateTabDataView(targetTabId);
+        if (state.selectedRDDId) {
+          await apiFetchDispatches();
         }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
 
-        function updateTabDataView(tabId) {
-            if (tabId === 'dispatch') {
-                loadTrackerData();
-            } else if (tabId === 'trucks') {
-                document.getElementById('trucks-active-date-display').textContent = formatDisplayDate(currentGlobalRdd);
-            } else if (tabId === 'dashboard') {
-                document.getElementById('dashboard-active-date-display').textContent = formatDisplayDate(currentGlobalRdd);
-                loadDashboardMetricsAndChart();
+    async function apiFetchDispatches() {
+      if (!state.selectedRDDId) return;
+      try {
+        let { data: dispatches, error } = await supabaseClient.from('dispatches')
+          .select('*')
+          .eq('rdd_id', state.selectedRDDId)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        state.dispatches = dispatches || [];
+      } catch(e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function apiFetchPersonnelData() {
+      try {
+        let { data, error } = await supabaseClient.from('personnel').select('*').order('name');
+        if (!error) state.personnel = data || [];
+      } catch (e) { console.error(e); }
+    }
+
+    async function apiFetchSystemUsersData() {
+      if (state.currentRole !== 'admin') return;
+      try {
+        let { data, error } = await supabaseClient.from('user_accounts').select('*').order('username');
+        if (!error) state.userAccounts = data || [];
+      } catch (e) { console.error(e); }
+    }
+
+    // 8. DYNAMIC RENDER PIPELINES
+    function populateRDDDropdowns() {
+      const d1 = document.getElementById('rdd-dropdown');
+      const d2 = document.getElementById('db-rdd-dropdown');
+      d1.innerHTML = '';
+      d2.innerHTML = '';
+
+      state.rdds.forEach(r => {
+        const fmtName = formatPostgresDateToRDDLabel(r.rdd_date);
+        const opt1 = new Option(fmtName, r.id);
+        const opt2 = new Option(fmtName, r.id);
+        opt1.selected = (r.id === state.selectedRDDId);
+        opt2.selected = (r.id === state.selectedRDDId);
+        d1.add(opt1);
+        d2.add(opt2);
+      });
+    }
+
+    function renderSummaryBanner() {
+      const act = state.rdds.find(r => r.id === state.selectedRDDId);
+      if (!act) return;
+      const countLoaded = state.dispatches.filter(d => d.loaded).length;
+      document.getElementById('rdd-summary-text').innerHTML = `RDD: <strong>${formatPostgresDateToRDDLabel(act.rdd_date)}</strong> | Planning: <strong>${act.initial_planning_count}</strong> dispatches | Total Loaded: <strong>${countLoaded}</strong>`;
+    }
+
+    function renderTrackerTable() {
+      const tbody = document.getElementById('dispatch-table-body');
+      tbody.innerHTML = '';
+
+      if (state.dispatches.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${state.currentRole==='admin'?12:11}" style="text-align:center;color:var(--text-muted);padding:3rem;">No operations tracked for this run delivery parameter.</td></tr>`;
+        return;
+      }
+
+      state.dispatches.forEach((d, index) => {
+        const tr = document.createElement('tr');
+        if (d.loaded) tr.className = 'loaded-row';
+
+        const stepResolution = computeOperationalProgressIndex(d);
+        const statusBadgeText = computeStatusBadgeText(d);
+
+        let rowHTML = `
+          <td class="monospace" style="color:var(--text-muted);">${index + 1}</td>
+          <td><span class="badge badge-${d.truck_type.toLowerCase()}">${d.truck_type}</span></td>
+          <td class="monospace" style="font-weight:600;">${d.dispatch_number}</td>
+        `;
+
+        WORKFLOW_STEPS.forEach(step => {
+          const isDone = d[step];
+          const isDisabled = checkStepDisabledLockState(d, step);
+          const tsField = `${step}_timestamp`;
+          const byField = `${step}_by`;
+          
+          let metaText = '';
+          if (isDone) {
+            let identity = d[byField] || '';
+            if (step === 'checking' && Array.isArray(d.checking_by)) {
+              identity = d.checking_by.join(', ');
             }
-        }
-
-        // VISUAL STRING DECORATOR FOR CONTEXT HEADERS
-        function formatDisplayDate(isoDateStr) {
-            if(!isoDateStr) return "...";
-            const parts = isoDateStr.split('-');
-            if(parts.length !== 3) return isoDateStr;
-            const months = ["JUN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            return `JUN ${parts[2]}, ${parts[0]}`; // Formats to exact layout view context
-        }
-
-        // DATABASE OPERATIONS: DISPATCH FETCH
-        async function loadTrackerData() {
-            if(!supabase) {
-                console.warn("Supabase client missing initialization credentials.");
-                renderTrackerTable([]); // Call empty array fallback state
-                return;
+            if (step === 'checking' && d.checking_bay) {
+              identity += ` [Bay ${d.checking_bay}]`;
             }
+            metaText = `<div class="step-meta-text">${formatTimestampString(d[tsField])}</div><div class="step-meta-text">${identity}</div>`;
+          }
 
-            const { data, error } = await supabase
-                .from('dispatches')
-                .select('*')
-                .eq('rdd', currentGlobalRdd)
-                .order('trip_number', { ascending: true });
+          let checkboxControl = '';
+          if (state.currentRole === 'admin') {
+            checkboxControl = `
+              <div class="workflow-check-container">
+                <label class="custom-checkbox-wrapper">
+                  <input type="checkbox" ${isDone ? 'checked' : ''} onchange="handleAdminCheckboxToggle('${d.id}', '${step}', this)">
+                  <span class="custom-checkbox"></span>
+                </label>
+                ${isDone ? `<input type="datetime-local" class="inline-ts-edit" value="${formatToDatetimeLocalValue(d[tsField])}" onchange="handleAdminTimestampModification('${d.id}', '${step}', this.value)">` : ''}
+                ${metaText ? `<div class="step-meta-text" style="opacity:0.6;">${d[byField] ? (Array.isArray(d[byField]) ? d[byField].join(',') : d[byField]) : ''}</div>` : ''}
+              </div>
+            `;
+          } else {
+            checkboxControl = `
+              <div class="workflow-check-container">
+                <label class="custom-checkbox-wrapper ${isDisabled ? 'disabled' : ''}">
+                  <input type="checkbox" ${isDone ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} onchange="handleStandardStaffTick('${d.id}', '${step}', this)">
+                  <span class="custom-checkbox"></span>
+                </label>
+                ${metaText}
+              </div>
+            `;
+          }
 
-            if(error) {
-                console.error("Critical fault executing database read operation:", error);
-                return;
-            }
-            renderTrackerTable(data);
-        }
-
-        // CONSTRUCT DYNAMIC OPERATIONAL GRID LOGS
-        function renderTrackerTable(rows) {
-            const container = document.getElementById('dispatch-table-body');
-            container.innerHTML = "";
-            
-            if(!rows || rows.length === 0) {
-                container.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-gray-500 font-medium bg-slate-900/10">No tracking logs recorded under this RDD block profile.</td></tr>`;
-                return;
-            }
-
-            rows.forEach((row, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-950/60 transition border-b border-gray-800/50 align-top";
-                
-                // Formatted metadata helper rendering engine string chunks
-                const metaSubLabel = (checked, timestamp, user) => {
-                    if (!checked || !timestamp) return '<div class="h-4"></div>';
-                    const dateObj = new Date(timestamp);
-                    const formattedTime = isNaN(dateObj.getTime()) ? "" : dateObj.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'}) + " " + dateObj.toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit'});
-                    return `<div class="text-[10px] text-gray-500 font-mono mt-0.5 leading-none">${formattedTime}</div>
-                            <div class="text-[10px] text-gray-400 truncate max-w-[130px] font-medium">${user || 'system'}</div>`;
-                };
-
-                tr.innerHTML = `
-                    <td class="p-3.5 text-center font-mono text-gray-500 font-semibold">${idx + 1}</td>
-                    <td class="p-3.5">
-                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black tracking-wide ${row.type === '4W' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'bg-purple-950 text-purple-400 border border-purple-800'}">${row.type || 'AUV'}</span>
-                    </td>
-                    <td class="p-3.5 font-mono font-bold text-gray-200 tracking-wider">${row.trip_number || 'N/A'}</td>
-                    
-                    <td class="p-3.5">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" ${row.picked ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'picked', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
-                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Pick</span>
-                        </label>
-                        ${metaSubLabel(row.picked, row.picked_timestamp, row.picked_by)}
-                    </td>
-
-                    <td class="p-3.5">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" ${row.pgi ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'pgi', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
-                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">PGI</span>
-                        </label>
-                        ${metaSubLabel(row.pgi, row.pgi_timestamp, row.pgi_by)}
-                    </td>
-
-                    <td class="p-3.5">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" ${row.invoiced ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'invoiced', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
-                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Invoice</span>
-                        </label>
-                        ${metaSubLabel(row.invoiced, row.invoiced_timestamp, row.invoiced_by)}
-                    </td>
-
-                    <td class="p-3.5">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" ${row.checked ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'checked', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
-                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Check</span>
-                        </label>
-                        ${metaSubLabel(row.checked, row.checked_timestamp, row.checked_by)}
-                    </td>
-
-                    <td class="p-3.5">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" ${row.loaded ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'loaded', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
-                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Load</span>
-                        </label>
-                        ${metaSubLabel(row.loaded, row.loaded_timestamp, row.loaded_by)}
-                    </td>
-
-                    <td class="p-3.5 text-center">
-                        <span class="px-2.5 py-0.5 rounded text-[10px] font-black tracking-widest block border ${row.status === 'DONE' ? 'bg-green-950/80 text-green-400 border-green-800' : 'bg-amber-950/80 text-amber-400 border-amber-800'}">${row.status || 'PENDING'}</span>
-                    </td>
-                    <td class="p-3.5 text-center">
-                        <button onclick="deleteDispatchRecord('${row.id}')" class="text-[11px] font-bold bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900 hover:text-white px-3 py-1 rounded transition cursor-pointer active:scale-95">Delete</button>
-                    </td>
-                `;
-                container.appendChild(tr);
-            });
-        }
-
-        // SYNC CELL TOGGLES IN REAL TIME
-        async function toggleWorkflowStep(id, field, value) {
-            if(!supabase) return;
-            const updates = {};
-            updates[field] = value;
-            updates[`${field}_timestamp`] = value ? new Date().toISOString() : null;
-            updates[`${field}_by`] = value ? "admin" : null;
-
-            // Recalculate summary string conditions
-            const { data: currentItem } = await supabase.from('dispatches').select('*').eq('id', id).single();
-            if(currentItem) {
-                let checkDone = true;
-                const fieldsToCheck = ['picked', 'pgi', 'invoiced', 'checked', 'loaded'];
-                fieldsToCheck.forEach(f => {
-                    if(f === field) { if(!value) checkDone = false; }
-                    else if(!currentItem[f]) checkDone = false;
-                });
-                updates['status'] = checkDone ? 'DONE' : 'PENDING';
-            }
-
-            const { error } = await supabase.from('dispatches').update(updates).eq('id', id);
-            if(!error) loadTrackerData();
-        }
-
-        async function deleteDispatchRecord(id) {
-            if(!supabase || !confirm("Are you sure you want to delete this trip record log?")) return;
-            const { error } = await supabase.from('dispatches').delete().eq('id', id);
-            if(!error) loadTrackerData();
-        }
-
-        // DATABASE OPERATIONS: DASHBOARD METRICS CALCULATION ENGINE
-        async function loadDashboardMetricsAndChart() {
-            if(!supabase) return;
-            
-            const { data, error } = await supabase
-                .from('dispatches')
-                .select('*')
-                .eq('rdd', currentGlobalRdd);
-
-            if(error) {
-                console.error("Dashboard engine calculation error payload interrupted:", error);
-                return;
-            }
-
-            // 1. Update Graphical Metric Cards Readouts
-            document.getElementById('metric-total').textContent = data.length;
-            document.getElementById('metric-picked').textContent = data.filter(r => r.picked).length;
-            document.getElementById('metric-pgi').textContent = data.filter(r => r.pgi).length;
-            document.getElementById('metric-invoiced').textContent = data.filter(r => r.invoiced).length;
-            document.getElementById('metric-checked').textContent = data.filter(r => r.checked).length;
-            document.getElementById('metric-loaded').textContent = data.filter(r => r.loaded).length;
-
-            // 2. Refresh Right Hand Monitor Sidebar Panel Grid
-            renderCheckedInMonitor(data);
-
-            // 3. Process Live Data Matrix Arrays Into Chart Engine Arrays
-            buildMetricsChart(data);
-        }
-
-        // WHAT IS CHECKED IN DYNAMIC COMPONENT LOADER
-        function renderCheckedInMonitor(data) {
-            const container = document.getElementById('checked-in-list');
-            container.innerHTML = "";
-
-            // Filters active checked logs containing trip context data fields
-            const checkListItems = data.filter(r => r.trip_number);
-
-            if(checkListItems.length === 0) {
-                container.innerHTML = `<div class="text-xs text-gray-600 text-center py-8 font-medium">No operational units are currently running active checking tasks.</div>`;
-                return;
-            }
-
-            checkListItems.forEach(row => {
-                const isDone = row.status === 'DONE';
-                const badgeStyle = isDone ? 'bg-green-950 text-green-400 border-green-800' : 'bg-amber-950 text-amber-400 border-amber-800';
-                
-                const div = document.createElement('div');
-                div.className = "bg-gray-900/90 border border-gray-800/80 rounded-md p-3 flex justify-between items-center shadow-inner hover:border-gray-700/60 transition";
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-black tracking-wide font-mono ${row.type === '4W' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'bg-purple-950 text-purple-400 border border-purple-800'}">${row.type || 'AUV'}</span>
-                        <span class="font-mono text-sm text-gray-200 font-bold tracking-wider">${row.trip_number}</span>
-                    </div>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-black tracking-widest border uppercase ${badgeStyle}">${row.status || 'PENDING'}</span>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // CHART TIME-STRIP BUCKETING ENGINE
-        function buildMetricsChart(data) {
-            const ctx = document.getElementById('analyticsChart').getContext('2d');
-            if (trackingChartInstance) {
-                trackingChartInstance.destroy();
-            }
-
-            // Explicit time mapping scale array
-            const hoursLabels = ["05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "00:00", "01:00", "02:00", "03:00", "04:00"];
-            
-            // Allocate blank matrix arrays matching specific index sizes
-            const pickData = new Array(24).fill(0);
-            const pgiData = new Array(24).fill(0);
-            const invoiceData = new Array(24).fill(0);
-            const checkData = new Array(24).fill(0);
-            const loadData = new Array(24).fill(0);
-
-            // Converts ISO string timestamps accurately to the index position in hoursLabels
-            function getTimelineIndex(timestampStr) {
-                if(!timestampStr) return -1;
-                const d = new Date(timestampStr);
-                if(isNaN(d.getTime())) return -1;
-                
-                const hr = d.getHours(); // Reads client timezone specific hour parameter
-                // Shift range calculations: 05:00 maps to index 0, 00:00 maps to index 19
-                return (hr >= 5) ? (hr - 5) : (hr + 19);
-            }
-
-            // Parse individual record elements into database bucket tracks
-            data.forEach(row => {
-                if(row.picked && row.picked_timestamp) {
-                    const idx = getTimelineIndex(row.picked_timestamp);
-                    if(idx >= 0 && idx < 24) pickData[idx]++;
-                }
-                if(row.pgi && row.pgi_timestamp) {
-                    const idx = getTimelineIndex(row.pgi_timestamp);
-                    if(idx >= 0 && idx < 24) pgiData[idx]++;
-                }
-                if(row.invoiced && row.invoiced_timestamp) {
-                    const idx = getTimelineIndex(row.invoiced_timestamp);
-                    if(idx >= 0 && idx < 24) invoiceData[idx]++;
-                }
-                if(row.checked && row.checked_timestamp) {
-                    const idx = getTimelineIndex(row.checked_timestamp);
-                    if(idx >= 0 && idx < 24) checkData[idx]++;
-                }
-                if(row.loaded && row.loaded_timestamp) {
-                    const idx = getTimelineIndex(row.loaded_timestamp);
-                    if(idx >= 0 && idx < 24) loadData[idx]++;
-                }
-            });
-
-            // Find max step size limit bounds to auto-scale graph axes comfortably
-            const combinedData = [...pickData, ...pgiData, ...invoiceData, ...checkData, ...loadData];
-            const maxValue = Math.max(...combinedData, 0);
-            const suggestedMaxY = maxValue > 0 ? maxValue + 1 : 2;
-
-            trackingChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: hoursLabels,
-                    datasets: [
-                        { label: 'Pick Count', data: pickData, backgroundColor: '#a855f7', barPercentage: 0.8 },
-                        { label: 'PGI Count', data: pgiData, backgroundColor: '#0ea5e9', barPercentage: 0.8 },
-                        { label: 'Invoiced Count', data: invoiceData, backgroundColor: '#10b981', barPercentage: 0.8 },
-                        { label: 'Checking Completed', data: checkData, backgroundColor: '#f59e0b', barPercentage: 0.8 },
-                        { label: 'Loaded / Dispatched', data: loadData, backgroundColor: '#22c55e', barPercentage: 0.8 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { 
-                            grid: { color: '#1e293b', drawOnChartArea: true }, 
-                            ticks: { color: '#64748b', font: { family: 'monospace', size: 10 } } 
-                        },
-                        y: { 
-                            grid: { color: '#1e293b' }, 
-                            ticks: { color: '#64748b', stepSize: 1 }, 
-                            min: 0,
-                            suggestedMax: suggestedMaxY
-                        }
-                    },
-                    plugins: {
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' }, padding: 15 } 
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
-                    }
-                }
-            });
-        }
-
-        // BOOTSTRAP INITIALIZER SETUP RUNTIME
-        window.addEventListener('DOMContentLoaded', () => {
-            currentGlobalRdd = document.getElementById('tracker-rdd-select').value;
-            loadTrackerData();
+          rowHTML += `<td>${checkboxControl}</td>`;
         });
-    </script>
+
+        rowHTML += `
+          <td><span class="status-pill">${statusBadgeText}</span></td>
+          <td>
+            <div class="mini-progress-container">
+              <div class="mini-progress-bar" style="width: ${(stepResolution / 6) * 100}%;"></div>
+            </div>
+          </td>
+        `;
+
+        if (state.currentRole === 'admin') {
+          rowHTML += `<td><button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleAdminDeleteDispatchRow('${d.id}', '${d.dispatch_number}')">Delete</button></td>`;
+        }
+
+        tr.innerHTML = rowHTML;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTrucksInventoryTable() {
+      const tbody = document.getElementById('truck-table-body');
+      tbody.innerHTML = '';
+
+      if (state.trucks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:3rem;">No logistics hardware registered in database.</td></tr>`;
+        return;
+      }
+
+      state.trucks.forEach(t => {
+        const tr = document.createElement('tr');
+        
+        let targetDispatchNum = '--';
+        if (!t.is_available && t.assigned_dispatch_id) {
+          const match = state.dispatches.find(d => d.id === t.assigned_dispatch_id);
+          targetDispatchNum = match ? match.dispatch_number : 'Active Run';
+        }
+
+        const statusLabel = t.is_available ? '<span style="color:var(--success);font-weight:600;">🟢 Available</span>' : '<span style="color:var(--danger);font-weight:600;">🔴 In Use</span>';
+        
+        let actionBtn = '--';
+        if (state.currentRole === 'admin' && !t.is_available) {
+          actionBtn = `<button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleAdminManualReleaseTruck('${t.id}')">Release</button>`;
+        }
+
+        tr.innerHTML = `
+          <td class="monospace" style="font-weight:600;">${t.series_name}</td>
+          <td><span class="badge badge-${t.truck_type.toLowerCase()}">${t.truck_type}</span></td>
+          <td class="monospace">${t.plate_number}</td>
+          <td>${statusLabel}</td>
+          <td class="monospace" style="font-size:0.8rem;color:var(--text-muted);">${formatTimestampString(t.added_at)}</td>
+          <td class="monospace">${targetDispatchNum}</td>
+          <td>${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderPersonnelTable() {
+      const tbody = document.getElementById('personnel-table-body');
+      tbody.innerHTML = '';
+
+      if (state.personnel.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:2rem;">No personnel registered in the manifest database.</td></tr>`;
+        return;
+      }
+
+      state.personnel.forEach(p => {
+        const tr = document.createElement('tr');
+        
+        // Contextual actions check: Deletion restricted strictly to Admin role
+        let actionsMarkup = '';
+        if (state.currentRole === 'admin') {
+          actionsMarkup = `
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;margin-right:0.25rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
+            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeletePersonnel('${p.id}')">Remove</button>
+          `;
+        } else {
+          actionsMarkup = `
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleEditPersonnel('${p.id}', '${p.name}')">Edit</button>
+          `;
+        }
+
+        tr.innerHTML = `
+          <td style="font-weight:600;">${p.name}</td>
+          <td><span class="status-pill">${p.role.toUpperCase()}</span></td>
+          <td>${actionsMarkup}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = '';
+
+      if (state.userAccounts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem;">No customizable secondary profile overrides loaded.</td></tr>`;
+        return;
+      }
+
+      state.userAccounts.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="monospace" style="font-weight:600;">${u.username}</td>
+          <td><span class="badge" style="background:#475569;">${u.role.toUpperCase()}</span></td>
+          <td class="monospace">${u.password}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="handleDeleteSystemUser('${u.id}')">Revoke</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 9. INTERACTIVE USER WORKFLOW ACTION MANAGEMENT HANDLERS
+    function checkStepDisabledLockState(dispatch, stepName) {
+      if (!ROLE_PERMISSIONS[stepName].includes(state.currentRole)) return true;
+      
+      const idx = WORKFLOW_STEPS.indexOf(stepName);
+      if (idx === 0) return false; 
+      
+      const precedingStep = WORKFLOW_STEPS[idx - 1];
+      return !dispatch[precedingStep]; 
+    }
+
+    async function handleStandardStaffTick(dispatchId, stepName, element) {
+      if (!element.checked) {
+        element.checked = true; 
+        showToast('Standard workflows cannot reverse ticks.', 'warning');
+        return;
+      }
+
+      state.activeContextDispatchId = dispatchId;
+
+      if (stepName === 'pick') {
+        openModal('modal-pick');
+      } else if (stepName === 'checking') {
+        openModal('modal-checking');
+      } else if (stepName === 'loaded') {
+        openModal('modal-loaded');
+      } else {
+        await apiCommitStandardStepUpdate(dispatchId, stepName, {
+          [stepName]: true,
+          [`${stepName}_timestamp`]: new Date().toISOString(),
+          [`${stepName}_by`]: state.currentUser
+        });
+      }
+    }
+
+    async function apiCommitStandardStepUpdate(dispatchId, stepName, updatePayload) {
+      try {
+        let { error } = await supabaseClient.from('dispatches').update(updatePayload).eq('id', dispatchId);
+        if (error) throw error;
+        showToast(`Step context [${stepName.toUpperCase()}] committed successfully.`);
+        await apiFetchDispatches();
+        renderTrackerTable();
+        await logToAuditTrail(dispatchId, 'UPDATE_STEP', stepName, 'FALSE', 'TRUE');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function confirmPickStep() {
+      const selectedName = document.getElementById('m-pick-name').value;
+      if (!selectedName) return;
+
+      await apiCommitStandardStepUpdate(state.activeContextDispatchId, 'pick', {
+        pick: true,
+        pick_timestamp: new Date().toISOString(),
+        pick_by: selectedName
+      });
+      closeModal('modal-pick');
+    }
+
+    async function confirmCheckingStep() {
+      const rows = document.querySelectorAll('.m-checker-sel');
+      const names = [];
+      rows.forEach(r => { if(r.value) names.push(r.value); });
+
+      if (names.length === 0) {
+        showToast('Provide at least one specialized auditor asset.', 'warning');
+        return;
+      }
+      if (!state.selectedBayCode) {
+        showToast('Operational loading bay parameter assignment mandatory.', 'warning');
+        return;
+      }
+
+      await apiCommitStandardStepUpdate(state.activeContextDispatchId, 'checking', {
+        checking: true,
+        checking_timestamp: new Date().toISOString(),
+        checking_by: names, 
+        checking_bay: state.selectedBayCode
+      });
+      closeModal('modal-checking');
+    }
+
+    async function confirmLoadedStep() {
+      const truckId = document.getElementById('m-load-truck-select').value;
+      if (!truckId) {
+        showToast('No vehicle asset available for assignment criteria.', 'warning');
+        return;
+      }
+
+      try {
+        let { error: e1 } = await supabaseClient.from('dispatches').update({
+          loaded: true,
+          loaded_timestamp: new Date().toISOString(),
+          loaded_by: state.currentUser,
+          assigned_truck_id: truckId
+        }).eq('id', state.activeContextDispatchId);
+        if (e1) throw e1;
+
+        let { error: e2 } = await supabaseClient.from('trucks').update({
+          is_available: false,
+          assigned_dispatch_id: state.activeContextDispatchId
+        }).eq('id', truckId);
+        if (e2) throw e2;
+
+        showToast('Asset locking execution completed.');
+        closeModal('modal-loaded');
+        await apiFetchInitialState();
+        renderTrackerTable();
+      } catch(err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // 10. ADMINISTRATIVE REVERSIONS & INTERFACES (OVERRIDE ENGINES)
+    async function handleAdminCheckboxToggle(dispatchId, stepName, element) {
+      const targetDispatch = state.dispatches.find(d => d.id === dispatchId);
+      if (!targetDispatch) return;
+
+      if (!element.checked) {
+        const confirmed = confirm(`Are you sure you want to undo operational step [${stepName.toUpperCase()}] for dispatch block [${targetDispatch.dispatch_number}]? This will also clear down all workflow dependencies.`);
+        if (!confirmed) {
+          element.checked = true;
+          return;
+        }
+
+        const idx = WORKFLOW_STEPS.indexOf(stepName);
+        const stepsToClear = WORKFLOW_STEPS.slice(idx);
+        
+        let updatePayload = {};
+        stepsToClear.forEach(st => {
+          updatePayload[st] = false;
+          updatePayload[`${st}_timestamp`] = null;
+          updatePayload[`${st}_by`] = null;
+        });
+
+        if (stepsToClear.includes('checking')) {
+          updatePayload['checking_by'] = null;
+          updatePayload['checking_bay'] = null;
+        }
+        
+        let contextTruckReleaseId = null;
+        if (stepsToClear.includes('loaded') && targetDispatch.assigned_truck_id) {
+          contextTruckReleaseId = targetDispatch.assigned_truck_id;
+          updatePayload['assigned_truck_id'] = null;
+        }
+
+        try {
+          let { error: e1 } = await supabaseClient.from('dispatches').update(updatePayload).eq('id', dispatchId);
+          if (e1) throw e1;
+
+          if (contextTruckReleaseId) {
+            await supabaseClient.from('trucks').update({ is_available: true, assigned_dispatch_id: null }).eq('id', contextTruckReleaseId);
+          }
+
+          showToast('Operational chain parameters rolled back by administrator.', 'warning');
+          await logToAuditTrail(dispatchId, 'ADMIN_REVERSAL', stepName, 'TRUE', 'FALSE');
+          await apiFetchInitialState();
+          renderTrackerTable();
+        } catch(err) {
+          showToast(err.message, 'error');
+          element.checked = true;
+        }
+      } else {
+        state.activeContextDispatchId = dispatchId;
+        if (stepName === 'pick') openModal('modal-pick');
+        else if (stepName === 'checking') openModal('modal-checking');
+        else if (stepName === 'loaded') openModal('modal-loaded');
+        else {
+          await apiCommitStandardStepUpdate(dispatchId, stepName, {
+            [stepName]: true,
+            [`${stepName}_timestamp`]: new Date().toISOString(),
+            [`${stepName}_by`]: state.currentUser
+          });
+        }
+      }
+    }
+
+    async function handleAdminTimestampModification(dispatchId, stepName, value) {
+      if (!value) return;
+      const computedISOString = new Date(value).toISOString();
+      try {
+        let { error } = await supabaseClient.from('dispatches').update({
+          [`${stepName}_timestamp`]: computedISOString
+        }).eq('id', dispatchId);
+        if (error) throw error;
+        showToast('Operational timestamp modified safely.');
+        await logToAuditTrail(dispatchId, 'ADMIN_TIMESTAMP_EDIT', stepName, '', computedISOString);
+        await apiFetchDispatches();
+        renderTrackerTable();
+      } catch(e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function handleAdminDeleteDispatchRow(id, number) {
+      if(!confirm(`Destructive confirmation sequence: Remove entry ${number} entirely from logistics manifest?`)) return;
+      try {
+        const disp = state.dispatches.find(d => d.id === id);
+        let { error } = await supabaseClient.from('dispatches').delete().eq('id', id);
+        if (error) throw error;
+        
+        if (disp && disp.assigned_truck_id) {
+          await supabaseClient.from('trucks').update({ is_available: true, assigned_dispatch_id: null }).eq('id', disp.assigned_truck_id);
+        }
+
+        showToast('Logistics payload record expunged.');
+        await apiFetchInitialState();
+        renderTrackerTable();
+      } catch(e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function handleAdminManualReleaseTruck(truckId) {
+      try {
+        let { error } = await supabaseClient.from('trucks').update({
+          is_available: true,
+          assigned_dispatch_id: null
+        }).eq('id', truckId);
+        if (error) throw error;
+        showToast('Fleet equipment item released to tracking pool manually.');
+        await apiFetchInitialState();
+        renderTrucksInventoryTable();
+        if (state.selectedRDDId) { await apiFetchDispatches(); renderTrackerTable(); }
+      } catch(e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    // 11. DATA FORMS SUBMISSION ACTIONS (MANUAL & BULK IMPORTS)
+    async function submitNewRDD() {
+      const rawDate = document.getElementById('m-rdd-date').value;
+      const count = parseInt(document.getElementById('m-rdd-count').value) || 0;
+      
+      if (!rawDate) { showToast('Select operational validation target calendar date.', 'error'); return; }
+      const rddLabelText = formatPostgresDateToRDDLabel(rawDate);
+
+      try {
+        let { error } = await supabaseClient.from('rdds').insert({
+          rdd_name: rddLabelText,
+          rdd_date: rawDate,
+          initial_planning_count: count
+        });
+        if (error) throw error;
+        
+        showToast('Operational manifest run delivery reference instantiated.');
+        closeModal('modal-rdd');
+        await apiFetchInitialState();
+        populateRDDDropdowns();
+        renderSummaryBanner();
+        renderTrackerTable();
+      } catch(e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function submitSingleDispatch() {
+      if (!state.selectedRDDId) { showToast('Instantiate or select active operational RDD first.', 'warning'); return; }
+      const type = document.getElementById('disp-truck-type').value;
+      const num = document.getElementById('disp-number').value.trim();
+
+      if (!num) { showToast('Dispatch Tracking identification number required.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('dispatches').insert({
+          rdd_id: state.selectedRDDId,
+          dispatch_number: num,
+          truck_type: type
+        });
+        if (error) throw error;
+
+        document.getElementById('disp-number').value = '';
+        showToast(`Tracking identity sequence ${num} linked to layout execution structural node.`);
+        await apiFetchDispatches();
+        renderTrackerTable();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function submitMassDispatch() {
+      if (!state.selectedRDDId) { showToast('No active target RDD configuration parameters loaded.', 'warning'); return; }
+      const textarea = document.getElementById('disp-mass-text');
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      const lines = text.split('\n');
+      const validPayloads = [];
+      const validationClasses = ['AUV','4W','6W','10W','20F','40F'];
+
+      lines.forEach(line => {
+        const structuralTokens = line.trim().split(/[\t\s]+/);
+        if (structuralTokens.length >= 2) {
+          const typeCls = structuralTokens[0].toUpperCase();
+          const routeNum = structuralTokens[1];
+          if (validationClasses.includes(typeCls) && routeNum) {
+            validPayloads.push({
+              rdd_id: state.selectedRDDId,
+              truck_type: typeCls,
+              dispatch_number: routeNum
+            });
+          }
+        }
+      });
+
+      if (validPayloads.length === 0) {
+        showToast('No structured layout parameters could be mined from target dataset.', 'error');
+        return;
+      }
+
+      try {
+        let { error } = await supabaseClient.from('dispatches').insert(validPayloads);
+        if (error) throw error;
+        showToast(`Bulk Injection Complete. Processed parsing arrays count: ${validPayloads.length}`);
+        textarea.value = '';
+        await apiFetchDispatches();
+        renderTrackerTable();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function submitTruckAsset() {
+      const type = document.getElementById('truck-asset-type').value;
+      const plate = document.getElementById('truck-plate').value.trim().toUpperCase();
+
+      if (!plate) { showToast('Vehicle license tracking confirmation string missing.', 'error'); return; }
+
+      try {
+        let { data, error: countErr } = await supabaseClient.from('trucks').select('series_name').eq('truck_type', type);
+        if (countErr) throw countErr;
+        
+        const serialIdx = (data ? data.length : 0) + 1;
+        const generatedLabelSeries = `${type}${serialIdx}`;
+
+        let { error } = await supabaseClient.from('trucks').insert({
+          truck_type: type,
+          plate_number: plate,
+          series_name: generatedLabelSeries,
+          is_available: true
+        });
+        if (error) throw error;
+
+        showToast(`Fleet configuration asset item successfully committed as index: ${generatedLabelSeries}`);
+        document.getElementById('truck-plate').value = '';
+        await apiFetchInitialState();
+        renderTrucksInventoryTable();
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function submitNewPersonnelAsset() {
+      const name = document.getElementById('per-name').value.trim().toUpperCase();
+      const role = document.getElementById('per-role').value;
+
+      if (!name) { showToast('Personnel assignment identifier token missing.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('personnel').insert({ name, role });
+        if (error) throw error;
+        showToast(`Personnel entry tracking record created for: ${name}`);
+        document.getElementById('per-name').value = '';
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleEditPersonnel(id, currentName) {
+      const updatedName = prompt('Modify operator asset description token:', currentName);
+      if (updatedName === null) return; // User tracking cancel sequence
+      const normalizedValue = updatedName.trim().toUpperCase();
+      if (!normalizedValue) { showToast('Personnel description name element cannot map blank.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('personnel').update({ name: normalizedValue }).eq('id', id);
+        if (error) throw error;
+        showToast(`Operational manifest updated mapping identifier to: ${normalizedValue}`);
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleDeletePersonnel(id) {
+      // Security role gate validation backup check
+      if (state.currentRole !== 'admin') {
+        showToast('Restricted operation. Deletion authorization tied directly to administrative nodes.', 'error');
+        return;
+      }
+      if (!confirm('Are you sure you want to remove this operator asset?')) return;
+      try {
+        let { error } = await supabaseClient.from('personnel').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Personnel asset profile successfully terminated.');
+        await apiFetchPersonnelData();
+        renderPersonnelTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function submitNewSystemUser() {
+      const username = document.getElementById('usr-name').value.trim();
+      const password = document.getElementById('usr-pass').value.trim();
+      const role = document.getElementById('usr-role').value;
+
+      if (!username || !password) { showToast('Account creation requirements unfulfilled.', 'error'); return; }
+
+      try {
+        let { error } = await supabaseClient.from('user_accounts').insert({ username, password, role });
+        if (error) throw error;
+        showToast(`Access credentials provisioned for account node [${username}].`);
+        document.getElementById('usr-name').value = '';
+        document.getElementById('usr-pass').value = '';
+        await apiFetchSystemUsersData();
+        renderUsersTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function handleDeleteSystemUser(id) {
+      if (!confirm('Permanently revoke this account profile access authorization token?')) return;
+      try {
+        let { error } = await supabaseClient.from('user_accounts').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Access privileges successfully terminated.');
+        await apiFetchSystemUsersData();
+        renderUsersTable();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // 12. HARD-PRUNED REAL-TIME GRAPH ANALYTICS IMPLEMENTATION ENGINE
+    function calculateAndRenderOperationalMetricsDashboard() {
+      const activeRDDId = document.getElementById('db-rdd-dropdown').value;
+      const referenceTargetRDD = state.rdds.find(r => r.id === activeRDDId);
+      if (!referenceTargetRDD) return;
+
+      const displayScopeArray = state.dispatches; 
+
+      // Summary Cards calculations
+      document.getElementById('stat-total').innerText = displayScopeArray.length;
+      document.getElementById('stat-picked').innerText = displayScopeArray.filter(d => d.pick).length;
+      document.getElementById('stat-pgi').innerText = displayScopeArray.filter(d => d.pgi).length;
+      document.getElementById('stat-invoiced').innerText = displayScopeArray.filter(d => d.invoiced).length;
+      document.getElementById('stat-checked').innerText = displayScopeArray.filter(d => d.checking).length;
+      document.getElementById('stat-loaded').innerText = displayScopeArray.filter(d => d.loaded).length;
+
+      const operationalHoursMatrixIndexLabels = [];
+      const binData = { 
+        pick: Array(25).fill(0), 
+        pgi: Array(25).fill(0), 
+        invoiced: Array(25).fill(0), 
+        checking: Array(25).fill(0), 
+        loaded: Array(25).fill(0),
+        trucks: Array(25).fill(0)
+      };
+
+      const rightNowTimeMarker = new Date(); // Accurate system reference clock context
+
+      // Construct precise timeline array mapping architecture
+      const rddParts = referenceTargetRDD.rdd_date.split('-');
+      const rddY = parseInt(rddParts[0]);
+      const rddM = parseInt(rddParts[1]) - 1;
+      const rddD = parseInt(rddParts[2]);
+
+      const hourlyStartMarkersList = [];
+
+      for (let i = 0; i < 25; i++) {
+        const hrVal = (5 + i) % 24;
+        const dayOffset = (5 + i) >= 24 ? 1 : 0;
+        
+        // Compute precise date-time wall clock coordinates for this specific evaluation bin
+        const binDateTimeStartMarker = new Date(rddY, rddM, rddD + dayOffset, hrVal, 0, 0);
+        hourlyStartMarkersList.push(binDateTimeStartMarker);
+        operationalHoursMatrixIndexLabels.push(`${String(hrVal).padStart(2, '0')}:00`);
+      }
+
+      // Populate activity counts inside past or currently running active execution window only
+      displayScopeArray.forEach(d => {
+        WORKFLOW_STEPS.forEach(st => {
+          if (st === 'ds_printed') return; 
+          const tsField = `${st}_timestamp`;
+          if (d[st] && d[tsField]) {
+            const dateObj = new Date(d[tsField]);
+            const targetBinIdx = computeOperationalHourBinIndexIndex(dateObj);
+            
+            if (targetBinIdx >= 0 && targetBinIdx < 25) {
+              const binTimeLocation = hourlyStartMarkersList[targetBinIdx];
+              // Block projection calculation if history element has not eventuated yet
+              if (binTimeLocation <= rightNowTimeMarker) {
+                const bKey = st === 'checking' ? 'checking' : (st === 'invoiced' ? 'invoiced' : st);
+                if (binData[bKey]) binData[bKey][targetBinIdx]++;
+              }
+            }
+          }
+        });
+      });
+
+      // COMPUTE FLEET ASSET AVAILABILITY TIMELINE 
+      for (let i = 0; i < 25; i++) {
+        const hourStartMarker = hourlyStartMarkersList[i];
+
+        // STRICT REAL-TIME BOUNDARY: If hour bin window is ahead of real time, data stays hidden/zero
+        if (hourStartMarker > rightNowTimeMarker) {
+          binData.trucks[i] = 0;
+          // Clean dependencies arrays out to prevent data leaked into future projections
+          binData.pick[i] = 0;
+          binData.pgi[i] = 0;
+          binData.invoiced[i] = 0;
+          binData.checking[i] = 0;
+          binData.loaded[i] = 0;
+          continue;
+        }
+
+        let availableCount = 0;
+        state.trucks.forEach(t => {
+          const addedAtDate = new Date(t.added_at);
+          
+          // RULE 1: If truck added_at timestamp is later than this hour bin, it cannot exist yet here
+          if (addedAtDate > hourStartMarker) {
+            return; 
+          }
+
+          // RULE 2: Evaluate operational loading metrics constraints
+          const matchDisp = displayScopeArray.find(d => d.assigned_truck_id === t.id);
+          if (matchDisp && matchDisp.loaded && matchDisp.loaded_timestamp) {
+            const loadedTime = new Date(matchDisp.loaded_timestamp);
+            // If asset departed before this hour bin started, it's no longer in the terminal yard
+            if (loadedTime < hourStartMarker) {
+              // Asset is down the road -> excluded
+            } else {
+              availableCount++;
+            }
+          } else {
+            availableCount++;
+          }
+        });
+        binData.trucks[i] = availableCount;
+      }
+
+      if (state.chartInstance) { state.chartInstance.destroy(); }
+
+      const contextCanvasNode = document.getElementById('hourlyActivityChart').getContext('2d');
+      state.chartInstance = new Chart(contextCanvasNode, {
+        type: 'bar',
+        data: {
+          labels: operationalHoursMatrixIndexLabels,
+          datasets: [
+            { label: 'Pick Count', data: binData.pick, backgroundColor: '#8b5cf6' },
+            { label: 'PGI Count', data: binData.pgi, backgroundColor: '#0ea5e9' },
+            { label: 'Invoiced Count', data: binData.invoiced, backgroundColor: '#14b8a6' },
+            { label: 'Checking Completed', data: binData.checking, backgroundColor: '#f59e0b' },
+            { label: 'Loaded / Dispatched', data: binData.loaded, backgroundColor: '#22c55e' },
+            { label: 'Available Trucks', data: binData.trucks, backgroundColor: '#64748b' }
+          ]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: false, grid: { color: '#2a2d3a' }, ticks: { color: '#64748b' } },
+            y: { 
+              grid: { color: '#2a2d3a' }, 
+              ticks: { color: '#64748b', stepSize: 1 },
+              grace: '12%'
+            }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#f1f5f9', font: { family: 'Inter' } } },
+            tooltip: { mode: 'index', intersect: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#f1f5f9',
+              offset: 2,
+              font: { weight: 'bold', family: 'JetBrains Mono', size: 10 },
+              formatter: function(value) { return value > 0 ? value : ''; }
+            }
+          }
+        }
+      });
+    }
+
+    function computeOperationalHourBinIndexIndex(dateInstance) {
+      const h = dateInstance.getHours();
+      let calculatedBin = h - 5;
+      if (calculatedBin < 0) calculatedBin += 24;
+      return calculatedBin;
+    }
+
+    // 13. REALTIME SYNC SUBSCRIPTION CHANNELS LAYERS ENGINE
+    function connectSupabaseRealtimeSyncChannels() {
+      supabaseClient
+        .channel('schema-db-dispatches-changes-channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, async () => {
+          if (state.selectedRDDId) {
+            await apiFetchDispatches();
+            renderTrackerTable();
+            if (!document.getElementById('panel-dashboard').classList.contains('hidden')) {
+              calculateAndRenderOperationalMetricsDashboard();
+            }
+          }
+        })
+        .subscribe();
+    }
+
+    // 14. INTERFACES NAVIGATION LAYOUT CONTROL MODALITY UTILS
+    function switchTab(targetTabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+
+      const activeBtnElement = document.getElementById(`tab-link-${targetTabId}`);
+      if (activeBtnElement) activeBtnElement.classList.add('active');
+
+      const activePanelElement = document.getElementById(`panel-${targetTabId}`);
+      if (activePanelElement) activePanelElement.classList.remove('hidden');
+
+      if (targetTabId === 'tracker') renderTrackerTable();
+      else if (targetTabId === 'trucks') renderTrucksInventoryTable();
+      else if (targetTabId === 'dashboard') calculateAndRenderOperationalMetricsDashboard();
+      else if (targetTabId === 'personnel') renderPersonnelTable();
+      else if (targetTabId === 'users') renderUsersTable();
+    }
+
+    function toggleAddMode() {
+      const isMass = document.getElementById('mode-mass').checked;
+      if (isMass) {
+        document.getElementById('entry-single').classList.add('hidden');
+        document.getElementById('entry-mass').classList.remove('hidden');
+      } else {
+        document.getElementById('entry-single').classList.remove('hidden');
+        document.getElementById('entry-mass').classList.add('hidden');
+      }
+    }
+
+    function openModal(modalId) {
+      const targetM = document.getElementById(modalId);
+      if (!targetM) return;
+      
+      if (modalId === 'modal-pick') {
+        const sel = document.getElementById('m-pick-name');
+        sel.innerHTML = '';
+        state.personnel.filter(p => p.role === 'picker').forEach(n => sel.add(new Option(n.name, n.name)));
+      } else if (modalId === 'modal-checking') {
+        state.selectedBayCode = null;
+        document.getElementById('checker-names-container').innerHTML = '';
+        addCheckerSelectionRow(); 
+        rebuildOperationalBaysLayoutGridInterfaceGrid();
+      } else if (modalId === 'modal-loaded') {
+        const sel = document.getElementById('m-load-truck-select');
+        sel.innerHTML = '';
+        
+        const activeDispNode = state.dispatches.find(d => d.id === state.activeContextDispatchId);
+        if (activeDispNode) {
+          const compatibleAvailableTrucksList = state.trucks.filter(t => t.truck_type === activeDispNode.truck_type && t.is_available);
+          compatibleAvailableTrucksList.forEach(t => {
+            sel.add(new Option(`${t.series_name} — ${t.plate_number}`, t.id));
+          });
+        }
+      }
+
+      targetM.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function addCheckerSelectionRow() {
+      const container = document.getElementById('checker-names-container');
+      const childrenCount = container.children.length;
+      if (childrenCount >= 6) { showToast('Maximum threshold mapping parameters reached (6 names).', 'warning'); return; }
+
+      const div = document.createElement('div');
+      div.className = 'checker-row';
+      
+      const sel = document.createElement('select');
+      sel.className = 'form-control m-checker-sel';
+      sel.add(new Option('-- Select Checker Asset Personnel --', ''));
+      state.personnel.filter(p => p.role === 'checker').forEach(p => sel.add(new Option(p.name, p.name)));
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-danger';
+      removeBtn.style.padding = '0.5rem';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.onclick = function() { div.remove(); };
+
+      div.appendChild(sel);
+      div.appendChild(removeBtn);
+      container.appendChild(div);
+    }
+
+    function rebuildOperationalBaysLayoutGridInterfaceGrid() {
+      const targetGridElementNode = document.getElementById('bay-selection-grid');
+      targetGridElementNode.innerHTML = '';
+
+      for (let segmentIndex = 1; segmentIndex <= 8; segmentIndex++) {
+        ['A', 'B', 'C'].forEach(letter => {
+          const code = `${segmentIndex}${letter}`;
+          const b = document.createElement('button');
+          b.className = 'bay-btn';
+          b.innerText = code;
+          b.onclick = () => selectBayValueTargetNode(code, b);
+          targetGridElementNode.appendChild(b);
+        });
+      }
+
+      const extBtn = document.createElement('button');
+      extBtn.className = 'bay-btn extended-bay';
+      extBtn.innerText = 'EXTENDED STAGING AREA';
+      extBtn.onclick = () => selectBayValueTargetNode('EXTENDED', extBtn);
+      targetGridElementNode.appendChild(extBtn);
+    }
+
+    function selectBayValueTargetNode(code, referenceElementNode) {
+      document.querySelectorAll('.bay-btn').forEach(btn => btn.classList.remove('selected'));
+      referenceElementNode.classList.add('selected');
+      state.selectedBayCode = code;
+    }
+
+    async function onRDDChange() {
+      state.selectedRDDId = document.getElementById('rdd-dropdown').value;
+      await apiFetchDispatches();
+      renderSummaryBanner();
+      renderTrackerTable();
+    }
+
+    function onDashboardRDDChange() {
+      calculateAndRenderOperationalMetricsDashboard();
+    }
+
+    // 15. FORMATTING TOOLS STRUCTURAL CONVERSION COMPONENT MACROS
+    function formatPostgresDateToRDDLabel(dateInputString) {
+      if(!dateInputString) return '';
+      const d = new Date(dateInputString);
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      return `${months[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}, ${d.getFullYear()}`;
+    }
+
+    function formatTimestampString(isoTimestampString) {
+      if (!isoTimestampString) return '';
+      const d = new Date(isoTimestampString);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const minutesValuePadded = String(d.getMinutes()).padStart(2, '0');
+      const hoursValuePadded = String(d.getHours()).padStart(2, '0');
+      return `${months[d.getMonth()]} ${String(d.getDate()).padStart(2, '0')}, ${d.getFullYear()} ${hoursValuePadded}:${minutesValuePadded}`;
+    }
+
+    function formatToDatetimeLocalValue(isoTimestampString) {
+      if (!isoTimestampString) return '';
+      const d = new Date(isoTimestampString);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function computeOperationalProgressIndex(dispatch) {
+      let score = 0;
+      WORKFLOW_STEPS.forEach(st => { if (dispatch[st]) score++; });
+      return score;
+    }
+
+    function computeStatusBadgeText(dispatch) {
+      // Priority 1 Status Layout Matrix Overrides (Checking Done vs Pending Status Colors)
+      if (dispatch.loaded) return '<span class="status-done-green">DONE</span>';
+      if (dispatch.checking) return '<span class="status-done-green">DONE</span>';
+      
+      // Step dependency indicators inside workflow checklist pipelines
+      if (dispatch.ds_printed) return '<span class="status-pending-yellow">PENDING</span>';
+      if (dispatch.invoiced) return '⏳ DS PRINT';
+      if (dispatch.pgi) return '⏳ INVOICE';
+      if (dispatch.pick) return '⏳ PGI';
+      return '⏳ PICK';
+    }
+
+    // 16. REPOSITORY SECURITY LOG AUDIT INFRASTRUCTURE WRAPPER ENGINE
+    async function logToAuditTrail(dispatchId, action, field, oldVal, newVal) {
+      try {
+        await supabaseClient.from('audit_logs').insert({
+          dispatch_id: dispatchId,
+          action: action,
+          field: field,
+          old_value: oldVal,
+          new_value: newVal,
+          performed_by: state.currentUser
+        });
+      } catch (err) { console.error('Audit trace logging exception caught:', err); }
+    }
+
+    // 17. APPLICATION SYSTEM LIFECYCLE INITIALIZER ENTRY POINT
+    async function initializeAuthenticatedSession() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+      
+      document.getElementById('display-username').innerText = state.currentUser;
+      document.getElementById('display-role').innerText = state.currentRole;
+
+      // Handle visibility vectors based on authentication matrix roles
+      if (state.currentRole === 'admin') {
+        document.getElementById('th-actions').classList.remove('hidden');
+        document.getElementById('tab-link-personnel').classList.remove('hidden');
+        document.getElementById('tab-link-users').classList.remove('hidden');
+      } else if (state.currentRole === 'outbound') {
+        document.getElementById('th-actions').classList.add('hidden');
+        document.getElementById('tab-link-personnel').classList.remove('hidden');
+        document.getElementById('tab-link-users').classList.add('hidden');
+      } else {
+        document.getElementById('th-actions').classList.add('hidden');
+        document.getElementById('tab-link-personnel').classList.add('hidden');
+        document.getElementById('tab-link-users').classList.add('hidden');
+      }
+
+      await apiFetchInitialState();
+      populateRDDDropdowns();
+      renderSummaryBanner();
+      switchTab('tracker');
+      connectSupabaseRealtimeSyncChannels();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        }
+      });
+
+      if (checkSession()) {
+        initializeAuthenticatedSession();
+      }
+    });
+  </script>
 </body>
 </html>
