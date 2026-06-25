@@ -23,94 +23,125 @@
             color: #38bdf8;
             border-bottom: 2px solid #38bdf8;
         }
+        /* Custom scrollbar adjustments for sub-grids */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f111a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans antialiased">
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
 
-    <header class="bg-card-header px-6 py-4 flex justify-between items-center border-b border-gray-800">
-        <h1 class="text-xl font-bold text-gray-100 tracking-wide">Logistics Outbound Tracker</h1>
+    <header class="bg-card-header px-6 py-4 flex justify-between items-center border-b border-gray-800 shadow-lg z-10">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">📦</span>
+            <h1 class="text-xl font-bold text-gray-100 tracking-wide">Logistics Outbound Tracker</h1>
+        </div>
         <div class="flex items-center gap-4">
             <div class="text-right">
                 <p class="text-sm font-semibold text-gray-200">admin</p>
-                <p class="text-xs text-gray-400 font-mono">ADMIN</p>
+                <p class="text-xs text-emerald-400 font-mono flex items-center gap-1 justify-end">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE
+                </p>
             </div>
-            <button class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm py-1.5 px-4 rounded border border-gray-700 transition">
+            <button class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm py-1.5 px-4 rounded border border-gray-700 transition active:scale-95">
                 Logout
             </button>
         </div>
     </header>
 
-    <nav class="bg-card px-6 border-b border-gray-800 flex gap-6 text-sm font-medium">
-        <button onclick="switchTab('dispatch')" id="tab-dispatch" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 active-tab">
+    <nav class="bg-card px-6 border-b border-gray-800 flex gap-6 text-sm font-medium shadow-sm">
+        <button onclick="switchTab('dispatch')" id="tab-dispatch" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 active-tab cursor-pointer">
             📑 Dispatch Tracker
         </button>
-        <button onclick="switchTab('trucks')" id="tab-trucks" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2">
+        <button onclick="switchTab('trucks')" id="tab-trucks" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
             🚚 Available Trucks
         </button>
-        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
             📊 Dashboard
         </button>
-        <button onclick="switchTab('personnel')" id="tab-personnel" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2">
+        <button onclick="switchTab('personnel')" id="tab-personnel" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
             👥 Personnel List
         </button>
-        <button onclick="switchTab('user-mgmt')" id="tab-user-mgmt" class="py-3 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2">
+        <button onclick="switchTab('user-mgmt')" id="tab-user-mgmt" class="py-4 px-1 text-gray-400 hover:text-gray-200 transition flex items-center gap-2 cursor-pointer">
             🔐 User Management
         </button>
     </nav>
 
-    <main class="flex-1 p-6">
+    <main class="flex-1 p-6 max-w-[1600px] w-full mx-auto">
         
         <div id="view-dispatch" class="tab-view space-y-4">
-            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <label for="tracker-rdd-select" class="text-sm font-semibold text-gray-300">Select Active RDD:</label>
-                    <select id="tracker-rdd-select" onchange="handleRddChange(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-sky-500">
+            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
+                <div class="flex items-center gap-4">
+                    <label for="tracker-rdd-select" class="text-sm font-semibold text-gray-300">Active Reference Date (RDD):</label>
+                    <select id="tracker-rdd-select" onchange="handleRddChange(this.value)" class="bg-gray-900 border border-gray-700 text-gray-200 rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:border-sky-500 cursor-pointer">
                         <option value="2026-06-25">JUN 25, 2026</option>
                         <option value="2026-06-26" selected>JUN 26, 2026</option>
                         <option value="2026-06-27">JUN 27, 2026</option>
                     </select>
                 </div>
-                <span class="text-xs text-sky-400 font-mono">Controls data filters for all tabs</span>
+                <div class="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded border border-slate-800">
+                    <span class="text-xs text-sky-400 font-mono">⚠️ Shared Context State Engine Active</span>
+                </div>
             </div>
 
-            <div class="bg-card rounded-lg border border-gray-800 overflow-hidden">
-                <table class="w-full text-left text-sm border-collapse">
-                    <thead class="bg-gray-900 text-gray-300 font-semibold border-b border-gray-800">
-                        <tr>
-                            <th class="p-3">Type</th>
-                            <th class="p-3">Trip Number</th>
-                            <th class="p-3">Pick</th>
-                            <th class="p-3">PGI</th>
-                            <th class="p-3">Invoiced</th>
-                            <th class="p-3">Checked</th>
-                            <th class="p-3">Loaded</th>
-                            <th class="p-3">Status</th>
-                            <th class="p-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dispatch-table-body" class="divide-y divide-gray-800 text-gray-300">
-                        </tbody>
-                </table>
+            <div class="bg-card rounded-lg border border-gray-800 overflow-hidden shadow-xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-gray-900 text-gray-300 font-semibold border-b border-gray-800 uppercase tracking-wider">
+                            <tr>
+                                <th class="p-3.5 text-center w-12">No</th>
+                                <th class="p-3.5 w-20">Type</th>
+                                <th class="p-3.5 w-32">Trip Number</th>
+                                <th class="p-3.5 min-w-[140px]">Pick</th>
+                                <th class="p-3.5 min-w-[140px]">PGI</th>
+                                <th class="p-3.5 min-w-[140px]">Invoiced</th>
+                                <th class="p-3.5 min-w-[140px]">Checked</th>
+                                <th class="p-3.5 min-w-[140px]">Loaded</th>
+                                <th class="p-3.5 w-28 text-center">Status</th>
+                                <th class="p-3.5 w-36 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dispatch-table-body" class="divide-y divide-gray-800 text-gray-300">
+                            </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div id="view-trucks" class="tab-view hidden space-y-4">
-            <div class="bg-card p-4 rounded-lg border border-gray-800">
+            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
                 <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
-                    🚚 Available Trucks for RDD: <span id="trucks-active-date-display" class="text-sky-400 font-mono">...</span>
+                    🚚 Fleet Availability Logs
                 </h2>
+                <div class="text-sm bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
+                    Inherited Target Date: <span id="trucks-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
+                </div>
             </div>
-            <div class="bg-card p-6 rounded-lg border border-gray-800 text-center text-gray-500">
-                Truck logs filtered by the active tracker RDD dataset will render here.
+            <div class="bg-card p-8 rounded-lg border border-gray-800 text-center text-gray-500">
+                <p class="font-medium">Truck records are automatically synchronized with the chosen RDD above.</p>
+                <p class="text-xs mt-1 text-gray-600">Database queries auto-refresh on layout navigation selections.</p>
             </div>
         </div>
 
         <div id="view-dashboard" class="tab-view hidden space-y-6">
             
-            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-100">📊 Metrics Analysis Dashboard</h2>
-                <div class="text-sm">
-                    Filtering Data Target: <span id="dashboard-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
+            <div class="bg-card p-4 rounded-lg border border-gray-800 flex justify-between items-center shadow-md">
+                <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2">
+                    📊 Metrics Analysis Dashboard
+                </h2>
+                <div class="text-sm bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
+                    Data Query Target: <span id="dashboard-active-date-display" class="text-sky-400 font-mono font-bold">...</span>
                 </div>
             </div>
 
@@ -142,7 +173,9 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md lg:col-span-2">
+                
+                <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md lg:col-span-2 flex flex-col justify-between">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">Hourly Output Tracking Breakdown</h3>
                     <div class="h-80 w-full relative">
                         <canvas id="analyticsChart"></canvas>
                     </div>
@@ -150,51 +183,67 @@
 
                 <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md flex flex-col">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">What Is Checked In</h3>
-                    <div id="checked-in-list" class="space-y-3 overflow-y-auto max-h-80 pr-1">
+                    <div id="checked-in-list" class="space-y-3 overflow-y-auto max-h-80 pr-1 flex-1">
                         </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div id="view-personnel" class="tab-view hidden space-y-4">
+            <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md">
+                <h2 class="text-lg font-bold text-gray-100 mb-4">Personnel Management Registry</h2>
+                <div class="text-sm text-gray-400 max-w-xl">
+                    Add and look up authorized pickers or checking floor staff configured inside your database profile records.
                 </div>
             </div>
         </div>
 
-        <div id="view-personnel" class="tab-view hidden">
-            <div class="bg-card p-6 rounded-lg border border-gray-800">
-                <h2 class="text-lg font-bold text-gray-100 mb-2">Personnel Management Table</h2>
-            </div>
-        </div>
-
-        <div id="view-user-mgmt" class="tab-view hidden">
-            <div class="bg-card p-6 rounded-lg border border-gray-800">
-                <h2 class="text-lg font-bold text-gray-100 mb-2">System User Configurations</h2>
+        <div id="view-user-mgmt" class="tab-view hidden space-y-4">
+            <div class="bg-card p-6 rounded-lg border border-gray-800 shadow-md">
+                <h2 class="text-lg font-bold text-gray-100 mb-4">System User Configuration Tables</h2>
+                <div class="text-sm text-gray-400 max-w-xl">
+                    Administrative credentials management, security roles allocations, and token authorization adjustments.
+                </div>
             </div>
         </div>
 
     </main>
 
     <script>
-        // Initialize Supabase Connection Client
+        // --- CLIENT KEYS CONFIGURATION CONFIG ---
         const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
         const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
         const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        // APPLICATION STATE
+        // APPLICATION SHARED CONTEXT STATES
         let currentGlobalRdd = "2026-06-26"; 
         let currentActiveTab = "dispatch";
         let trackingChartInstance = null;
 
+        // GLOBAL DATE CHANGE LISTENERS
         function handleRddChange(newRddValue) {
             currentGlobalRdd = newRddValue;
+            console.log(`Global context shifted: ${currentGlobalRdd}`);
+
+            // Force query reload across operational scopes
             loadTrackerData();
             updateTabDataView(currentActiveTab);
         }
 
+        // NAVIGATION TAB ROUTING HANDLERS
         function switchTab(targetTabId) {
             currentActiveTab = targetTabId;
+
+            // DOM Visual active assignment updates
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-tab'));
             document.getElementById(`tab-${targetTabId}`).classList.add('active-tab');
 
+            // View toggle container frames
             document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
             document.getElementById(`view-${targetTabId}`).classList.remove('hidden');
 
+            // Dispatch targeted data payloads
             updateTabDataView(targetTabId);
         }
 
@@ -209,51 +258,162 @@
             }
         }
 
+        // VISUAL STRING DECORATOR FOR CONTEXT HEADERS
         function formatDisplayDate(isoDateStr) {
             if(!isoDateStr) return "...";
             const parts = isoDateStr.split('-');
             if(parts.length !== 3) return isoDateStr;
-            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            return `${months[parseInt(parts[1], 10) - 1]} ${parts[2]}, ${parts[0]}`;
+            const months = ["JUN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            return `JUN ${parts[2]}, ${parts[0]}`; // Formats to exact layout view context
         }
 
+        // DATABASE OPERATIONS: DISPATCH FETCH
         async function loadTrackerData() {
-            if(!supabase) return;
-            const { data, error } = await supabase.from('dispatches').select('*').eq('rdd', currentGlobalRdd);
-            if(!error) renderTrackerTable(data);
+            if(!supabase) {
+                console.warn("Supabase client missing initialization credentials.");
+                renderTrackerTable([]); // Call empty array fallback state
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('dispatches')
+                .select('*')
+                .eq('rdd', currentGlobalRdd)
+                .order('trip_number', { ascending: true });
+
+            if(error) {
+                console.error("Critical fault executing database read operation:", error);
+                return;
+            }
+            renderTrackerTable(data);
         }
 
+        // CONSTRUCT DYNAMIC OPERATIONAL GRID LOGS
         function renderTrackerTable(rows) {
             const container = document.getElementById('dispatch-table-body');
             container.innerHTML = "";
+            
             if(!rows || rows.length === 0) {
-                container.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-500 font-medium">No records found.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-gray-500 font-medium bg-slate-900/10">No tracking logs recorded under this RDD block profile.</td></tr>`;
                 return;
             }
-            rows.forEach(row => {
+
+            rows.forEach((row, idx) => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-950 transition";
+                tr.className = "hover:bg-gray-950/60 transition border-b border-gray-800/50 align-top";
+                
+                // Formatted metadata helper rendering engine string chunks
+                const metaSubLabel = (checked, timestamp, user) => {
+                    if (!checked || !timestamp) return '<div class="h-4"></div>';
+                    const dateObj = new Date(timestamp);
+                    const formattedTime = isNaN(dateObj.getTime()) ? "" : dateObj.toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'}) + " " + dateObj.toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit'});
+                    return `<div class="text-[10px] text-gray-500 font-mono mt-0.5 leading-none">${formattedTime}</div>
+                            <div class="text-[10px] text-gray-400 truncate max-w-[130px] font-medium">${user || 'system'}</div>`;
+                };
+
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-sky-400">${row.type || 'AUV'}</td>
-                    <td class="p-3 font-mono font-medium">${row.trip_number || 'N/A'}</td>
-                    <td class="p-3"><input type="checkbox" ${row.picked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
-                    <td class="p-3"><input type="checkbox" ${row.pgi ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
-                    <td class="p-3"><input type="checkbox" ${row.invoiced ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
-                    <td class="p-3"><input type="checkbox" ${row.checked ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
-                    <td class="p-3"><input type="checkbox" ${row.loaded ? 'checked' : ''} disabled class="rounded border-gray-700 bg-gray-900 text-sky-500"></td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${row.status === 'DONE' ? 'bg-green-950 text-green-400 border border-green-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">${row.status || 'PENDING'}</span></td>
-                    <td class="p-3 text-right"><button class="text-xs bg-red-950 text-red-400 border border-red-900 px-2.5 py-1 rounded">Delete</button></td>
+                    <td class="p-3.5 text-center font-mono text-gray-500 font-semibold">${idx + 1}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black tracking-wide ${row.type === '4W' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'bg-purple-950 text-purple-400 border border-purple-800'}">${row.type || 'AUV'}</span>
+                    </td>
+                    <td class="p-3.5 font-mono font-bold text-gray-200 tracking-wider">${row.trip_number || 'N/A'}</td>
+                    
+                    <td class="p-3.5">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" ${row.picked ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'picked', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Pick</span>
+                        </label>
+                        ${metaSubLabel(row.picked, row.picked_timestamp, row.picked_by)}
+                    </td>
+
+                    <td class="p-3.5">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" ${row.pgi ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'pgi', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">PGI</span>
+                        </label>
+                        ${metaSubLabel(row.pgi, row.pgi_timestamp, row.pgi_by)}
+                    </td>
+
+                    <td class="p-3.5">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" ${row.invoiced ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'invoiced', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Invoice</span>
+                        </label>
+                        ${metaSubLabel(row.invoiced, row.invoiced_timestamp, row.invoiced_by)}
+                    </td>
+
+                    <td class="p-3.5">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" ${row.checked ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'checked', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Check</span>
+                        </label>
+                        ${metaSubLabel(row.checked, row.checked_timestamp, row.checked_by)}
+                    </td>
+
+                    <td class="p-3.5">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" ${row.loaded ? 'checked' : ''} onchange="toggleWorkflowStep('${row.id}', 'loaded', this.checked)" class="rounded border-gray-700 bg-gray-900 text-sky-500 h-4 w-4 focus:ring-0 focus:ring-offset-0">
+                            <span class="text-xs text-gray-400 group-hover:text-gray-200 transition">Load</span>
+                        </label>
+                        ${metaSubLabel(row.loaded, row.loaded_timestamp, row.loaded_by)}
+                    </td>
+
+                    <td class="p-3.5 text-center">
+                        <span class="px-2.5 py-0.5 rounded text-[10px] font-black tracking-widest block border ${row.status === 'DONE' ? 'bg-green-950/80 text-green-400 border-green-800' : 'bg-amber-950/80 text-amber-400 border-amber-800'}">${row.status || 'PENDING'}</span>
+                    </td>
+                    <td class="p-3.5 text-center">
+                        <button onclick="deleteDispatchRecord('${row.id}')" class="text-[11px] font-bold bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900 hover:text-white px-3 py-1 rounded transition cursor-pointer active:scale-95">Delete</button>
+                    </td>
                 `;
                 container.appendChild(tr);
             });
         }
 
+        // SYNC CELL TOGGLES IN REAL TIME
+        async function toggleWorkflowStep(id, field, value) {
+            if(!supabase) return;
+            const updates = {};
+            updates[field] = value;
+            updates[`${field}_timestamp`] = value ? new Date().toISOString() : null;
+            updates[`${field}_by`] = value ? "admin" : null;
+
+            // Recalculate summary string conditions
+            const { data: currentItem } = await supabase.from('dispatches').select('*').eq('id', id).single();
+            if(currentItem) {
+                let checkDone = true;
+                const fieldsToCheck = ['picked', 'pgi', 'invoiced', 'checked', 'loaded'];
+                fieldsToCheck.forEach(f => {
+                    if(f === field) { if(!value) checkDone = false; }
+                    else if(!currentItem[f]) checkDone = false;
+                });
+                updates['status'] = checkDone ? 'DONE' : 'PENDING';
+            }
+
+            const { error } = await supabase.from('dispatches').update(updates).eq('id', id);
+            if(!error) loadTrackerData();
+        }
+
+        async function deleteDispatchRecord(id) {
+            if(!supabase || !confirm("Are you sure you want to delete this trip record log?")) return;
+            const { error } = await supabase.from('dispatches').delete().eq('id', id);
+            if(!error) loadTrackerData();
+        }
+
+        // DATABASE OPERATIONS: DASHBOARD METRICS CALCULATION ENGINE
         async function loadDashboardMetricsAndChart() {
             if(!supabase) return;
-            const { data, error } = await supabase.from('dispatches').select('*').eq('rdd', currentGlobalRdd);
-            if(error) return;
+            
+            const { data, error } = await supabase
+                .from('dispatches')
+                .select('*')
+                .eq('rdd', currentGlobalRdd);
 
-            // 1. Update Card Summaries
+            if(error) {
+                console.error("Dashboard engine calculation error payload interrupted:", error);
+                return;
+            }
+
+            // 1. Update Graphical Metric Cards Readouts
             document.getElementById('metric-total').textContent = data.length;
             document.getElementById('metric-picked').textContent = data.filter(r => r.picked).length;
             document.getElementById('metric-pgi').textContent = data.filter(r => r.pgi).length;
@@ -261,118 +421,142 @@
             document.getElementById('metric-checked').textContent = data.filter(r => r.checked).length;
             document.getElementById('metric-loaded').textContent = data.filter(r => r.loaded).length;
 
-            // 2. Build Monitor Sidebar List
+            // 2. Refresh Right Hand Monitor Sidebar Panel Grid
             renderCheckedInMonitor(data);
 
-            // 3. Process and Build Graph Engine
+            // 3. Process Live Data Matrix Arrays Into Chart Engine Arrays
             buildMetricsChart(data);
         }
 
+        // WHAT IS CHECKED IN DYNAMIC COMPONENT LOADER
         function renderCheckedInMonitor(data) {
             const container = document.getElementById('checked-in-list');
             container.innerHTML = "";
 
-            // Filters logs that contain an assigned active trip number
-            const activeDispatches = data.filter(r => r.trip_number);
+            // Filters active checked logs containing trip context data fields
+            const checkListItems = data.filter(r => r.trip_number);
 
-            if(activeDispatches.length === 0) {
-                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-4">No active checks.</p>`;
+            if(checkListItems.length === 0) {
+                container.innerHTML = `<div class="text-xs text-gray-600 text-center py-8 font-medium">No operational units are currently running active checking tasks.</div>`;
                 return;
             }
 
-            activeDispatches.forEach(row => {
+            checkListItems.forEach(row => {
                 const isDone = row.status === 'DONE';
                 const badgeStyle = isDone ? 'bg-green-950 text-green-400 border-green-800' : 'bg-amber-950 text-amber-400 border-amber-800';
                 
-                const item = document.createElement('div');
-                item.className = "bg-gray-900 border border-gray-800 rounded p-3 flex justify-between items-center shadow-sm";
-                item.innerHTML = `
+                const div = document.createElement('div');
+                div.className = "bg-gray-900/90 border border-gray-800/80 rounded-md p-3 flex justify-between items-center shadow-inner hover:border-gray-700/60 transition";
+                div.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-950 text-purple-400 border border-purple-800 font-mono">${row.type || 'AUV'}</span>
-                        <span class="font-mono text-gray-200 font-bold tracking-wide">${row.trip_number}</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black tracking-wide font-mono ${row.type === '4W' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'bg-purple-950 text-purple-400 border border-purple-800'}">${row.type || 'AUV'}</span>
+                        <span class="font-mono text-sm text-gray-200 font-bold tracking-wider">${row.trip_number}</span>
                     </div>
-                    <span class="px-2 py-0.5 rounded text-xs font-bold border ${badgeStyle}">${row.status || 'PENDING'}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black tracking-widest border uppercase ${badgeStyle}">${row.status || 'PENDING'}</span>
                 `;
-                container.appendChild(item);
+                container.appendChild(div);
             });
         }
 
+        // CHART TIME-STRIP BUCKETING ENGINE
         function buildMetricsChart(data) {
             const ctx = document.getElementById('analyticsChart').getContext('2d');
             if (trackingChartInstance) {
                 trackingChartInstance.destroy();
             }
 
-            // Custom timeline shift range: 05:00 through 04:00
+            // Explicit time mapping scale array
             const hoursLabels = ["05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "00:00", "01:00", "02:00", "03:00", "04:00"];
             
-            // Generate clean frequency tracks for chart lines
+            // Allocate blank matrix arrays matching specific index sizes
             const pickData = new Array(24).fill(0);
             const pgiData = new Array(24).fill(0);
             const invoiceData = new Array(24).fill(0);
             const checkData = new Array(24).fill(0);
             const loadData = new Array(24).fill(0);
 
-            // Time helper to convert timestamp string to our 24-position index array
+            // Converts ISO string timestamps accurately to the index position in hoursLabels
             function getTimelineIndex(timestampStr) {
                 if(!timestampStr) return -1;
                 const d = new Date(timestampStr);
                 if(isNaN(d.getTime())) return -1;
                 
-                const hr = d.getHours(); // Reads local standard client hour
+                const hr = d.getHours(); // Reads client timezone specific hour parameter
+                // Shift range calculations: 05:00 maps to index 0, 00:00 maps to index 19
                 return (hr >= 5) ? (hr - 5) : (hr + 19);
             }
 
-            // Iterate and map items to correct hour buckets
+            // Parse individual record elements into database bucket tracks
             data.forEach(row => {
                 if(row.picked && row.picked_timestamp) {
                     const idx = getTimelineIndex(row.picked_timestamp);
-                    if(idx !== -1) pickData[idx]++;
+                    if(idx >= 0 && idx < 24) pickData[idx]++;
                 }
                 if(row.pgi && row.pgi_timestamp) {
                     const idx = getTimelineIndex(row.pgi_timestamp);
-                    if(idx !== -1) pgiData[idx]++;
+                    if(idx >= 0 && idx < 24) pgiData[idx]++;
                 }
                 if(row.invoiced && row.invoiced_timestamp) {
                     const idx = getTimelineIndex(row.invoiced_timestamp);
-                    if(idx !== -1) invoiceData[idx]++;
+                    if(idx >= 0 && idx < 24) invoiceData[idx]++;
                 }
                 if(row.checked && row.checked_timestamp) {
                     const idx = getTimelineIndex(row.checked_timestamp);
-                    if(idx !== -1) checkData[idx]++;
+                    if(idx >= 0 && idx < 24) checkData[idx]++;
                 }
                 if(row.loaded && row.loaded_timestamp) {
                     const idx = getTimelineIndex(row.loaded_timestamp);
-                    if(idx !== -1) loadData[idx]++;
+                    if(idx >= 0 && idx < 24) loadData[idx]++;
                 }
             });
+
+            // Find max step size limit bounds to auto-scale graph axes comfortably
+            const combinedData = [...pickData, ...pgiData, ...invoiceData, ...checkData, ...loadData];
+            const maxValue = Math.max(...combinedData, 0);
+            const suggestedMaxY = maxValue > 0 ? maxValue + 1 : 2;
 
             trackingChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: hoursLabels,
                     datasets: [
-                        { label: 'Pick Count', data: pickData, backgroundColor: '#a855f7' },
-                        { label: 'PGI Count', data: pgiData, backgroundColor: '#0ea5e9' },
-                        { label: 'Invoiced Count', data: invoiceData, backgroundColor: '#10b981' },
-                        { label: 'Checking Completed', data: checkData, backgroundColor: '#f59e0b' },
-                        { label: 'Loaded / Dispatched', data: loadData, backgroundColor: '#22c55e' }
+                        { label: 'Pick Count', data: pickData, backgroundColor: '#a855f7', barPercentage: 0.8 },
+                        { label: 'PGI Count', data: pgiData, backgroundColor: '#0ea5e9', barPercentage: 0.8 },
+                        { label: 'Invoiced Count', data: invoiceData, backgroundColor: '#10b981', barPercentage: 0.8 },
+                        { label: 'Checking Completed', data: checkData, backgroundColor: '#f59e0b', barPercentage: 0.8 },
+                        { label: 'Loaded / Dispatched', data: loadData, backgroundColor: '#22c55e', barPercentage: 0.8 }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 }, min: 0 }
+                        x: { 
+                            grid: { color: '#1e293b', drawOnChartArea: true }, 
+                            ticks: { color: '#64748b', font: { family: 'monospace', size: 10 } } 
+                        },
+                        y: { 
+                            grid: { color: '#1e293b' }, 
+                            ticks: { color: '#64748b', stepSize: 1 }, 
+                            min: 0,
+                            suggestedMax: suggestedMaxY
+                        }
                     },
                     plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { color: '#94a3b8', font: { size: 11, weight: 'bold' }, padding: 15 } 
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
                     }
                 }
             });
         }
 
+        // BOOTSTRAP INITIALIZER SETUP RUNTIME
         window.addEventListener('DOMContentLoaded', () => {
             currentGlobalRdd = document.getElementById('tracker-rdd-select').value;
             loadTrackerData();
