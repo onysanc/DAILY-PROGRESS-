@@ -4,77 +4,139 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispatch Tracker</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#0b0f19] min-h-screen flex flex-col items-center justify-center font-sans antialiased text-slate-200 p-6">
+<body class="bg-[#0b0f19] min-h-screen flex items-center justify-center font-sans antialiased text-slate-200 p-6">
 
-    <div class="w-full max-w-4xl flex flex-col md:flex-row items-center justify-around gap-12">
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="w-full max-w-md bg-[#151c2e] p-8 rounded-xl shadow-xl border border-slate-800/50 transition-all duration-300">
+        <h1 class="text-2xl font-bold text-white mb-1 tracking-tight">Dispatch Tracker</h1>
+        <p class="text-sm text-slate-400 mb-6">Sign in with your username.</p>
         
-        <div class="bg-[#151c2e] w-full max-w-md p-8 rounded-xl shadow-xl border border-slate-800/50">
-            <h1 class="text-2xl font-bold text-white mb-1 tracking-tight">Dispatch Tracker</h1>
-            <p class="text-sm text-slate-400 mb-6">Sign in with your username.</p>
+        <!-- Added id and updated onsubmit to trigger the login simulation -->
+        <form id="login-form" class="space-y-4" onsubmit="simulateLogin(event)">
+            <div>
+                <label for="username" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Username</label>
+                <input type="text" id="username" name="username" autocomplete="off" required
+                    class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+            </div>
             
-            <form class="space-y-4" onsubmit="event.preventDefault();">
-                <div>
-                    <label for="username" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Username</label>
-                    <input type="text" id="username" name="username" autocomplete="off"
-                        class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                </div>
-                
-                <div>
-                    <label for="password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-                    <input type="password" id="password" name="password"
-                        class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                </div>
-                
-                <button type="submit" 
-                    class="w-full bg-[#1d5bf7] hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-colors mt-2">
-                    Log In
-                </button>
-            </form>
+            <div>
+                <label for="password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+                <input type="password" id="password" name="password" required
+                    class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+            </div>
+            
+            <button type="submit" id="login-btn"
+                class="w-full bg-[#1d5bf7] hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-all mt-2 flex justify-center items-center gap-2">
+                <span>Log In</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- 2. DASHBOARD SCREEN (Initially Hidden via 'hidden' class) -->
+    <div id="dashboard-screen" class="hidden w-full max-w-5xl flex flex-col gap-6 animate-fade-in">
+        <!-- Dashboard Header -->
+        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Dispatch Dashboard</h1>
+                <p class="text-sm text-slate-400">Welcome back, dispatcher.</p>
+            </div>
+            <button onclick="logout()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-colors">
+                Log Out
+            </button>
         </div>
 
+        <!-- Main Dashboard Layout Mock -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Example Chart / Grid Area where your tooltip lives -->
+            <div class="md:col-span-2 bg-[#151c2e] p-6 rounded-xl border border-slate-800/50 min-h-[300px] flex flex-col justify-between">
+                <p class="text-sm text-slate-400">Daily Progress Timeline (Hover map/chart tracking points to see metrics)</p>
+                <div class="h-48 bg-[#1e2640]/50 rounded-lg border border-dashed border-slate-700/60 flex items-center justify-center text-slate-500 text-xs">
+                    [ Main Dispatch Visual Map / Graph Grid Area ]
+                </div>
+            </div>
 
-        <div class="flex flex-col items-center">
-            <p class="text-xs text-slate-500 mb-2 uppercase tracking-widest font-bold">Dashboard Tooltip Component</p>
-            
-            <div class="bg-[#262626] w-52 p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white">
-                <div class="font-bold text-base mb-3 text-slate-100">16:00</div>
+            <!-- The Metrics Tooltip Panel Component -->
+            <div class="flex flex-col items-center md:items-start">
+                <p class="text-xs text-slate-500 mb-2 uppercase tracking-widest font-bold">Metrics Breakdown</p>
                 
-                <ul class="space-y-2">
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#3b82f6] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">Pick: <strong class="text-white font-semibold">4</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#a855f7] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">PGI: <strong class="text-white font-semibold">4</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#ec4899] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">Invoice: <strong class="text-white font-semibold">3</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#06b6d4] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">DS Printed: <strong class="text-white font-semibold">3</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#f59e0b] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">Check: <strong class="text-white font-semibold">3</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#10b981] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">Loaded: <strong class="text-white font-semibold">1</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                        <span class="w-4 h-4 bg-[#ef4444] rounded-sm shrink-0 border border-white/10"></span>
-                        <span class="text-neutral-300">Avail. Trucks: <strong class="text-white font-semibold">0</strong></span>
-                    </li>
-                </ul>
+                <div class="bg-[#262626] w-full max-w-xs p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white">
+                    <div class="font-bold text-base mb-3 text-slate-100">16:00</div>
+                    
+                    <ul class="space-y-2">
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#3b82f6] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">Pick: <strong class="text-white font-semibold">4</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#a855f7] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">PGI: <strong class="text-white font-semibold">4</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#ec4899] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">Invoice: <strong class="text-white font-semibold">3</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#06b6d4] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">DS Printed: <strong class="text-white font-semibold">3</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#f59e0b] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">Check: <strong class="text-white font-semibold">3</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#10b981] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">Loaded: <strong class="text-white font-semibold">1</strong></span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-[#ef4444] rounded-sm shrink-0 border border-white/10"></span>
+                            <span class="text-neutral-300">Avail. Trucks: <strong class="text-white font-semibold">0</strong></span>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-
     </div>
+
+    <!-- INTERACTIVE SCRIPT -->
+    <script>
+        function simulateLogin(event) {
+            // Prevent the browser from refreshing the page
+            event.preventDefault();
+            
+            const btn = document.getElementById('login-btn');
+            const loginScreen = document.getElementById('login-screen');
+            const dashboardScreen = document.getElementById('dashboard-screen');
+            
+            // 1. Show a quick visual loading state on the button
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Connecting...</span>
+            `;
+            
+            // 2. Simulate network delay (600ms) then switch views
+            setTimeout(() => {
+                loginScreen.classList.add('hidden');
+                dashboardScreen.classList.remove('hidden');
+                
+                // Reset button state for if they log back out later
+                btn.disabled = false;
+                btn.innerHTML = '<span>Log In</span>';
+            }, 600);
+        }
+
+        function logout() {
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+        }
+    </script>
 
 </body>
 </html>
