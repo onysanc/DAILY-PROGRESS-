@@ -74,8 +74,11 @@
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
 
       <div id="add-dispatch-panel" class="hidden bg-white p-5 rounded-xl shadow mb-5">
-        <h2 class="font-bold mb-3">Add Dispatches</h2>
-        <div class="grid grid-cols-2 gap-8">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold">Add Dispatches</h2>
+          <button onclick="App.toggleAddDispatchPanel()" id="add-dispatch-toggle" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Minimize</button>
+        </div>
+        <div id="add-dispatch-content" class="grid grid-cols-2 gap-8">
           <form onsubmit="App.addSingleDispatch(event)" class="space-y-2">
             <h3 class="text-sm font-semibold text-slate-500">Single Entry</h3>
             <div class="flex space-x-2">
@@ -142,10 +145,24 @@
 
     <!-- ---------- TAB 3: DASHBOARD ---------- -->
     <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
-      <div class="flex justify-between items-center mb-5">
+      <div class="flex justify-between items-center mb-3">
         <h1 class="text-2xl font-bold">Hourly Accomplishment — 5:00 AM to 5:00 AM</h1>
         <span class="text-xs text-slate-500">Based on the currently selected RDD</span>
       </div>
+
+      <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-start gap-8 flex-wrap">
+        <div class="flex-1 min-w-[280px]">
+          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">DONE</div>
+          <div id="dashboard-done-row" class="flex gap-2 flex-wrap mb-4"></div>
+          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">PENDING</div>
+          <div id="dashboard-pending-row" class="flex gap-2 flex-wrap"></div>
+        </div>
+        <div class="shrink-0">
+          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide text-right">TRUCK POOL</div>
+          <div id="dashboard-truck-pool" class="text-xs text-right space-y-0.5"></div>
+        </div>
+      </div>
+
       <div class="bg-white p-5 rounded-xl shadow flex-1 relative min-h-[400px]">
         <canvas id="activityChart"></canvas>
       </div>
@@ -381,11 +398,17 @@ const App = {
     const btn = document.getElementById('btn-' + tabId.replace('tab-', 'tab-'));
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
-    if (tabId === 'tab-analytics') this.renderChart();
+    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); }
   },
 
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+  toggleAddDispatchPanel() {
+    const content = document.getElementById('add-dispatch-content');
+    const btn = document.getElementById('add-dispatch-toggle');
+    const collapsed = content.classList.toggle('hidden');
+    btn.textContent = collapsed ? 'Expand' : 'Minimize';
+  },
   cancelMilestone() {
     this.state.pendingMilestoneUpdate = null;
     this.state.pendingRowEdit = null;
@@ -463,6 +486,7 @@ const App = {
     this.state.dispatches = data;
     this.renderDispatches();
     this.renderRddSummary();
+    this.refreshDashboardIfVisible();
   },
 
   async addSingleDispatch(e) {
@@ -772,6 +796,14 @@ const App = {
     if (error) { console.error(error); return; }
     this.state.trucks = data;
     this.renderTrucks();
+    this.refreshDashboardIfVisible();
+  },
+
+  refreshDashboardIfVisible() {
+    if (!document.getElementById('tab-analytics').classList.contains('hidden')) {
+      this.renderDashboardSummary();
+      this.renderChart();
+    }
   },
 
   async addTruck() {
@@ -851,6 +883,31 @@ const App = {
   },
 
   /* ---------------- DASHBOARD ---------------- */
+  renderDashboardSummary() {
+    const total = this.state.dispatches.length;
+    const colors = { pick: '#3b82f6', pgi: '#8b5cf6', invoiced: '#ec4899', ds_printed: '#06b6d4', checking: '#f59e0b', loaded: '#10b981' };
+    const labels = { pick: 'Picked', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checked', loaded: 'Loaded' };
+
+    const doneRow = document.getElementById('dashboard-done-row');
+    const pendingRow = document.getElementById('dashboard-pending-row');
+    doneRow.innerHTML = '';
+    pendingRow.innerHTML = '';
+
+    MILESTONE_FLOW.forEach(step => {
+      const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
+      const pending = total - done;
+      doneRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold text-white" style="background:${colors[step]}">${labels[step]} ${done}</span>`;
+      pendingRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">${labels[step]} ${pending}</span>`;
+    });
+
+    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    const pool = document.getElementById('dashboard-truck-pool');
+    pool.innerHTML = truckTypes.map(type => {
+      const count = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
+      return `<div>${type} - <b>${count}</b></div>`;
+    }).join('');
+  },
+
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
