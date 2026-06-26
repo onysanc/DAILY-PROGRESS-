@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   .hidden{display:none!important}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
@@ -730,7 +731,7 @@ const App = {
           { type: 'bar', label: 'Invoice', data: cutFuture(series.invoiced), backgroundColor: '#ec4899' },
           { type: 'bar', label: 'Check', data: cutFuture(series.checking), backgroundColor: '#f59e0b' },
           { type: 'bar', label: 'Loaded', data: cutFuture(series.loaded), backgroundColor: '#10b981' },
-          { type: 'line', label: 'Available Trucks', data: cutFuture(availableTrend), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.25, yAxisID: 'y1', fill: false, spanGaps: false },
+          { type: 'bar', label: 'Available Trucks', data: cutFuture(availableTrend), backgroundColor: '#ef4444' },
         ],
       },
       options: {
@@ -738,10 +739,19 @@ const App = {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          // stacked:false (the default) + multiple bar datasets = each checkbox gets its own bar, side by side, per hour
+          // stacked:false (the default) + multiple bar datasets = each checkbox (and trucks) gets its own bar, side by side, per hour
           x: { title: { display: true, text: 'Hour' } },
-          y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 }, title: { display: true, text: 'Milestones completed' } },
-          y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Trucks available' } },
+          y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 }, title: { display: true, text: 'Count' } },
+        },
+        plugins: {
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            offset: 2,
+            color: '#334155',
+            font: { size: 9, weight: 'bold' },
+            formatter: (value) => (value === null || value === 0 ? '' : value),
+          },
         },
       },
     });
