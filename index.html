@@ -1219,10 +1219,42 @@ const App = {
       { key: 'trucks',   label: 'Avail. Trucks',  color: '#eab308', data: cutFuture(availableTrend) },
     ];
     this.updateLiveSummaryBox(series, labels, nowBucket);
+
+    // Target line = whichever is higher: initial plan or actual dispatches entered
+    const targetCount = Math.max(planCount, dispatchCount);
+    const targetLineDataset = {
+      type: 'line',
+      label: `Target (${targetCount})`,
+      data: Array(24).fill(targetCount),
+      borderColor: '#f97316',
+      borderWidth: 2.5,
+      borderDash: [8, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      backgroundColor: 'transparent',
+      datalabels: {
+        display: (ctx) => ctx.dataIndex === 23,
+        anchor: 'end',
+        align: 'right',
+        offset: 4,
+        backgroundColor: '#f97316',
+        borderRadius: 6,
+        padding: { top: 3, bottom: 3, left: 6, right: 6 },
+        font: { size: 12, weight: 'bold' },
+        color: '#fff',
+        formatter: () => `Target: ${targetCount}`,
+      },
+    };
+
     this.state.chartInstance = new Chart(ctx, {
       data: {
         labels,
-        datasets: series.map(s => ({ type: 'bar', label: s.label, data: s.data, backgroundColor: s.color })),
+        datasets: [
+          ...series.map(s => ({ type: 'bar', label: s.label, data: s.data, backgroundColor: s.color })),
+          targetLineDataset,
+        ],
       },
       options: {
         responsive: true,
