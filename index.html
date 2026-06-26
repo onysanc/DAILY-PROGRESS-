@@ -410,7 +410,6 @@ const ROLE_PERMISSIONS = {
 const TRUCK_CANCEL_ROLES = ['admin', 'outbound', 'transport'];
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
-const customBarRemarks = {};
 const App = {
   state: {
     currentUser: null,
@@ -1259,21 +1258,6 @@ const App = {
       },
       options: {
         responsive: true,
-        // ADD THIS ONCLICK HANDLER BLOCK 👇
-  onClick: (event, elements, chart) => {
-    if (elements.length > 0) {
-      const elementIndex = elements[0].index;
-      const labelName = chart.data.labels[elementIndex];
-      
-      const existingNote = customBarRemarks[elementIndex] || "";
-      const userRemark = prompt(`Enter custom chart remarks for "${labelName}":`, existingNote);
-      
-      if (userRemark !== null) {
-        customBarRemarks[elementIndex] = userRemark.toUpperCase(); // Automatically makes text UPPERCASE
-        chart.update(); // Re-renders the chart with your new labels
-      }
-    }
-  },
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { top: 18 } },
@@ -1286,7 +1270,7 @@ const App = {
             grid: { color: gridColor },
           },
           y: {
-            beginAtZero: true, grace: 1,
+            beginAtZero: true, grace: 1,	
             autoSkip: false,
             ticks: { stepSize: 1, color: textColor, font: { size: 13 } },
             title: { display: true, text: 'Cumulative Count', color: textColor, font: { size: 14, weight: 'bold' } },
@@ -1305,13 +1289,9 @@ const App = {
             padding: { top: 3, bottom: 3, left: 6, right: 6 },
             font: { size: 13, weight: 'bold' }, color: '#fff',
             display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
-            
-            // REPLACE FORMATTER WITH THIS VERSION 👇
-            formatter: (value, ctx) => {
-              const customRemark = customBarRemarks[ctx.dataIndex];
-              return customRemark ? `${value} \n [ ${customRemark} ]` : value;
-            },
+            formatter: (value) => value,
           },
+        },
       },
     });
   },
