@@ -86,11 +86,12 @@
             </div>
           </form>
           <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
-            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — "TYPE DISPATCH#" one per line</h3>
-            <div class="flex space-x-2">
-              <textarea id="mass-dispatch-input" rows="2" placeholder="AUV 12345678&#10;4W 87654321" class="flex-1 p-2 border rounded-lg font-mono text-xs"></textarea>
-              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold self-stretch">Add All</button>
-            </div>
+            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — one row per line: <code class="bg-slate-100 px-1 rounded">TYPE&lt;tab or space&gt;DISPATCH#</code></h3>
+            <textarea id="mass-dispatch-input" rows="10" oninput="App.previewMassDispatch()"
+                      placeholder="AUV&#9;10130422&#10;AUV&#9;10130423&#10;6W&#9;10130437&#10;4W&#9;10130438"
+                      class="w-full p-2 border rounded-lg font-mono text-xs"></textarea>
+            <div id="mass-dispatch-preview" class="text-xs text-slate-500 min-h-[1.2em]"></div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold w-full">Add All</button>
           </form>
         </div>
       </div>
@@ -417,13 +418,13 @@ const App = {
     await this.loadDispatches();
   },
 
-  async addMassDispatch(e) {
-    e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
-    const text = document.getElementById('mass-dispatch-input').value;
+  parseMassPasteText(text) {
     const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const inserts = [];
+    const existingNumbers = new Set(this.state.dispatches.map(d => d.dispatch_number));
+    const seenInPaste = new Set();
+    const valid = [];
     const skipped = [];
+    const duplicates = [];
 
     text.split('\n').forEach(line => {
       const trimmed = line.trim();
@@ -431,20 +432,52 @@ const App = {
       const parts = trimmed.split(/\s+/);
       const type = (parts[0] || '').toUpperCase();
       const num = parts[1];
-      if (parts.length >= 2 && validTypes.includes(type) && num) {
-        inserts.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
-      } else {
+
+      if (parts.length < 2 || !validTypes.includes(type) || !num) {
         skipped.push(trimmed);
+        return;
       }
+      if (existingNumbers.has(num) || seenInPaste.has(num)) {
+        duplicates.push(`${type} ${num}`);
+        return;
+      }
+      seenInPaste.add(num);
+      valid.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
     });
 
-    if (inserts.length) {
-      const { error } = await supabaseClient.from('dispatches').insert(inserts);
+    return { valid, skipped, duplicates };
+  },
+
+  previewMassDispatch() {
+    const text = document.getElementById('mass-dispatch-input').value;
+    const box = document.getElementById('mass-dispatch-preview');
+    if (!text.trim()) { box.textContent = ''; return; }
+    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
+    let msg = `<span class="text-emerald-600 font-semibold">${valid.length} ready to add</span>`;
+    if (duplicates.length) msg += ` · <span class="text-amber-600 font-semibold">${duplicates.length} duplicate (skipped)</span>`;
+    if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
+    box.innerHTML = msg;
+  },
+
+  async addMassDispatch(e) {
+    e.preventDefault();
+    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    const text = document.getElementById('mass-dispatch-input').value;
+    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
+
+    if (valid.length) {
+      const { error } = await supabaseClient.from('dispatches').insert(valid);
       if (error) return alert(error.message);
       document.getElementById('mass-dispatch-input').value = '';
+      document.getElementById('mass-dispatch-preview').innerHTML = '';
       await this.loadDispatches();
     }
-    if (skipped.length) alert(`Added ${inserts.length}. Skipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`);
+    if (skipped.length || duplicates.length) {
+      let report = `Added ${valid.length} dispatch(es).`;
+      if (duplicates.length) report += `\n\nSkipped ${duplicates.length} duplicate dispatch number(s):\n${duplicates.join('\n')}`;
+      if (skipped.length) report += `\n\nSkipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`;
+      alert(report);
+    }
   },
 
   renderDispatches() {
