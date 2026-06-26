@@ -135,25 +135,145 @@
       <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
     </section>
     <!-- ---------- TAB 3: DASHBOARD ---------- -->
-    <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
-      <div class="flex justify-between items-center mb-3">
-        <h1 class="text-2xl font-bold">Hourly Accomplishment — <span id="dashboard-heading-rdd">RDD</span> &nbsp;<span class="text-slate-400 font-normal text-xl">as of</span> <span id="dashboard-heading-time" class="text-blue-600"></span></h1>
+    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3">
+
+      <!-- HEADING -->
+      <div>
+        <h1 class="text-xl font-extrabold tracking-tight">
+          PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-700">RDD —</span>
+          &nbsp;<span class="text-slate-500 font-semibold">AS OF</span>
+          <span id="dashboard-heading-time" class="text-blue-700"></span>
+        </h1>
       </div>
-      <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-start gap-8 flex-wrap">
-        <div class="flex-1 min-w-[280px]">
-          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">DONE</div>
-          <div id="dashboard-done-row" class="flex gap-2 flex-wrap mb-4"></div>
-          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">PENDING</div>
-          <div id="dashboard-pending-row" class="flex gap-2 flex-wrap"></div>
+
+      <!-- ROW 1: milestone table + bay grid -->
+      <div class="flex gap-3 flex-wrap">
+
+        <!-- Milestone progress table -->
+        <div class="bg-white rounded-xl shadow overflow-hidden shrink-0">
+          <table class="text-xs border-collapse" id="dash-milestone-table">
+            <thead>
+              <tr>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 w-24"></th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PICKED</th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PGI</th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">INVOICED</th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">DS PRINTED</th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">CHECKED</th>
+                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">LOADED</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="border border-slate-200 px-3 py-1.5 font-bold text-emerald-600">DONE</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pick-done">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pgi-done">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-invoiced-done">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-ds_printed-done">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-checking-done">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-loaded-done">—</td>
+              </tr>
+              <tr>
+                <td class="border border-slate-200 px-3 py-1.5 font-bold text-amber-500">PENDING</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pick-pending">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pgi-pending">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-invoiced-pending">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-ds_printed-pending">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-checking-pending">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-loaded-pending">—</td>
+              </tr>
+              <tr class="bg-slate-50">
+                <td class="border border-slate-200 px-3 py-1.5 font-bold text-slate-600">PROGRESS</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pick-pct">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pgi-pct">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-invoiced-pct">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-ds_printed-pct">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-checking-pct">—</td>
+                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-loaded-pct">—</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div class="shrink-0 min-w-[140px]">
-          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide text-right">AVAILABLE TRUCKS</div>
-          <div id="dashboard-truck-pool" class="text-xs text-right space-y-0.5"></div>
+
+        <!-- Bay occupancy grid -->
+        <div class="bg-white rounded-xl shadow overflow-hidden flex-1 min-w-[420px]">
+          <table class="text-xs border-collapse w-full" id="dash-bay-table">
+            <thead>
+              <tr>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 w-8"></th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 1</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 2</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 3</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 4</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 5</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 6</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 7</th>
+                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 8</th>
+              </tr>
+            </thead>
+            <tbody id="dash-bay-tbody">
+              <!-- rendered by JS -->
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="bg-white p-5 rounded-xl shadow flex-1 relative min-h-[400px]">
-        <canvas id="activityChart"></canvas>
+
+      <!-- ROW 2: chart + right panel (remarks + truck pool table + truck pool list) -->
+      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
+
+        <!-- Chart -->
+        <div class="bg-white p-4 rounded-xl shadow flex-1 relative min-h-[340px]">
+          <canvas id="activityChart"></canvas>
+        </div>
+
+        <!-- Right panel -->
+        <div class="flex flex-col gap-0 shrink-0 w-72">
+
+          <!-- Remarks now -->
+          <div class="bg-white rounded-t-xl shadow border-b border-slate-100 px-4 py-2">
+            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
+            <textarea id="dash-remarks-now" rows="3"
+              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="Type current remarks…"></textarea>
+          </div>
+
+          <!-- Truck pool summary table -->
+          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
+            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL</div>
+            <table class="text-xs border-collapse w-full">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">TRUCK</th>
+                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PLANNED</th>
+                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">AVAILABLE</th>
+                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">LOADED</th>
+                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PROGRESS</th>
+                </tr>
+              </thead>
+              <tbody id="dash-truckpool-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Remarks previous hours -->
+          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
+            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
+            <textarea id="dash-remarks-prev" rows="2"
+              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="Previous hour notes…"></textarea>
+          </div>
+
+          <!-- Available truck list by type -->
+          <div class="bg-white rounded-b-xl shadow px-4 py-2 flex-1 overflow-y-auto">
+            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL — PLATES</div>
+            <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
+              <thead id="dash-truckpool-plates-head"></thead>
+              <tbody id="dash-truckpool-plates-body"></tbody>
+            </table>
+          </div>
+
+        </div>
       </div>
+
     </section>
     <!-- ---------- TAB 4: PERSONNEL ---------- -->
     <section id="tab-personnel" class="tab-content hidden">
@@ -788,40 +908,124 @@ const App = {
   /* ---------------- DASHBOARD ---------------- */
   renderDashboardSummary() {
     const total = this.state.dispatches.length;
-    const colors = { pick: '#3b82f6', pgi: '#8b5cf6', invoiced: '#ec4899', ds_printed: '#06b6d4', checking: '#f59e0b', loaded: '#10b981' };
-    const labels = { pick: 'Picked', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checked', loaded: 'Loaded' };
-    const doneRow = document.getElementById('dashboard-done-row');
-    const pendingRow = document.getElementById('dashboard-pending-row');
-    doneRow.innerHTML = '';
-    pendingRow.innerHTML = '';
-    MILESTONE_FLOW.forEach(step => {
+    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+
+    // ── Milestone table ──
+    steps.forEach(step => {
       const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
       const pending = total - done;
-      doneRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold text-white" style="background:${colors[step]}">${labels[step]} ${done}</span>`;
-      pendingRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">${labels[step]} ${pending}</span>`;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      const doneEl = document.getElementById(`dm-${step}-done`);
+      const pendEl = document.getElementById(`dm-${step}-pending`);
+      const pctEl  = document.getElementById(`dm-${step}-pct`);
+      if (doneEl) doneEl.textContent = done;
+      if (pendEl) pendEl.textContent = pending;
+      if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    // Truck pool: individual plates grouped by type, only Available ones
-    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const pool = document.getElementById('dashboard-truck-pool');
-    let poolHtml = '';
-    let anyTruck = false;
-    truckTypes.forEach(type => {
-      const available = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available');
-      if (!available.length) return;
-      anyTruck = true;
-      // type header
-      poolHtml += `<div class="text-slate-400 font-bold mt-1 first:mt-0">${type}</div>`;
-      available.forEach((t, i) => {
-        poolHtml += `<div class="text-slate-600">${type}${i + 1} &nbsp;<span class="text-slate-400">${t.plate_number}</span></div>`;
+    // ── Bay occupancy grid ──
+    // Build a map: "bay-letter" → dispatch number (from checking data)
+    // bay_location is stored as e.g. "1A", "3C", "Extended"
+    const bayMap = {};
+    this.state.dispatches.forEach(d => {
+      if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
+        bayMap[d.bay_location] = d.dispatch_number;
+      }
+    });
+    const tbody = document.getElementById('dash-bay-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      ['A', 'B', 'C'].forEach(letter => {
+        const tr = document.createElement('tr');
+        let html = `<td class="border border-slate-200 px-2 py-1.5 font-bold text-slate-600 text-center">${letter}</td>`;
+        for (let bay = 1; bay <= 8; bay++) {
+          const key = `${bay}${letter}`;
+          const occupied = bayMap[key];
+          html += occupied
+            ? `<td class="border border-slate-200 px-1 py-1.5 text-center text-blue-700 font-semibold text-[11px]">${occupied}</td>`
+            : `<td class="border border-slate-200 px-1 py-1.5 text-center text-slate-300 text-[10px]">VACANT</td>`;
+        }
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
       });
-    });
-    pool.innerHTML = anyTruck ? poolHtml : `<div class="text-slate-400 italic">No available trucks</div>`;
+    }
 
-    // Update heading: RDD date + live time
+    // ── Truck pool summary table ──
+    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    const tpTbody = document.getElementById('dash-truckpool-tbody');
+    if (tpTbody) {
+      let totalPlanned = 0, totalAvail = 0, totalLoaded = 0;
+      let rows = '';
+      truckTypes.forEach(type => {
+        // "planned" = all trucks of this type ever added
+        const all      = this.state.trucks.filter(t => t.truck_type === type);
+        const avail    = all.filter(t => t.status === 'Available').length;
+        const loaded   = all.filter(t => t.status === 'Dispatched').length;
+        const planned  = all.length;
+        const pct      = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
+        totalPlanned  += planned;
+        totalAvail    += avail;
+        totalLoaded   += loaded;
+        rows += `<tr>
+          <td class="border border-slate-200 px-2 py-1 text-center font-semibold">${type}</td>
+          <td class="border border-slate-200 px-2 py-1 text-center">${planned}</td>
+          <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600 font-bold">${avail}</td>
+          <td class="border border-slate-200 px-2 py-1 text-center text-blue-600 font-bold">${loaded}</td>
+          <td class="border border-slate-200 px-2 py-1 text-center text-slate-600">${pct}%</td>
+        </tr>`;
+      });
+      const totPct = totalPlanned > 0 ? Math.round((totalLoaded / totalPlanned) * 100) : 0;
+      rows += `<tr class="bg-slate-50 font-bold">
+        <td class="border border-slate-200 px-2 py-1 text-center">TOTAL</td>
+        <td class="border border-slate-200 px-2 py-1 text-center">${totalPlanned}</td>
+        <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600">${totalAvail}</td>
+        <td class="border border-slate-200 px-2 py-1 text-center text-blue-600">${totalLoaded}</td>
+        <td class="border border-slate-200 px-2 py-1 text-center">${totPct}%</td>
+      </tr>`;
+      tpTbody.innerHTML = rows;
+    }
+
+    // ── Truck pool plates list (columns per type) ──
+    const thead = document.getElementById('dash-truckpool-plates-head');
+    const pbody = document.getElementById('dash-truckpool-plates-body');
+    if (thead && pbody) {
+      // Only types that have ≥1 available truck
+      const activeCols = truckTypes.filter(type =>
+        this.state.trucks.some(t => t.truck_type === type && t.status === 'Available')
+      );
+      if (!activeCols.length) {
+        thead.innerHTML = '';
+        pbody.innerHTML = `<tr><td class="text-slate-400 italic px-2 py-1 text-center" colspan="6">No available trucks</td></tr>`;
+      } else {
+        thead.innerHTML = `<tr>${activeCols.map(t =>
+          `<th class="border border-slate-200 px-2 py-1 bg-slate-50 font-bold text-slate-600">${t}</th>`
+        ).join('')}</tr>`;
+        // Build columns
+        const cols = activeCols.map(type => {
+          return this.state.trucks
+            .filter(t => t.truck_type === type && t.status === 'Available')
+            .map((t, i) => `${type}${i + 1}`);
+        });
+        const maxRows = Math.max(...cols.map(c => c.length));
+        let pbHtml = '';
+        for (let r = 0; r < maxRows; r++) {
+          pbHtml += `<tr>${cols.map(col =>
+            `<td class="border border-slate-200 px-2 py-1 text-center text-slate-700">${col[r] || ''}</td>`
+          ).join('')}</tr>`;
+        }
+        pbody.innerHTML = pbHtml;
+      }
+    }
+
+    // ── Heading RDD label ──
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    const rddLabel = rdd ? rdd.rdd_date : '—';
-    document.getElementById('dashboard-heading-rdd').textContent = `RDD ${rddLabel}`;
+    if (rdd) {
+      const d = new Date(rdd.rdd_date + 'T00:00:00');
+      const formatted = d.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+      document.getElementById('dashboard-heading-rdd').textContent = `RDD ${formatted}`;
+    } else {
+      document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
+    }
   },
   startDashboardClock() {
     const tick = () => {
@@ -857,7 +1061,7 @@ const App = {
       });
     });
 
-    // Convert to cumulative and mask future buckets with null
+    // Convert to cumulative, mask future buckets with null
     const toCumulative = (arr) => {
       let running = 0;
       return arr.map((v, i) => {
@@ -867,7 +1071,7 @@ const App = {
       });
     };
 
-    // Available trucks cumulative trend (already inherently cumulative logic)
+    // Available trucks trend
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
@@ -897,7 +1101,7 @@ const App = {
           { type: 'bar', label: 'DS Printed',       data: toCumulative(raw.ds_printed),  backgroundColor: '#06b6d4' },
           { type: 'bar', label: 'Check',            data: toCumulative(raw.checking),    backgroundColor: '#f59e0b' },
           { type: 'bar', label: 'Loaded',           data: toCumulative(raw.loaded),      backgroundColor: '#10b981' },
-          { type: 'bar', label: 'Available Trucks', data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
+          { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
         ],
       },
       options: {
