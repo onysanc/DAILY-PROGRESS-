@@ -13,6 +13,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="chart-labels.js"></script>
 <style>
   .hidden{display:none!important}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
@@ -1103,21 +1106,33 @@ const App = {
           { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
         ],
       },
-      options: {
+options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        // Updated to true to make individual bars easier to click
+        interaction: { mode: 'index', intersect: true },
         scales: {
-          x: { title: { display: true, text: 'Hour', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
-          y: { beginAtZero: true, max: yMax, grace: '10%', ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor }, title: { display: true, text: 'Cumulative Count', color: textColor }, grid: { color: gridColor } },
+          x: { 
+            // Added for better spacing
+            categoryPercentage: 0.8, 
+            barPercentage: 0.9,
+            title: { display: true, text: 'Hour', color: textColor }, 
+            ticks: { color: textColor }, 
+            grid: { color: gridColor } 
+          },
+          y: { 
+            beginAtZero: true, max: yMax, grace: '10%', 
+            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor }, 
+            title: { display: true, text: 'Cumulative Count', color: textColor }, 
+            grid: { color: gridColor } 
+          },
         },
         plugins: {
           legend: { labels: { color: textColor } },
-          datalabels: { anchor: 'end', align: 'end', clamp: true, offset: 2, backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8, padding: { top: 2, bottom: 2, left: 5, right: 5 }, font: { size: 12, weight: 'bold' }, color: '#fff', display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; }, formatter: (value) => value, },
+          // This uses the configuration from your new separate file
+          datalabels: alwaysOnLabelConfig 
         },
       },
-    });
-  },
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
