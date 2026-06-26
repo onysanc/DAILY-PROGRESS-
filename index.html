@@ -13,9 +13,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-<script src="chart-labels.js"></script>
 <style>
   .hidden{display:none!important}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
@@ -220,22 +217,19 @@
           </table>
         </div>
       </div>
-      
-      <div class="flex flex-col gap-4 flex-1 min-h-0">
+      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
         <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow flex-1 relative min-h-[340px] border dark:border-slate-800">
           <canvas id="activityChart"></canvas>
         </div>
-        
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2 shrink-0">
-          <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
-          <textarea id="dash-remarks-now" rows="2"
-            class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-            placeholder="Type current remarks…"></textarea>
-        </div>
-
-        <div class="flex flex-row gap-4 shrink-0 w-full items-stretch">
-          <div class="bg-white dark:bg-slate-900 shadow rounded-xl px-4 py-3 border dark:border-slate-800 flex-1">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-2 text-center">TRUCK POOL</div>
+        <div class="flex flex-col gap-0 shrink-0 w-72">
+          <div class="bg-white dark:bg-slate-900 rounded-t-xl shadow border-b border-slate-100 dark:border-slate-800 px-4 py-2">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
+            <textarea id="dash-remarks-now" rows="3"
+              class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="Type current remarks…"></textarea>
+          </div>
+          <div class="bg-white dark:bg-slate-900 shadow px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1 text-center">TRUCK POOL</div>
             <table class="text-xs border-collapse w-full">
               <thead>
                 <tr class="bg-slate-50 dark:bg-slate-800">
@@ -249,23 +243,19 @@
               <tbody id="dash-truckpool-tbody"></tbody>
             </table>
           </div>
-
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow px-4 py-3 border dark:border-slate-800 flex-1 flex flex-col overflow-hidden">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-2 text-center">TRUCK POOL — PLATES</div>
-            <div class="flex-1 overflow-y-auto">
-              <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
-                <thead id="dash-truckpool-plates-head"></thead>
-                <tbody id="dash-truckpool-plates-body"></tbody>
-              </table>
-            </div>
+          <div class="bg-white dark:bg-slate-900 shadow px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
+            <textarea id="dash-remarks-prev" rows="2"
+              class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="Previous hour notes…"></textarea>
           </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 shadow rounded-xl px-4 py-2 border dark:border-slate-800 shrink-0">
-          <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
-          <textarea id="dash-remarks-prev" rows="2"
-            class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-            placeholder="Previous hour notes…"></textarea>
+          <div class="bg-white dark:bg-slate-900 rounded-b-xl shadow px-4 py-2 flex-1 overflow-y-auto">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1 text-center">TRUCK POOL — PLATES</div>
+            <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
+              <thead id="dash-truckpool-plates-head"></thead>
+              <tbody id="dash-truckpool-plates-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -310,6 +300,8 @@
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
     <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
     <select id="pick-name" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+      <option value="R. ISUGA">R. ISUGA</option>
+      <option value="E. ISIGE">E. ISIGE</option>
     </select>
     <div class="flex justify-end space-x-2">
       <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
@@ -326,7 +318,7 @@
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Bay Location</label>
     <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-202 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
     </div>
   </div>
@@ -368,33 +360,30 @@
     <div class="flex justify-between items-center">
       <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
       <div class="space-x-2">
-        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
+        <button onclick="App.closeModal('row-edit-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+        <button onclick="App.updateDispatchRow()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Changes</button>
       </div>
     </div>
   </div>
 </div>
+
 <script>
-const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-Chart.register(ChartDataLabels);
-const USERS = {
-  admin:     { pass: 'superadmin', role: 'admin' },
-  outbound:  { pass: 'outbound',   role: 'outbound' },
-  pgi:       { pass: 'pgi',        role: 'pgi' },
-  invoice:   { pass: 'invoice',    role: 'invoice' },
-  transport: { pass: 'transport',  role: 'transport' },
-};
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
 const ROLE_PERMISSIONS = {
-  admin:     ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
-  outbound:  ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
-  pgi:       ['pgi'],
-  invoice:   ['invoiced'],
+  admin: ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
+  outbound: ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
+  pgi: ['pgi'],
+  invoice: ['invoiced'],
   transport: ['ds_printed', 'loaded'],
 };
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+const MILESTONE_LABELS = {
+  pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded'
+};
+
 const App = {
   state: {
     currentUser: null,
@@ -407,6 +396,7 @@ const App = {
     pendingRowEdit: null,
     chartInstance: null,
   },
+
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
@@ -416,6 +406,7 @@ const App = {
       document.getElementById('theme-toggle-btn').textContent = 'Dark Mode';
     }
   },
+
   toggleTheme() {
     if (document.documentElement.classList.contains('dark')) {
       document.documentElement.classList.remove('dark');
@@ -428,6 +419,7 @@ const App = {
     }
     this.refreshDashboardIfVisible();
   },
+
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (sidebar.classList.contains('w-60')) {
@@ -438,76 +430,13 @@ const App = {
       sidebar.classList.add('w-60');
     }
   },
-  login(e) {
-    e.preventDefault();
-    const u = document.getElementById('login-username').value.toLowerCase().trim();
-    const p = document.getElementById('login-password').value;
-    const errEl = document.getElementById('login-error');
-    if (USERS[u] && USERS[u].pass === p) {
-      this.state.currentUser = { username: u, role: USERS[u].role };
-      errEl.classList.add('hidden');
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('app-wrapper').classList.remove('hidden');
-      document.getElementById('display-username').textContent = u.toUpperCase();
-      document.getElementById('display-role').textContent = USERS[u].role.toUpperCase();
-      this.init();
-    } else {
-      errEl.classList.remove('hidden');
-    }
-  },
-  logout() { location.reload(); },
-  async init() {
-    this.initTheme();
-    this.populateBaySelect();
-    if (this.state.currentUser.role === 'admin') {
-      document.getElementById('actions-col-header').classList.remove('hidden');
-      document.getElementById('add-picker-form').classList.remove('hidden');
-      document.getElementById('add-checker-form').classList.remove('hidden');
-    } else {
-      document.getElementById('personnel-admin-note').classList.remove('hidden');
-    }
-    await this.loadRDDs();
-    await this.loadTrucks();
-    await this.loadPersonnel();
-    this.setupRealtimeSubscriptions();
-  },
-  populateBaySelect() {
-    const sel = document.getElementById('checking-bay');
-    sel.innerHTML = '';
-    for (let i = 1; i <= 8; i++) {
-      ['A', 'B', 'C'].forEach(letter => {
-        const opt = document.createElement('option');
-        opt.value = `${i}${letter}`;
-        opt.textContent = `${i}${letter}`;
-        sel.appendChild(opt);
-      });
-    }
-    const ext = document.createElement('option');
-    ext.value = 'Extended';
-    ext.textContent = 'Extended';
-    sel.appendChild(ext);
-  },
-  switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
-    document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
-    document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
-    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
-  },
-  openModal(id) { document.getElementById(id).classList.remove('hidden'); },
-  closeModal(id) { document.getElementById(id).classList.add('hidden'); },
-  toggleAddDispatchPanel() {
-    const content = document.getElementById('add-dispatch-content');
-    const btn = document.getElementById('add-dispatch-toggle');
-    const collapsed = content.classList.toggle('hidden');
-    btn.textContent = collapsed ? 'Expand' : 'Minimize';
-  },
-  cancelMilestone() {
+
+  closeModal(id) {
     this.state.pendingMilestoneUpdate = null;
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
+
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
     if (error) { console.error(error); return; }
@@ -518,313 +447,18 @@ const App = {
     data.forEach(rdd => {
       const opt = document.createElement('option');
       opt.value = rdd.id;
-      opt.textContent = `${rdd.rdd_date}  (Plan: ${rdd.initial_planning_count})`;
+      opt.textContent = `${rdd.rdd_date} (Plan: ${rdd.initial_planning_count})`;
       sel.appendChild(opt);
     });
     if (prev) sel.value = prev;
   },
-  async createRDD() {
-    const rdd_date = document.getElementById('new-rdd-date').value;
-    const count = document.getElementById('new-rdd-count').value;
-    if (!rdd_date || count === '') return alert('Please fill in both fields.');
-    const { error } = await supabaseClient.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count, 10) });
-    if (error) return alert('Could not create RDD: ' + error.message);
-    document.getElementById('new-rdd-date').value = '';
-    document.getElementById('new-rdd-count').value = '';
-    this.closeModal('rdd-modal');
-    await this.loadRDDs();
-  },
-  async selectRDD(id) {
-    this.state.currentRddId = id || null;
-    document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
-    document.getElementById('rdd-summary').classList.toggle('hidden', !id);
-    if (!id) {
-      this.state.dispatches = [];
-      this.state.trucks = [];
-      this.renderDispatches();
-      this.renderTrucks();
-      return;
-    }
-    await this.loadDispatches();
-    await this.loadTrucks();
-  },
-  renderRddSummary() {
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    const box = document.getElementById('rdd-summary');
-    if (!rdd) { box.innerHTML = ''; return; }
-    const total = this.state.dispatches.length;
-    const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
-    const pending = total - loaded;
-    const cards = [
-      { label: 'Initial Plan', value: rdd.initial_planning_count },
-      { label: 'Dispatches Added', value: total },
-      { label: 'Loaded / Done', value: loaded },
-      { label: 'Pending', value: pending },
-    ];
-    box.innerHTML = cards.map(c => `
-      <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
-        <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
-        <div class="text-2xl font-bold">${c.value}</div>
-      </div>`).join('');
-  },
-  async loadDispatches() {
-    const { data, error } = await supabaseClient.from('dispatches').select('*')
-      .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
-    if (error) { console.error(error); return; }
-    this.state.dispatches = data;
-    this.renderDispatches();
-    this.renderRddSummary();
-    this.refreshDashboardIfVisible();
-  },
-  async addSingleDispatch(e) {
-    e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
-    const truck_type = document.getElementById('single-truck-type').value;
-    const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
-    if (!truck_type || !dispatch_number) return;
-    const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
-    if (error) return alert(error.message);
-    e.target.reset();
-    await this.loadDispatches();
-  },
-  parseMassPasteText(text) {
-    const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const existingNumbers = new Set(this.state.dispatches.map(d => d.dispatch_number));
-    const seenInPaste = new Set();
-    const valid = [];
-    const skipped = [];
-    const duplicates = [];
-    text.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      const parts = trimmed.split(/\s+/);
-      const type = (parts[0] || '').toUpperCase();
-      const num = parts[1];
-      if (parts.length < 2 || !validTypes.includes(type) || !num) {
-        skipped.push(trimmed);
-        return;
-      }
-      if (existingNumbers.has(num) || seenInPaste.has(num)) {
-        duplicates.push(`${type} ${num}`);
-        return;
-      }
-      seenInPaste.add(num);
-      valid.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
-    });
-    return { valid, skipped, duplicates };
-  },
-  previewMassDispatch() {
-    const text = document.getElementById('mass-dispatch-input').value;
-    const box = document.getElementById('mass-dispatch-preview');
-    if (!text.trim()) { box.textContent = ''; return; }
-    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-    let msg = `<span class="text-emerald-600 font-semibold">${valid.length} ready to add</span>`;
-    if (duplicates.length) msg += ` · <span class="text-amber-600 font-semibold">${duplicates.length} duplicate (skipped)</span>`;
-    if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
-    box.innerHTML = msg;
-  },
-  async addMassDispatch(e) {
-    e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
-    const text = document.getElementById('mass-dispatch-input').value;
-    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-    if (valid.length) {
-      const { error } = await supabaseClient.from('dispatches').insert(valid);
-      if (error) return alert(error.message);
-      document.getElementById('mass-dispatch-input').value = '';
-      document.getElementById('mass-dispatch-preview').innerHTML = '';
-      await this.loadDispatches();
-    }
-    if (skipped.length || duplicates.length) {
-      let report = `Added ${valid.length} dispatch(es).`;
-      if (duplicates.length) report += `\n\nSkipped ${duplicates.length} duplicate dispatch number(s):\n${duplicates.join('\n')}`;
-      if (skipped.length) report += `\n\nSkipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`;
-      alert(report);
-    }
-  },
-  renderDispatches() {
-    const tbody = document.getElementById('dispatch-tbody');
-    const emptyEl = document.getElementById('dispatch-empty');
-    tbody.innerHTML = '';
-    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
-    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
-    emptyEl.classList.add('hidden');
-    const role = this.state.currentUser.role;
-    const allowed = ROLE_PERMISSIONS[role] || [];
-    this.state.dispatches.forEach(d => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
-      MILESTONE_FLOW.forEach((step, idx) => {
-        const isChecked = d[`${step}_checked`];
-        const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
-        const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
-        const hasPermission = allowed.includes(step);
-        const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
-        const tip = isChecked
-          ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
-          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-        html += `<td class="p-3 text-center" title="${tip}">
-                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
-                           ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
-                           onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
-                  </td>`;
-      });
-      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
-                <td class="p-3">
-                  <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
-                    <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
-                  </div>
-                </td>`;
-      if (role === 'admin') {
-        html += `<td class="p-3">
-                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>
-                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>
-                  </td>`;
-      }
-      tr.innerHTML = html;
-      tbody.appendChild(tr);
-    });
-  },
-  handleMilestoneClick(event, dispatchId, step) {
-    event.preventDefault();
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    const isChecked = dispatch[`${step}_checked`];
-    if (isChecked) {
-      if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
-      else alert('Only an admin can edit or untick a completed step.');
-      return;
-    }
-    this.state.pendingMilestoneUpdate = { dispatch, step };
-    if (step === 'pick') {
-      const sel = document.getElementById('pick-name');
-      const pickers = this.state.personnel.filter(p => p.pool === 'picker');
-      if (!pickers.length) { alert('No pickers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
-      sel.innerHTML = pickers.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-      this.openModal('pick-modal');
-    } else if (step === 'checking') {
-      const checkers = this.state.personnel.filter(p => p.pool === 'checker');
-      const list = document.getElementById('checking-checkbox-list');
-      if (!checkers.length) { alert('No checkers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
-      list.innerHTML = checkers.map(p => `
-        <label class="flex items-center space-x-2 px-1 py-0.5">
-          <input type="checkbox" value="${p.name}" onchange="App.enforceCheckerLimit()">
-          <span>${p.name}</span>
-        </label>`).join('');
-      document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
-      this.openModal('checking-modal');
-    } else if (step === 'loaded') {
-      this.openLoadedModal(dispatch);
-    } else {
-      this.confirmMilestone(step);
-    }
-  },
-  enforceCheckerLimit() {
-    const boxes = document.querySelectorAll('#checking-checkbox-list input[type=checkbox]');
-    const checked = [...boxes].filter(b => b.checked);
-    document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selected (pick at least 1)`;
-    boxes.forEach(b => { if (!b.checked) b.disabled = checked.length >= 6; });
-  },
-  openLoadedModal(dispatch) {
-    const sel = document.getElementById('loaded-truck');
-    const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
-    if (!available.length) { alert(`No available ${dispatch.truck_type} trucks for this RDD Plan. Add one in the Available Trucks tab first.`); this.state.pendingMilestoneUpdate = null; return; }
-    sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
-    this.openModal('loaded-modal');
-  },
-  async confirmMilestone(step) {
-    const { dispatch } = this.state.pendingMilestoneUpdate;
-    const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
-    if (step === 'pick') {
-      payload.pick_assigned_name = document.getElementById('pick-name').value;
-    } else if (step === 'checking') {
-      const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
-      if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
-      payload.checking_assigned_names = names;
-      payload.bay_location = document.getElementById('checking-bay').value;
-    } else if (step === 'loaded') {
-      const truckId = document.getElementById('loaded-truck').value;
-      if (!truckId) return alert('Select a truck.');
-      payload.assigned_truck_id = truckId;
-      const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
-      if (tErr) return alert(tErr.message);
-    }
-    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
-    if (error) { alert(error.message); return; }
-    this.cancelMilestone();
-    await this.loadDispatches();
-    await this.loadTrucks();
-  },
-  openAdminEditModal(dispatch, step) {
-    this.state.pendingMilestoneUpdate = { dispatch, step };
-    const current = dispatch[`${step}_timestamp`];
-    if (current) {
-      const dt = new Date(current);
-      dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-      document.getElementById('admin-edit-time').value = dt.toISOString().slice(0, 16);
-    } else {
-      document.getElementById('admin-edit-time').value = '';
-    }
-    this.openModal('admin-edit-modal');
-  },
-  async adminUpdateTimestamp() {
-    const { dispatch, step } = this.state.pendingMilestoneUpdate;
-    const newTime = document.getElementById('admin-edit-time').value;
-    if (!newTime) return alert('Pick a date/time.');
-    const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
-    if (error) return alert(error.message);
-    this.cancelMilestone();
-    await this.loadDispatches();
-  },
-  async adminUntickMilestone() {
-    const { dispatch, step } = this.state.pendingMilestoneUpdate;
-    const startIdx = MILESTONE_FLOW.indexOf(step);
-    const toUncheck = MILESTONE_FLOW.slice(startIdx);
-    const payload = {};
-    toUncheck.forEach(s => {
-      payload[`${s}_checked`] = false;
-      payload[`${s}_timestamp`] = null;
-      if (s === 'pick') payload.pick_assigned_name = null;
-      if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
-      if (s === 'loaded' && dispatch.assigned_truck_id) {
-        supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
-        payload.assigned_truck_id = null;
-      }
-    });
-    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
-    if (error) return alert(error.message);
-    this.cancelMilestone();
-    await this.loadDispatches();
-    await this.loadTrucks();
-  },
-  openRowEditModal(dispatchId) {
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    this.state.pendingRowEdit = dispatch;
-    document.getElementById('row-edit-type').value = dispatch.truck_type;
-    document.getElementById('row-edit-number').value = dispatch.dispatch_number;
-    this.openModal('row-edit-modal');
-  },
-  async saveDispatchRowEdit() {
-    const dispatch = this.state.pendingRowEdit;
-    const truck_type = document.getElementById('row-edit-type').value;
-    const dispatch_number = document.getElementById('row-edit-number').value.trim();
-    if (!dispatch_number) return alert('Dispatch number cannot be empty.');
-    const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
-    if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
-    this.state.pendingRowEdit = null;
-    this.closeModal('row-edit-modal');
-    await this.loadDispatches();
-  },
+
   async deleteDispatchRow() {
     const dispatch = this.state.pendingRowEdit;
     await this.performDispatchDelete(dispatch);
     this.closeModal('row-edit-modal');
   },
-  async quickDeleteDispatch(dispatchId) {
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    if (!confirm(`Delete dispatch ${dispatch.truck_type} ${dispatch.dispatch_number}? This cannot be undone.`)) return;
-    await this.performDispatchDelete(dispatch);
-  },
+
   async performDispatchDelete(dispatch) {
     if (dispatch.assigned_truck_id) {
       await supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id);
@@ -834,6 +468,7 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
+
   async loadTrucks() {
     if (!this.state.currentRddId) {
       this.state.trucks = [];
@@ -847,214 +482,23 @@ const App = {
     this.renderTrucks();
     this.refreshDashboardIfVisible();
   },
+
   refreshDashboardIfVisible() {
     if (!document.getElementById('tab-analytics').classList.contains('hidden')) {
       this.renderDashboardSummary();
       this.renderChart();
     }
   },
-  async addTruck() {
-    if (!this.state.currentRddId) return alert('Please select an RDD Plan first.');
-    const truck_type = document.getElementById('truck-type-input').value;
-    const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
-    if (!plate_number) return alert('Enter a plate number.');
-    const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number });
-    if (error) return alert(error.message);
-    document.getElementById('truck-plate-input').value = '';
-    await this.loadTrucks();
-  },
-  renderTrucks() {
-    const grid = document.getElementById('trucks-grid');
-    grid.innerHTML = '';
-    if (!this.state.currentRddId) {
-      grid.innerHTML = `<div class="col-span-3 p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD plan to see the active fleet.</div>`;
-      return;
-    }
-    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    types.forEach(type => {
-      const all = this.state.trucks.filter(t => t.truck_type === type);
-      const available = all.filter(t => t.status === 'Available');
-      let html = `<div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
-                    <div class="flex justify-between items-baseline mb-3">
-                      <h3 class="font-bold">${type}</h3>
-                      <span class="text-xs text-slate-400 dark:text-slate-500">${available.length} available / ${all.length} total</span>
-                    </div>
-                    <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
-      all.forEach((t, i) => {
-        const isAvail = t.status === 'Available';
-        html += `<li class="flex justify-between items-center">
-                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
-                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}">${t.status}</span>
-                  </li>`;
-      });
-      if (!all.length) html += `<li class="text-slate-400 dark:text-slate-500 italic">No trucks added yet</li>`;
-      html += `</ul></div>`;
-      grid.innerHTML += html;
-    });
-  },
-  async loadPersonnel() {
-    const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
-    if (error) { console.error(error); return; }
-    this.state.personnel = data;
-    this.renderPersonnel();
-  },
-  renderPersonnel() {
-    const isAdmin = this.state.currentUser.role === 'admin';
-    ['picker', 'checker'].forEach(pool => {
-      const list = document.getElementById(`${pool}-list`);
-      const people = this.state.personnel.filter(p => p.pool === pool);
-      list.innerHTML = people.map(p => `
-        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          <span>${p.name}</span>
-          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
-        </li>`).join('') || `<li class="text-slate-400 dark:text-slate-500 italic px-2">No names added yet</li>`;
-    });
-  },
-  async addPersonnel(e, pool) {
-    e.preventDefault();
-    const inputId = pool === 'picker' ? 'new-picker-name' : 'new-checker-name';
-    const name = document.getElementById(inputId).value.trim();
-    if (!name) return;
-    const { error } = await supabaseClient.from('personnel').insert({ name, pool });
-    if (error) return alert(error.message.includes('duplicate') ? 'That name is already in this pool.' : error.message);
-    document.getElementById(inputId).value = '';
-    await this.loadPersonnel();
-  },
-  async deletePersonnel(id) {
-    if (!confirm('Remove this person from the pool?')) return;
-    const { error } = await supabaseClient.from('personnel').delete().eq('id', id);
-    if (error) return alert(error.message);
-    await this.loadPersonnel();
-  },
-  renderDashboardSummary() {
-    const total = this.state.dispatches.length;
-    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 
-    steps.forEach(step => {
-      const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
-      const pending = total - done;
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      const doneEl = document.getElementById(`dm-${step}-done`);
-      const pendEl = document.getElementById(`dm-${step}-pending`);
-      const pctEl  = document.getElementById(`dm-${step}-pct`);
-      if (doneEl) doneEl.textContent = done;
-      if (pendEl) pendEl.textContent = pending;
-      if (pctEl)  pctEl.textContent  = pct + '%';
-    });
-
-    const bayMap = {};
-    this.state.dispatches.forEach(d => {
-      if (d.checking_checked && !d.loaded_checked && d.bay_location && d.bay_location !== 'Extended') {
-        bayMap[d.bay_location] = d.dispatch_number;
-      }
-    });
-    const tbody = document.getElementById('dash-bay-tbody');
-    if (tbody) {
-      tbody.innerHTML = '';
-      ['A', 'B', 'C'].forEach(letter => {
-        const tr = document.createElement('tr');
-        let html = `<td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-bold text-slate-600 dark:text-slate-300 text-center">${letter}</td>`;
-        for (let bay = 1; bay <= 8; bay++) {
-          const key = `${bay}${letter}`;
-          const occupied = bayMap[key];
-          html += occupied
-            ? `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-700 dark:text-blue-400 font-semibold text-[11px]">${occupied}</td>`
-            : `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-slate-300 dark:text-slate-600 text-[10px]">VACANT</td>`;
-        }
-        tr.innerHTML = html;
-        tbody.appendChild(tr);
-      });
-    }
-
-    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const tpTbody = document.getElementById('dash-truckpool-tbody');
-    if (tpTbody) {
-      let totalPlanned = 0, totalAvail = 0, totalLoaded = 0;
-      let rows = '';
-      truckTypes.forEach(type => {
-        const all      = this.state.trucks.filter(t => t.truck_type === type);
-        const avail    = all.filter(t => t.status === 'Available').length;
-        const loaded   = all.filter(t => t.status === 'Dispatched').length;
-        const planned  = all.length;
-        const pct      = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
-        totalPlanned  += planned;
-        totalAvail    += avail;
-        totalLoaded   += loaded;
-        rows += `<tr>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-semibold">${type}</td>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${planned}</td>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-emerald-600 dark:text-emerald-400 font-bold">${avail}</td>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-blue-600 dark:text-blue-400 font-bold">${loaded}</td>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-600 dark:text-slate-400">${pct}%</td>
-        </tr>`;
-      });
-      const totPct = totalPlanned > 0 ? Math.round((totalLoaded / totalPlanned) * 100) : 0;
-      rows += `<tr class="bg-slate-50 dark:bg-slate-800 font-bold">
-        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">TOTAL</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${totalPlanned}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-emerald-600 dark:text-emerald-400">${totalAvail}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-blue-600 dark:text-blue-400">${totalLoaded}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${totPct}%</td>
-      </tr>`;
-      tpTbody.innerHTML = rows;
-    }
-
-    const thead = document.getElementById('dash-truckpool-plates-head');
-    const pbody = document.getElementById('dash-truckpool-plates-body');
-    if (thead && pbody) {
-      const activeCols = truckTypes.filter(type =>
-        this.state.trucks.some(t => t.truck_type === type && t.status === 'Available')
-      );
-      if (!activeCols.length) {
-        thead.innerHTML = '';
-        pbody.innerHTML = `<tr><td class="text-slate-400 dark:text-slate-500 italic px-2 py-1 text-center" colspan="6">No available trucks</td></tr>`;
-      } else {
-        thead.innerHTML = `<tr>${activeCols.map(t =>
-          `<th class="border border-slate-200 dark:border-slate-700 px-2 py-1 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">${t}</th>`
-        ).join('')}</tr>`;
-        const cols = activeCols.map(type => {
-          return this.state.trucks
-            .filter(t => t.truck_type === type && t.status === 'Available')
-            .map((t, i) => `${type}${i + 1}`);
-        });
-        const maxRows = Math.max(...cols.map(c => c.length));
-        let pbHtml = '';
-        for (let r = 0; r < maxRows; r++) {
-          pbHtml += `<tr>${cols.map(col =>
-            `<td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-700 dark:text-slate-300">${col[r] || ''}</td>`
-          ).join('')}</tr>`;
-        }
-        pbody.innerHTML = pbHtml;
-      }
-    }
-
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    if (rdd) {
-      const d = new Date(rdd.rdd_date + 'T00:00:00');
-      const formatted = d.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
-      document.getElementById('dashboard-heading-rdd').textContent = `RDD ${formatted}`;
-    } else {
-      document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
-    }
-  },
-  startDashboardClock() {
-    const tick = () => {
-      const el = document.getElementById('dashboard-heading-time');
-      if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-      }
-    };
-    tick();
-    if (!this._clockInterval) this._clockInterval = setInterval(tick, 1000);
-  },
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
+    
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#f1f5f9' : '#334155';
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
+    
     const bucketOf = (isoString) => {
       if (!isoString) return null;
       const h = new Date(isoString).getHours();
@@ -1062,12 +506,14 @@ const App = {
     };
     const nowBucket = bucketOf(new Date().toISOString());
     const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
         const b = bucketOf(d[`${step}_timestamp`]);
         if (b !== null) raw[step][b]++;
       });
     });
+    
     const toCumulative = (arr) => {
       let running = 0;
       return arr.map((v, i) => {
@@ -1076,23 +522,27 @@ const App = {
         return running;
       });
     };
+    
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
       if (addedB === null) return;
       for (let h = addedB; h < 24; h++) availableTrend[h]++;
     });
+    
     this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
       const b = bucketOf(d.loaded_timestamp);
       if (b === null) return;
       for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
+    
     const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
     const dispatchCount = this.state.dispatches.length;
     const rawMax = Math.max(planCount, dispatchCount, 10);
     const yMax = Math.ceil(rawMax / 10) * 10;
+    
     this.state.chartInstance = new Chart(ctx, {
       data: {
         labels,
@@ -1106,14 +556,14 @@ const App = {
           { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
         ],
       },
-options: {
+      options: {
         responsive: true,
         maintainAspectRatio: false,
-        // Updated to true to make individual bars easier to click
+        // Set interaction intersect to true for precise hover / click triggers
         interaction: { mode: 'index', intersect: true },
         scales: {
           x: { 
-            // Added for better spacing
+            // Gives elements cleaner spacing and breathing room
             categoryPercentage: 0.8, 
             barPercentage: 0.9,
             title: { display: true, text: 'Hour', color: textColor }, 
@@ -1129,22 +579,55 @@ options: {
         },
         plugins: {
           legend: { labels: { color: textColor } },
-          // This uses the configuration from your new separate file
-          datalabels: alwaysOnLabelConfig 
+          datalabels: {
+            anchor: 'end',
+            align: 'end',
+            clamp: true,
+            offset: 4,
+            // Forces data metrics to display dynamically on the view layer without hovering
+            display: (ctx) => {
+              const v = ctx.dataset.data[ctx.dataIndex];
+              return v !== null && v !== 0;
+            },
+            font: { 
+              size: 13, // Increased font size for real-time visibility
+              weight: 'bold' 
+            },
+            color: '#000000', // Set permanently to dark black summary text
+            formatter: (value) => value,
+          },
         },
       },
-  setupRealtimeSubscriptions() {
-    supabaseClient.channel('dispatch-app-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, () => this.loadTrucks())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rdd_masters' }, () => this.loadRDDs())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
-      .subscribe(status => {
-        const el = document.getElementById('connection-status');
-        el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
-      });
+    });
   },
+
+  async loadPersonnel() {
+    const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
+    if (error) { console.error(error); return; }
+    this.state.personnel = data;
+    this.renderPersonnel();
+  },
+
+  renderPersonnel() {
+    const isAdmin = this.state.currentUser?.role === 'admin';
+    ['picker', 'checker'].forEach(pool => {
+      const list = document.getElementById(`${pool}-list`);
+      const people = this.state.personnel.filter(p => p.pool === pool);
+      list.innerHTML = people.map(p => `
+        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+          <span>${p.name}</span>
+          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
+        </li>`).join('') || `<li class="text-slate-400 dark:text-slate-500 italic px-2">No names added yet</li>`;
+    });
+  },
+
+  init() {
+    this.initTheme();
+    this.loadRDDs();
+  }
 };
+
+window.addEventListener('DOMContentLoaded', () => App.init());
 </script>
 </body>
 </html>
