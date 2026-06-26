@@ -75,7 +75,7 @@
           <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white">
             <option value="">Select RDD…</option>
           </select>
-          <button id="create-rdd-btn" onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
+          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
@@ -130,7 +130,7 @@
     </section>
     <section id="tab-trucks" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
-      <div id="add-truck-panel" class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3 border dark:border-slate-800">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3 border dark:border-slate-800">
         <div>
           <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
           <select id="truck-type-input" class="p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
@@ -318,7 +318,7 @@
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Bay Location</label>
     <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-202 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
     </div>
   </div>
@@ -356,40 +356,43 @@
       <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
     </select>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Dispatch Number</label>
-    <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-6 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
     <div class="flex justify-between items-center">
       <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
       <div class="space-x-2">
-        <button onclick="App.closeModal('row-edit-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.saveDispatchRow()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Changes</button>
+        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+        <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
       </div>
     </div>
   </div>
 </div>
-
 <script>
-const SUPABASE_URL = "https://your-supabase-url.supabase.co"; 
-const SUPABASE_KEY = "your-anon-key";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+/* ======================================================================
+   CONFIG
+   ====================================================================== */
+const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+Chart.register(ChartDataLabels);
+/* ======================================================================
+   USERS & ROLE PERMISSIONS
+   ====================================================================== */
+const USERS = {
+  admin:     { pass: 'superadmin', role: 'admin' },
+  outbound:  { pass: 'outbound',   role: 'outbound' },
+  pgi:       { pass: 'pgi',        role: 'pgi' },
+  invoice:   { pass: 'invoice',    role: 'invoice' },
+  transport: { pass: 'transport',  role: 'transport' },
+};
 const ROLE_PERMISSIONS = {
-  admin: ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
-  outbound: ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
-  pgi: ['pgi'],
-  invoice: ['invoiced'],
+  admin:     ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
+  outbound:  ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
+  pgi:       ['pgi'],
+  invoice:   ['invoiced'],
   transport: ['ds_printed', 'loaded'],
 };
-
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_LABELS = {
-  pick: 'Pick',
-  pgi: 'PGI',
-  invoiced: 'Invoiced',
-  ds_printed: 'DS Printed',
-  checking: 'Checking',
-  loaded: 'Loaded'
-};
-
+const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const App = {
   state: {
     currentUser: null,
@@ -402,7 +405,6 @@ const App = {
     pendingRowEdit: null,
     chartInstance: null,
   },
-
   /* ---------------- THEME ---------------- */
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -425,7 +427,6 @@ const App = {
     }
     this.refreshDashboardIfVisible();
   },
-
   /* ---------------- SIDEBAR ---------------- */
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -437,82 +438,79 @@ const App = {
       sidebar.classList.add('w-60');
     }
   },
-  switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-blue-600'));
-    document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
-    if (tabId === 'tab-analytics') {
-      this.renderDashboardSummary();
-      this.renderChart();
+  /* ---------------- AUTH ---------------- */
+  login(e) {
+    e.preventDefault();
+    const u = document.getElementById('login-username').value.toLowerCase().trim();
+    const p = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    if (USERS[u] && USERS[u].pass === p) {
+      this.state.currentUser = { username: u, role: USERS[u].role };
+      errEl.classList.add('hidden');
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-wrapper').classList.remove('hidden');
+      document.getElementById('display-username').textContent = u.toUpperCase();
+      document.getElementById('display-role').textContent = USERS[u].role.toUpperCase();
+      this.init();
+    } else {
+      errEl.classList.remove('hidden');
     }
   },
-
-  /* ---------------- AUTH ---------------- */
-  async login(e) {
-    e.preventDefault();
-    const u = document.getElementById('login-username').value.trim();
-    const p = document.getElementById('login-password').value;
-    const err = document.getElementById('login-error');
-    err.classList.add('hidden');
-
-    const { data, error } = await supabaseClient.from('app_users').select('*').eq('username', u).single();
-    if (error || !data || data.password !== p) {
-      err.classList.remove('hidden');
-      return;
-    }
-
-    this.state.currentUser = data;
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app-wrapper').classList.remove('hidden');
-    document.getElementById('display-username').textContent = data.username.toUpperCase();
-    document.getElementById('display-role').textContent = data.role.toUpperCase();
-
-    const isAdmin = data.role === 'admin';
-    const isOutbound = data.role === 'outbound';
-    
-    // Toggle Control Elements based on structural role definitions
-    if (isAdmin || isOutbound) {
-      document.getElementById('add-dispatch-panel').classList.remove('hidden');
-      document.getElementById('create-rdd-btn').classList.remove('hidden');
-      document.getElementById('add-truck-panel').classList.remove('hidden');
-    } else {
-      document.getElementById('add-dispatch-panel').classList.add('hidden');
-      document.getElementById('create-rdd-btn').classList.add('hidden');
-      document.getElementById('add-truck-panel').classList.add('hidden');
-    }
-
-    if (isAdmin) {
+  logout() { location.reload(); },
+  /* ---------------- INIT ---------------- */
+  async init() {
+    this.initTheme();
+    this.populateBaySelect();
+    if (this.state.currentUser.role === 'admin') {
       document.getElementById('actions-col-header').classList.remove('hidden');
-      document.getElementById('personnel-admin-note').classList.add('hidden');
       document.getElementById('add-picker-form').classList.remove('hidden');
       document.getElementById('add-checker-form').classList.remove('hidden');
     } else {
-      document.getElementById('actions-col-header').classList.add('hidden');
       document.getElementById('personnel-admin-note').classList.remove('hidden');
-      document.getElementById('add-picker-form').classList.add('hidden');
-      document.getElementById('add-checker-form').classList.add('hidden');
     }
-
-    this.initApp();
+    await this.loadRDDs();
+    await this.loadTrucks();
+    await this.loadPersonnel();
+    this.setupRealtimeSubscriptions();
   },
-  logout() {
-    this.state.currentUser = null;
-    document.getElementById('login-username').value = '';
-    document.getElementById('login-password').value = '';
-    document.getElementById('app-wrapper').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
+  populateBaySelect() {
+    const sel = document.getElementById('checking-bay');
+    sel.innerHTML = '';
+    for (let i = 1; i <= 8; i++) {
+      ['A', 'B', 'C'].forEach(letter => {
+        const opt = document.createElement('option');
+        opt.value = `${i}${letter}`;
+        opt.textContent = `${i}${letter}`;
+        sel.appendChild(opt);
+      });
+    }
+    const ext = document.createElement('option');
+    ext.value = 'Extended';
+    ext.textContent = 'Extended';
+    sel.appendChild(ext);
   },
-
-  /* ---------------- MODALS ---------------- */
+  /* ---------------- TABS / MODALS ---------------- */
+  switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
+    document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
+    document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
+    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
+  },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+  toggleAddDispatchPanel() {
+    const content = document.getElementById('add-dispatch-content');
+    const btn = document.getElementById('add-dispatch-toggle');
+    const collapsed = content.classList.toggle('hidden');
+    btn.textContent = collapsed ? 'Expand' : 'Minimize';
+  },
   cancelMilestone() {
     this.state.pendingMilestoneUpdate = null;
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
-
   /* ---------------- RDD ---------------- */
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
@@ -524,325 +522,302 @@ const App = {
     data.forEach(rdd => {
       const opt = document.createElement('option');
       opt.value = rdd.id;
-      opt.textContent = `${rdd.rdd_date} (Plan: ${rdd.initial_planning_count})`;
+      opt.textContent = `${rdd.rdd_date}  (Plan: ${rdd.initial_planning_count})`;
       sel.appendChild(opt);
     });
     if (prev) sel.value = prev;
   },
   async createRDD() {
-    const date = document.getElementById('new-rdd-date').value;
-    const count = parseInt(document.getElementById('new-rdd-count').value) || 0;
-    if (!date) return alert('Select a date');
-    const { data, error } = await supabaseClient.from('rdd_masters').insert([{ rdd_date: date, initial_planning_count: count }]).select();
-    if (error) return alert(error.message);
+    const rdd_date = document.getElementById('new-rdd-date').value;
+    const count = document.getElementById('new-rdd-count').value;
+    if (!rdd_date || count === '') return alert('Please fill in both fields.');
+    const { error } = await supabaseClient.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count, 10) });
+    if (error) return alert('Could not create RDD: ' + error.message);
+    document.getElementById('new-rdd-date').value = '';
+    document.getElementById('new-rdd-count').value = '';
     this.closeModal('rdd-modal');
     await this.loadRDDs();
-    if (data && data[0]) {
-      document.getElementById('rdd-selector').value = data[0].id;
-      this.selectRDD(data[0].id);
-    }
   },
-  selectRDD(id) {
-    this.state.currentRddId = id;
+  async selectRDD(id) {
+    this.state.currentRddId = id || null;
+    document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
+    document.getElementById('rdd-summary').classList.toggle('hidden', !id);
     if (!id) {
-      document.getElementById('rdd-summary').classList.add('hidden');
-      document.getElementById('dispatch-empty').classList.remove('hidden');
-      document.getElementById('dispatch-tbody').innerHTML = '';
       this.state.dispatches = [];
       this.state.trucks = [];
+      this.renderDispatches();
+      this.renderTrucks();
       return;
     }
-    this.loadDispatches();
-    this.loadTrucks();
+    await this.loadDispatches();
+    await this.loadTrucks();
   },
-
+  renderRddSummary() {
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const box = document.getElementById('rdd-summary');
+    if (!rdd) { box.innerHTML = ''; return; }
+    const total = this.state.dispatches.length;
+    const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
+    const pending = total - loaded;
+    const cards = [
+      { label: 'Initial Plan', value: rdd.initial_planning_count },
+      { label: 'Dispatches Added', value: total },
+      { label: 'Loaded / Done', value: loaded },
+      { label: 'Pending', value: pending },
+    ];
+    box.innerHTML = cards.map(c => `
+      <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
+        <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
+        <div class="text-2xl font-bold">${c.value}</div>
+      </div>`).join('');
+  },
   /* ---------------- DISPATCHES ---------------- */
   async loadDispatches() {
-    if (!this.state.currentRddId) return;
-    const { data, error } = await supabaseClient.from('dispatches').select('*').eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
+    const { data, error } = await supabaseClient.from('dispatches').select('*')
+      .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
     if (error) { console.error(error); return; }
     this.state.dispatches = data;
     this.renderDispatches();
+    this.renderRddSummary();
     this.refreshDashboardIfVisible();
-  },
-  toggleAddDispatchPanel() {
-    const content = document.getElementById('add-dispatch-content');
-    const toggle = document.getElementById('add-dispatch-toggle');
-    if (content.classList.contains('hidden')) {
-      content.classList.remove('hidden');
-      toggle.textContent = 'Minimize';
-    } else {
-      content.classList.add('hidden');
-      toggle.textContent = 'Expand';
-    }
   },
   async addSingleDispatch(e) {
     e.preventDefault();
-    const type = document.getElementById('single-truck-type').value;
-    const no = document.getElementById('single-dispatch-no').value.trim();
-    if (!type || !no) return;
-    const { error } = await supabaseClient.from('dispatches').insert([{ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: no }]);
+    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    const truck_type = document.getElementById('single-truck-type').value;
+    const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
+    if (!truck_type || !dispatch_number) return;
+    const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
     if (error) return alert(error.message);
-    document.getElementById('single-dispatch-no').value = '';
-    this.loadDispatches();
+    e.target.reset();
+    await this.loadDispatches();
+  },
+  parseMassPasteText(text) {
+    const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    const existingNumbers = new Set(this.state.dispatches.map(d => d.dispatch_number));
+    const seenInPaste = new Set();
+    const valid = [];
+    const skipped = [];
+    const duplicates = [];
+    text.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const parts = trimmed.split(/\s+/);
+      const type = (parts[0] || '').toUpperCase();
+      const num = parts[1];
+      if (parts.length < 2 || !validTypes.includes(type) || !num) {
+        skipped.push(trimmed);
+        return;
+      }
+      if (existingNumbers.has(num) || seenInPaste.has(num)) {
+        duplicates.push(`${type} ${num}`);
+        return;
+      }
+      seenInPaste.add(num);
+      valid.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
+    });
+    return { valid, skipped, duplicates };
   },
   previewMassDispatch() {
-    const raw = document.getElementById('mass-dispatch-input').value;
-    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    let valid = 0;
-    lines.forEach(line => {
-      const tokens = line.split(/[\s,;]+/).filter(Boolean);
-      if (tokens.length >= 2) valid++;
-    });
-    document.getElementById('mass-dispatch-preview').textContent = `${valid} structural row entries detected out of ${lines.length} total lines.`;
+    const text = document.getElementById('mass-dispatch-input').value;
+    const box = document.getElementById('mass-dispatch-preview');
+    if (!text.trim()) { box.textContent = ''; return; }
+    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
+    let msg = `<span class="text-emerald-600 font-semibold">${valid.length} ready to add</span>`;
+    if (duplicates.length) msg += ` · <span class="text-amber-600 font-semibold">${duplicates.length} duplicate (skipped)</span>`;
+    if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
+    box.innerHTML = msg;
   },
   async addMassDispatch(e) {
     e.preventDefault();
-    const raw = document.getElementById('mass-dispatch-input').value;
-    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    const rows = [];
-    lines.forEach(line => {
-      const tokens = line.split(/[\s,;]+/).filter(Boolean);
-      if (tokens.length >= 2) {
-        rows.push({ rdd_id: this.state.currentRddId, truck_type: tokens[0].toUpperCase(), dispatch_number: tokens[1] });
-      }
-    });
-    if (!rows.length) return alert('No valid data entries parsed.');
-    const { error } = await supabaseClient.from('dispatches').insert(rows);
-    if (error) return alert(error.message);
-    document.getElementById('mass-dispatch-input').value = '';
-    document.getElementById('mass-dispatch-preview').textContent = '';
-    this.loadDispatches();
+    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    const text = document.getElementById('mass-dispatch-input').value;
+    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
+    if (valid.length) {
+      const { error } = await supabaseClient.from('dispatches').insert(valid);
+      if (error) return alert(error.message);
+      document.getElementById('mass-dispatch-input').value = '';
+      document.getElementById('mass-dispatch-preview').innerHTML = '';
+      await this.loadDispatches();
+    }
+    if (skipped.length || duplicates.length) {
+      let report = `Added ${valid.length} dispatch(es).`;
+      if (duplicates.length) report += `\n\nSkipped ${duplicates.length} duplicate dispatch number(s):\n${duplicates.join('\n')}`;
+      if (skipped.length) report += `\n\nSkipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`;
+      alert(report);
+    }
   },
   renderDispatches() {
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    const summaryEl = document.getElementById('rdd-summary');
     const tbody = document.getElementById('dispatch-tbody');
-    const empty = document.getElementById('dispatch-empty');
-
-    if (!this.state.dispatches.length) {
-      summaryEl.classList.add('hidden');
-      tbody.innerHTML = '';
-      empty.classList.remove('hidden');
-      empty.textContent = 'No dispatches uploaded for this RDD yet.';
+    const emptyEl = document.getElementById('dispatch-empty');
+    tbody.innerHTML = '';
+    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
+    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
+    emptyEl.classList.add('hidden');
+    const role = this.state.currentUser.role;
+    const allowed = ROLE_PERMISSIONS[role] || [];
+    this.state.dispatches.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
+      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
+      MILESTONE_FLOW.forEach((step, idx) => {
+        const isChecked = d[`${step}_checked`];
+        const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
+        const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
+        const hasPermission = allowed.includes(step);
+        const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
+        const tip = isChecked
+          ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
+          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
+        html += `<td class="p-3 text-center" title="${tip}">
+                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
+                           ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
+                           onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
+                  </td>`;
+      });
+      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
+                <td class="p-3">
+                  <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                    <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
+                  </div>
+                </td>`;
+      if (role === 'admin') {
+        html += `<td class="p-3">
+                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>
+                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>
+                  </td>`;
+      }
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+  },
+  handleMilestoneClick(event, dispatchId, step) {
+    event.preventDefault();
+    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
+    const isChecked = dispatch[`${step}_checked`];
+    if (isChecked) {
+      if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
+      else alert('Only an admin can edit or untick a completed step.');
       return;
     }
-
-    empty.classList.add('hidden');
-    summaryEl.classList.remove('hidden');
-
-    // Render Metrics Block Summary
-    const total = this.state.dispatches.length;
-    const loadedCount = this.state.dispatches.filter(d => d.loaded_time).length;
-    const planCount = rdd ? rdd.initial_planning_count : 0;
-    const rddProgressPct = planCount > 0 ? Math.round((loadedCount / planCount) * 100) : 0;
-
-    summaryEl.innerHTML = `
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Initial Plan</div><div class="text-2xl font-bold">${planCount}</div></div>
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Actual Dispatched</div><div class="text-2xl font-bold">${total}</div></div>
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Loaded Rows</div><div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${loadedCount}</div></div>
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">RDD Total Efficiency</div><div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${rddProgressPct}%</div></div>
-    `;
-
-    const userRole = this.state.currentUser.role;
-    const allowedMilestones = ROLE_PERMISSIONS[userRole] || [];
-    const isAdmin = userRole === 'admin';
-
-    tbody.innerHTML = this.state.dispatches.map(d => {
-      let currentStatus = 'Pending';
-      let doneCount = 0;
-      MILESTONE_FLOW.forEach(m => { if (d[`${m}_time`]) { currentStatus = MILESTONE_LABELS[m]; doneCount++; } });
-      const overallPct = Math.round((doneCount / MILESTONE_FLOW.length) * 100);
-
-      const milestoneCells = MILESTONE_FLOW.map((m, idx) => {
-        const time = d[`${m}_time`];
-        const isChecked = !!time;
-        const canUserTouch = allowedMilestones.includes(m);
-
-        let isPrereqMet = true;
-        if (idx > 0) {
-          const prevM = MILESTONE_FLOW[idx - 1];
-          if (!d[`${prevM}_time`]) isPrereqMet = false;
-        }
-
-        let isDisabled = !canUserTouch || (!isChecked && !isPrereqMet);
-        
-        let extraInfo = '';
-        if (isChecked) {
-          const shortTime = time.split('T')[1]?.substring(0, 5) || '';
-          if (m === 'pick' && d.picker_name) extraInfo = `<div class="text-[10px] font-bold text-blue-600 dark:text-blue-400 tracking-tight mt-0.5">${d.picker_name} [${shortTime}]</div>`;
-          else if (m === 'checking' && d.bay_location) extraInfo = `<div class="text-[10px] font-bold text-purple-600 dark:text-purple-400 tracking-tight mt-0.5">${d.bay_location} [${shortTime}]</div>`;
-          else if (m === 'loaded' && d.assigned_plate) extraInfo = `<div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-tight mt-0.5">${d.assigned_plate} [${shortTime}]</div>`;
-          else extraInfo = `<div class="text-[10px] text-slate-400 font-semibold mt-0.5">${shortTime}</div>`;
-        }
-
-        if (isAdmin && isChecked) {
-          return `
-            <td class="p-3 text-center border-r dark:border-slate-800 last:border-0">
-              <button onclick="App.openAdminOverride('${d.id}', '${m}')" class="font-bold text-sm text-emerald-600 dark:text-emerald-400 hover:underline flex flex-col items-center justify-center w-full">
-                <span>✓</span>
-                ${extraInfo}
-              </button>
-            </td>`;
-        }
-
-        return `
-          <td class="p-3 text-center border-r dark:border-slate-800 last:border-0 ${isDisabled ? 'disabled-checkbox' : ''}">
-            <div class="flex flex-col items-center justify-center">
-              <input type="checkbox" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}
-                     onclick="App.handleMilestoneClick(event, '${d.id}', '${m}')"
-                     class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed">
-              ${extraInfo}
-            </div>
-          </td>`;
-      }).join('');
-
-      return `
-        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b dark:border-slate-800 last:border-0">
-          <td class="p-3 font-semibold text-slate-500">${d.truck_type}</td>
-          <td class="p-3 font-mono font-bold tracking-tight">${d.dispatch_number}</td>
-          ${milestoneCells}
-          <td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded-md ${currentStatus === 'Loaded' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400'}">${currentStatus}</span></td>
-          <td class="p-3">
-            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="w-full; width: ${overallPct}%"></div>
-            </div>
-          </td>
-          ${isAdmin ? `
-          <td class="p-3">
-            <div class="flex space-x-1.5">
-              <button onclick="App.openRowEdit('${d.id}')" class="bg-slate-100 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-semibold transition">Edit</button>
-              <button onclick="App.quickDeleteDispatch('${d.id}')" class="bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 px-2 py-1 rounded text-xs font-semibold transition">Delete</button>
-            </div>
-          </td>` : ''}
-        </tr>`;
-    }).join('');
-  },
-
-  /* ---------------- MILESTONE ACTIONS ---------------- */
-  handleMilestoneClick(e, dispatchId, milestone) {
-    if (!e.target.checked) { e.preventDefault(); return; }
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    this.state.pendingMilestoneUpdate = { dispatchId, milestone };
-
-    if (milestone === 'pick') {
+    this.state.pendingMilestoneUpdate = { dispatch, step };
+    if (step === 'pick') {
+      const sel = document.getElementById('pick-name');
+      const pickers = this.state.personnel.filter(p => p.pool === 'picker');
+      if (!pickers.length) { alert('No pickers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
+      sel.innerHTML = pickers.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
       this.openModal('pick-modal');
-    } else if (milestone === 'checking') {
-      const container = document.getElementById('checking-checkbox-list');
+    } else if (step === 'checking') {
       const checkers = this.state.personnel.filter(p => p.pool === 'checker');
-      container.innerHTML = checkers.map(p => `
-        <label class="flex items-center space-x-2 py-0.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 px-1 rounded transition">
-          <input type="checkbox" value="${p.name}" class="checker-modal-cb w-4 h-4 rounded text-blue-600">
+      const list = document.getElementById('checking-checkbox-list');
+      if (!checkers.length) { alert('No checkers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
+      list.innerHTML = checkers.map(p => `
+        <label class="flex items-center space-x-2 px-1 py-0.5">
+          <input type="checkbox" value="${p.name}" onchange="App.enforceCheckerLimit()">
           <span>${p.name}</span>
-        </label>`).join('') || '<div class="text-xs text-slate-400 italic">No checkers registered in pool.</div>';
-      
-      const note = document.getElementById('checking-count-note');
-      note.textContent = "Select up to 6 names.";
-      note.className = "text-xs text-slate-400 mb-3";
-
-      const baySel = document.getElementById('checking-bay');
-      baySel.innerHTML = Array.from({ length: 8 }, (_, i) => `<option value="BAY ${i + 1}">BAY ${i + 1}</option>`).join('');
+        </label>`).join('');
+      document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
       this.openModal('checking-modal');
-    } else if (milestone === 'loaded') {
-      const truckSel = document.getElementById('loaded-truck');
-      const matchedTrucks = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
-      truckSel.innerHTML = matchedTrucks.map(t => `<option value="${t.id}">${t.plate_number} (${t.truck_type})</option>`).join('') || `<option value="">No ${dispatch.truck_type} trucks available</option>`;
-      this.openModal('loaded-modal');
+    } else if (step === 'loaded') {
+      this.openLoadedModal(dispatch);
     } else {
-      this.confirmMilestone(milestone);
+      this.confirmMilestone(step);
     }
   },
-  async confirmMilestone(milestone) {
-    const { dispatchId } = this.state.pendingMilestoneUpdate;
-    const nowStr = new Date().toISOString();
-    const updatePayload = { [`${milestone}_time`]: nowStr };
-
-    if (milestone === 'pick') {
-      updatePayload.picker_name = document.getElementById('pick-name').value;
-    } else if (milestone === 'checking') {
-      const checkedBoxes = Array.from(document.querySelectorAll('.checker-modal-cb:checked'));
-      if (checkedBoxes.length < 1 || checkedBoxes.length > 6) {
-        const note = document.getElementById('checking-count-note');
-        note.textContent = `Invalid selection: ${checkedBoxes.length} chosen. Please pick between 1 and 6 checkers.`;
-        note.className = "text-xs text-red-500 font-semibold mb-3";
-        return;
-      }
-      updatePayload.checkers_list = checkedBoxes.map(cb => cb.value);
-      updatePayload.bay_location = document.getElementById('checking-bay').value;
-    } else if (milestone === 'loaded') {
+  enforceCheckerLimit() {
+    const boxes = document.querySelectorAll('#checking-checkbox-list input[type=checkbox]');
+    const checked = [...boxes].filter(b => b.checked);
+    document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selected (pick at least 1)`;
+    boxes.forEach(b => { if (!b.checked) b.disabled = checked.length >= 6; });
+  },
+  openLoadedModal(dispatch) {
+    const sel = document.getElementById('loaded-truck');
+    const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
+    if (!available.length) { alert(`No available ${dispatch.truck_type} trucks for this RDD Plan. Add one in the Available Trucks tab first.`); this.state.pendingMilestoneUpdate = null; return; }
+    sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
+    this.openModal('loaded-modal');
+  },
+  async confirmMilestone(step) {
+    const { dispatch } = this.state.pendingMilestoneUpdate;
+    const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
+    if (step === 'pick') {
+      payload.pick_assigned_name = document.getElementById('pick-name').value;
+    } else if (step === 'checking') {
+      const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
+      if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
+      payload.checking_assigned_names = names;
+      payload.bay_location = document.getElementById('checking-bay').value;
+    } else if (step === 'loaded') {
       const truckId = document.getElementById('loaded-truck').value;
-      if (!truckId) return alert('No active truck selected.');
-      const t = this.state.trucks.find(truck => truck.id === truckId);
-      updatePayload.assigned_truck_id = t.id;
-      updatePayload.assigned_plate = t.plate_number;
-      await supabaseClient.from('available_trucks').update({ status: 'Loaded' }).eq('id', t.id);
+      if (!truckId) return alert('Select a truck.');
+      payload.assigned_truck_id = truckId;
+      const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
+      if (tErr) return alert(tErr.message);
     }
-
-    await supabaseClient.from('dispatches').update(updatePayload).eq('id', dispatchId);
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
+    if (error) { alert(error.message); return; }
     this.cancelMilestone();
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
-  /* ---------------- ADMIN OVERRIDES ---------------- */
-  openAdminOverride(dispatchId, milestone) {
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    this.state.pendingMilestoneUpdate = { dispatchId, milestone };
-    const currentTime = dispatch[`${milestone}_time`].substring(0, 16);
-    document.getElementById('admin-edit-time').value = currentTime;
+  /* ---------------- ADMIN OVERRIDE ---------------- */
+  openAdminEditModal(dispatch, step) {
+    this.state.pendingMilestoneUpdate = { dispatch, step };
+    const current = dispatch[`${step}_timestamp`];
+    if (current) {
+      const dt = new Date(current);
+      dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+      document.getElementById('admin-edit-time').value = dt.toISOString().slice(0, 16);
+    } else {
+      document.getElementById('admin-edit-time').value = '';
+    }
     this.openModal('admin-edit-modal');
   },
   async adminUpdateTimestamp() {
-    const { dispatchId, milestone } = this.state.pendingMilestoneUpdate;
+    const { dispatch, step } = this.state.pendingMilestoneUpdate;
     const newTime = document.getElementById('admin-edit-time').value;
-    if (!newTime) return;
-    const isoTime = new Date(newTime).toISOString();
-    await supabaseClient.from('dispatches').update({ [`${milestone}_time`]: isoTime }).eq('id', dispatchId);
+    if (!newTime) return alert('Pick a date/time.');
+    const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
+    if (error) return alert(error.message);
     this.cancelMilestone();
-    this.loadDispatches();
+    await this.loadDispatches();
   },
   async adminUntickMilestone() {
-    const { dispatchId, milestone } = this.state.pendingMilestoneUpdate;
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    if (!confirm('Untick this step? All subsequent milestones will be cleared.')) return;
-
+    const { dispatch, step } = this.state.pendingMilestoneUpdate;
+    const startIdx = MILESTONE_FLOW.indexOf(step);
+    const toUncheck = MILESTONE_FLOW.slice(startIdx);
     const payload = {};
-    const idx = MILESTONE_FLOW.indexOf(milestone);
-    for (let i = idx; i < MILESTONE_FLOW.length; i++) {
-      payload[`${MILESTONE_FLOW[i]}_time`] = null;
-    }
-
-    if (milestone === 'pick') payload.picker_name = null;
-    if (idx <= MILESTONE_FLOW.indexOf('checking')) {
-      payload.checkers_list = null;
-      payload.bay_location = null;
-    }
-    if (idx <= MILESTONE_FLOW.indexOf('loaded') && dispatch.assigned_truck_id) {
-      await supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id);
-      payload.assigned_truck_id = null;
-      payload.assigned_plate = null;
-    }
-
-    await supabaseClient.from('dispatches').update(payload).eq('id', dispatchId);
+    toUncheck.forEach(s => {
+      payload[`${s}_checked`] = false;
+      payload[`${s}_timestamp`] = null;
+      if (s === 'pick') payload.pick_assigned_name = null;
+      if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
+      if (s === 'loaded' && dispatch.assigned_truck_id) {
+        supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
+        payload.assigned_truck_id = null;
+      }
+    });
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
+    if (error) return alert(error.message);
     this.cancelMilestone();
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
-  /* ---------------- ROW MANAGEMENT ---------------- */
-  openRowEdit(id) {
-    const d = this.state.dispatches.find(item => item.id === id);
-    this.state.pendingRowEdit = d;
-    document.getElementById('row-edit-type').value = d.truck_type;
-    document.getElementById('row-edit-number').value = d.dispatch_number;
+  /* ---------------- ADMIN: EDIT / DELETE DISPATCH ROW ---------------- */
+  openRowEditModal(dispatchId) {
+    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
+    this.state.pendingRowEdit = dispatch;
+    document.getElementById('row-edit-type').value = dispatch.truck_type;
+    document.getElementById('row-edit-number').value = dispatch.dispatch_number;
     this.openModal('row-edit-modal');
   },
-  async saveDispatchRow() {
-    const d = this.state.pendingRowEdit;
-    const t = document.getElementById('row-edit-type').value;
-    const n = document.getElementById('row-edit-number').value.trim();
-    if (!n) return;
-    await supabaseClient.from('dispatches').update({ truck_type: t, dispatch_number: n }).eq('id', d.id);
+  async saveDispatchRowEdit() {
+    const dispatch = this.state.pendingRowEdit;
+    const truck_type = document.getElementById('row-edit-type').value;
+    const dispatch_number = document.getElementById('row-edit-number').value.trim();
+    if (!dispatch_number) return alert('Dispatch number cannot be empty.');
+    const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
+    if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
     this.state.pendingRowEdit = null;
     this.closeModal('row-edit-modal');
     await this.loadDispatches();
@@ -866,7 +841,6 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
   /* ---------------- TRUCKS ---------------- */
   async loadTrucks() {
     if (!this.state.currentRddId) {
@@ -888,61 +862,50 @@ const App = {
     }
   },
   async addTruck() {
-    if (!this.state.currentRddId) return alert('Select an active RDD first');
-    const type = document.getElementById('truck-type-input').value;
-    const plate = document.getElementById('truck-plate-input').value.trim().toUpperCase();
-    if (!plate) return alert('Enter a valid plate number');
-    const { error } = await supabaseClient.from('available_trucks').insert([{ rdd_id: this.state.currentRddId, truck_type: type, plate_number: plate, status: 'Available' }]);
+    if (!this.state.currentRddId) return alert('Please select an RDD Plan first.');
+    const truck_type = document.getElementById('truck-type-input').value;
+    const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
+    if (!plate_number) return alert('Enter a plate number.');
+    const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
-    this.loadTrucks();
-  },
-  async deleteTruck(id) {
-    const t = this.state.trucks.find(truck => truck.id === id);
-    if (t.status === 'Loaded') return alert('Cannot delete a truck currently linked to an operational milestone.');
-    await supabaseClient.from('available_trucks').delete().eq('id', id);
-    this.loadTrucks();
+    await this.loadTrucks();
   },
   renderTrucks() {
     const grid = document.getElementById('trucks-grid');
-    if (!this.state.trucks.length) {
-      grid.innerHTML = '<div class="text-slate-400 italic col-span-3 text-center p-4">No trucks registered under this tracking window.</div>';
+    grid.innerHTML = '';
+    if (!this.state.currentRddId) {
+      grid.innerHTML = `<div class="col-span-3 p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD plan to see the active fleet.</div>`;
       return;
     }
-    const userRole = this.state.currentUser.role;
-    const canDelete = userRole === 'admin' || userRole === 'outbound';
-
-    grid.innerHTML = this.state.trucks.map(t => `
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow flex justify-between items-center border dark:border-slate-800">
-        <div>
-          <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">${t.truck_type}</div>
-          <div class="text-lg font-black tracking-tight text-slate-800 dark:text-white">${t.plate_number}</div>
-          <div class="mt-1"><span class="px-2 py-0.5 text-[10px] font-bold rounded-md ${t.status === 'Available' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'}">${t.status}</span></div>
-        </div>
-        ${canDelete ? `<button onclick="App.deleteTruck('${t.id}')" class="text-red-500 hover:text-red-700 text-sm font-semibold">Remove</button>` : ''}
-      </div>`).join('');
+    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    types.forEach(type => {
+      const all = this.state.trucks.filter(t => t.truck_type === type);
+      const available = all.filter(t => t.status === 'Available');
+      let html = `<div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
+                    <div class="flex justify-between items-baseline mb-3">
+                      <h3 class="font-bold">${type}</h3>
+                      <span class="text-xs text-slate-400 dark:text-slate-500">${available.length} available / ${all.length} total</span>
+                    </div>
+                    <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
+      all.forEach((t, i) => {
+        const isAvail = t.status === 'Available';
+        html += `<li class="flex justify-between items-center">
+                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}">${t.status}</span>
+                  </li>`;
+      });
+      if (!all.length) html += `<li class="text-slate-400 dark:text-slate-500 italic">No trucks added yet</li>`;
+      html += `</ul></div>`;
+      grid.innerHTML += html;
+    });
   },
-
   /* ---------------- PERSONNEL ---------------- */
   async loadPersonnel() {
     const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
     if (error) { console.error(error); return; }
     this.state.personnel = data;
     this.renderPersonnel();
-  },
-  async addPersonnel(e, pool) {
-    e.preventDefault();
-    const input = document.getElementById(`new-${pool}-name`);
-    const name = input.value.trim().toUpperCase();
-    if (!name) return;
-    const { error } = await supabaseClient.from('personnel').insert([{ name, pool }]);
-    if (error) return alert(error.message);
-    input.value = '';
-    this.loadPersonnel();
-  },
-  async deletePersonnel(id) {
-    await supabaseClient.from('personnel').delete().eq('id', id);
-    this.loadPersonnel();
   },
   renderPersonnel() {
     const isAdmin = this.state.currentUser.role === 'admin';
@@ -956,122 +919,229 @@ const App = {
         </li>`).join('') || `<li class="text-slate-400 dark:text-slate-500 italic px-2">No names added yet</li>`;
     });
   },
-
-  /* ---------------- DASHBOARD & ANALYTICS ---------------- */
+  async addPersonnel(e, pool) {
+    e.preventDefault();
+    const inputId = pool === 'picker' ? 'new-picker-name' : 'new-checker-name';
+    const name = document.getElementById(inputId).value.trim();
+    if (!name) return;
+    const { error } = await supabaseClient.from('personnel').insert({ name, pool });
+    if (error) return alert(error.message.includes('duplicate') ? 'That name is already in this pool.' : error.message);
+    document.getElementById(inputId).value = '';
+    await this.loadPersonnel();
+  },
+  async deletePersonnel(id) {
+    if (!confirm('Remove this person from the pool?')) return;
+    const { error } = await supabaseClient.from('personnel').delete().eq('id', id);
+    if (error) return alert(error.message);
+    await this.loadPersonnel();
+  },
+  /* ---------------- DASHBOARD ---------------- */
   renderDashboardSummary() {
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    document.getElementById('dashboard-heading-rdd').textContent = rdd ? `RDD — ${rdd.rdd_date}` : 'RDD —';
-    document.getElementById('dashboard-heading-time').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const total = this.state.dispatches.length;
+    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 
-    const dispatches = this.state.dispatches;
-    const total = dispatches.length;
-
-    MILESTONE_FLOW.forEach(m => {
-      const done = dispatches.filter(d => d[`${m}_time`]).length;
+    // Milestone progress table
+    steps.forEach(step => {
+      const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
       const pending = total - done;
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      document.getElementById(`dm-${m}-done`).textContent = total > 0 ? done : '—';
-      document.getElementById(`dm-${m}-pending`).textContent = total > 0 ? pending : '—';
-      document.getElementById(`dm-${m}-pct`).textContent = total > 0 ? `${pct}%` : '—';
+      const doneEl = document.getElementById(`dm-${step}-done`);
+      const pendEl = document.getElementById(`dm-${step}-pending`);
+      const pctEl  = document.getElementById(`dm-${step}-pct`);
+      if (doneEl) doneEl.textContent = done;
+      if (pendEl) pendEl.textContent = pending;
+      if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    // Render Bays Mapping Matrix
-    const bayBody = document.getElementById('dash-bay-tbody');
-    const bayMatrix = Array.from({ length: 8 }, () => []);
-    dispatches.forEach(d => {
-      if (d.bay_location && !d.loaded_time) {
-        const num = parseInt(d.bay_location.replace('BAY ', ''));
-        if (num >= 1 && num <= 8) bayMatrix[num - 1].push(d);
+    // Bay occupancy grid
+    const bayMap = {};
+    this.state.dispatches.forEach(d => {
+      if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
+        bayMap[d.bay_location] = d.dispatch_number;
       }
     });
-    const maxItems = Math.max(...bayMatrix.map(b => b.length), 1);
-    let bayHtml = '';
-    for (let row = 0; row < maxItems; row++) {
-      bayHtml += `<tr class="border-b dark:border-slate-800 last:border-0">`;
-      if (row === 0) bayHtml += `<td rowspan="${maxItems}" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-center font-bold text-slate-400 w-8">LIVE</td>`;
-      for (let bay = 0; bay < 8; bay++) {
-        const item = bayMatrix[bay][row];
-        if (item) {
-          const checkers = Array.isArray(item.checkers_list) ? item.checkers_list.join(', ') : '';
-          bayHtml += `<td class="border border-slate-200 dark:border-slate-700 p-1.5 text-center bg-purple-50 dark:bg-purple-950/20"><div class="font-bold text-purple-700 dark:text-purple-400">${item.truck_type}</div><div class="font-mono text-[10px] text-slate-500">${item.dispatch_number}</div><div class="text-[9px] text-slate-400 truncate max-w-[70px]" title="${checkers}">${checkers}</div></td>`;
-        } else {
-          bayHtml += `<td class="border border-slate-200 dark:border-slate-700 p-1.5 text-center text-slate-300 dark:text-slate-800 bg-white dark:bg-slate-900">—</td>`;
+    const tbody = document.getElementById('dash-bay-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      ['A', 'B', 'C'].forEach(letter => {
+        const tr = document.createElement('tr');
+        let html = `<td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-bold text-slate-600 dark:text-slate-300 text-center">${letter}</td>`;
+        for (let bay = 1; bay <= 8; bay++) {
+          const key = `${bay}${letter}`;
+          const occupied = bayMap[key];
+          html += occupied
+            ? `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-700 dark:text-blue-400 font-semibold text-[11px]">${occupied}</td>`
+            : `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-slate-300 dark:text-slate-600 text-[10px]">VACANT</td>`;
         }
-      }
-      bayHtml += `</tr>`;
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      });
     }
-    bayBody.innerHTML = bayHtml;
 
-    // Render Truck Type Pools Summaries
-    const poolBody = document.getElementById('dash-truckpool-tbody');
-    const typesList = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    poolBody.innerHTML = typesList.map(type => {
-      const planned = dispatches.filter(d => d.truck_type === type).length;
-      const loaded = dispatches.filter(d => d.truck_type === type && d.loaded_time).length;
-      const available = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-      const pct = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
-      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><td class="border border-slate-200 dark:border-slate-700 px-2 py-1 font-bold text-slate-500">${type}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-bold">${planned}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-bold text-emerald-600">${available}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-bold text-blue-600">${loaded}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-semibold text-slate-500">${pct}%</td></tr>`;
-    }).join('');
+    // Truck pool summary table
+    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    const tpTbody = document.getElementById('dash-truckpool-tbody');
+    if (tpTbody) {
+      let totalPlanned = 0, totalAvail = 0, totalLoaded = 0;
+      let rows = '';
+      truckTypes.forEach(type => {
+        const all      = this.state.trucks.filter(t => t.truck_type === type);
+        const avail    = all.filter(t => t.status === 'Available').length;
+        const loaded   = all.filter(t => t.status === 'Dispatched').length;
+        const planned  = all.length;
+        const pct      = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
+        totalPlanned  += planned;
+        totalAvail    += avail;
+        totalLoaded   += loaded;
+        rows += `<tr>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center font-semibold">${type}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${planned}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-emerald-600 dark:text-emerald-400 font-bold">${avail}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-blue-600 dark:text-blue-400 font-bold">${loaded}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-600 dark:text-slate-400">${pct}%</td>
+        </tr>`;
+      });
+      const totPct = totalPlanned > 0 ? Math.round((totalLoaded / totalPlanned) * 100) : 0;
+      rows += `<tr class="bg-slate-50 dark:bg-slate-800 font-bold">
+        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">TOTAL</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${totalPlanned}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-emerald-600 dark:text-emerald-400">${totalAvail}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-blue-600 dark:text-blue-400">${totalLoaded}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center">${totPct}%</td>
+      </tr>`;
+      tpTbody.innerHTML = rows;
+    }
 
-    // Render Plate Logistics Breakdown Matrix
-    const platesHead = document.getElementById('dash-truckpool-plates-head');
-    const platesBody = document.getElementById('dash-truckpool-plates-body');
-    const platesMatrix = Array.from({ length: 6 }, () => []);
-    typesList.forEach((type, tIdx) => {
-      this.state.trucks.filter(t => t.truck_type === type).forEach(t => platesMatrix[tIdx].push(t));
-    });
-    const maxPlatesRows = Math.max(...platesMatrix.map(m => m.length), 1);
-    platesHead.innerHTML = `<tr class="bg-slate-50 dark:bg-slate-800">` + typesList.map(t => `<th class="border border-slate-200 dark:border-slate-700 px-1 py-0.5 font-bold text-slate-600 dark:text-slate-300 text-[10px]">${t}</th>`).join('') + `</tr>`;
-    let platesHtml = '';
-    for (let r = 0; r < maxPlatesRows; r++) {
-      platesHtml += `<tr>`;
-      for (let c = 0; c < 6; c++) {
-        const trk = platesMatrix[c][r];
-        if (trk) {
-          const colorClass = trk.status === 'Available' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 line-through';
-          platesHtml += `<td class="border border-slate-200 dark:border-slate-700 px-1 py-0.5 text-center text-[10px] ${colorClass}">${trk.plate_number}</td>`;
-        } else {
-          platesHtml += `<td class="border border-slate-200 dark:border-slate-700 px-1 py-0.5 text-center text-slate-300 dark:text-slate-800">—</td>`;
+    // Truck pool plates list
+    const thead = document.getElementById('dash-truckpool-plates-head');
+    const pbody = document.getElementById('dash-truckpool-plates-body');
+    if (thead && pbody) {
+      const activeCols = truckTypes.filter(type =>
+        this.state.trucks.some(t => t.truck_type === type && t.status === 'Available')
+      );
+      if (!activeCols.length) {
+        thead.innerHTML = '';
+        pbody.innerHTML = `<tr><td class="text-slate-400 dark:text-slate-500 italic px-2 py-1 text-center" colspan="6">No available trucks</td></tr>`;
+      } else {
+        thead.innerHTML = `<tr>${activeCols.map(t =>
+          `<th class="border border-slate-200 dark:border-slate-700 px-2 py-1 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">${t}</th>`
+        ).join('')}</tr>`;
+        const cols = activeCols.map(type => {
+          return this.state.trucks
+            .filter(t => t.truck_type === type && t.status === 'Available')
+            .map((t, i) => `${type}${i + 1}`);
+        });
+        const maxRows = Math.max(...cols.map(c => c.length));
+        let pbHtml = '';
+        for (let r = 0; r < maxRows; r++) {
+          pbHtml += `<tr>${cols.map(col =>
+            `<td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-700 dark:text-slate-300">${col[r] || ''}</td>`
+          ).join('')}</tr>`;
         }
+        pbody.innerHTML = pbHtml;
       }
-      platesHtml += `</tr>`;
     }
-    platesBody.innerHTML = platesHtml;
+
+    // Heading RDD label
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    if (rdd) {
+      const d = new Date(rdd.rdd_date + 'T00:00:00');
+      const formatted = d.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+      document.getElementById('dashboard-heading-rdd').textContent = `RDD ${formatted}`;
+    } else {
+      document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
+    }
+  },
+  startDashboardClock() {
+    const tick = () => {
+      const el = document.getElementById('dashboard-heading-time');
+      if (el) {
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      }
+    };
+    tick();
+    if (!this._clockInterval) this._clockInterval = setInterval(tick, 1000);
   },
   renderChart() {
-    const ctx = document.getElementById('activityChart')?.getContext('2d');
-    if (!ctx) return;
+    const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
 
-    const hourlyCounts = Array.from({ length: 24 }, () => 0);
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#f1f5f9' : '#334155';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+
+    const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
+    const bucketOf = (isoString) => {
+      if (!isoString) return null;
+      const h = new Date(isoString).getHours();
+      return (h - 5 + 24) % 24;
+    };
+
+    const nowBucket = bucketOf(new Date().toISOString());
+    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
-      if (d.loaded_time) {
-        const hour = new Date(d.loaded_time).getHours();
-        if (hour >= 0 && hour < 24) hourlyCounts[hour]++;
-      }
+      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
+        const b = bucketOf(d[`${step}_timestamp`]);
+        if (b !== null) raw[step][b]++;
+      });
     });
 
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? '#334155' : '#e2e8f0';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
+    const toCumulative = (arr) => {
+      let running = 0;
+      return arr.map((v, i) => {
+        if (i > nowBucket) return null;
+        running += v;
+        return running;
+      });
+    };
+
+    const availableTrend = Array(24).fill(0);
+    this.state.trucks.forEach(t => {
+      const addedB = bucketOf(t.created_at);
+      if (addedB === null) return;
+      for (let h = addedB; h < 24; h++) availableTrend[h]++;
+    });
+    this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
+      const b = bucketOf(d.loaded_timestamp);
+      if (b === null) return;
+      for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
+    });
+    const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
+
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
+    const dispatchCount = this.state.dispatches.length;
+    const rawMax = Math.max(planCount, dispatchCount, 10);
+    const yMax = Math.ceil(rawMax / 10) * 10;
 
     this.state.chartInstance = new Chart(ctx, {
-      type: 'bar',
       data: {
-        labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
-        datasets: [{
-          label: 'Dispatches Loaded',
-          data: hourlyCounts,
-          backgroundColor: '#2563eb',
-          borderRadius: 4,
-        }]
+        labels,
+        datasets: [
+          { type: 'bar', label: 'Pick',             data: toCumulative(raw.pick),        backgroundColor: '#3b82f6' },
+          { type: 'bar', label: 'PGI',              data: toCumulative(raw.pgi),         backgroundColor: '#8b5cf6' },
+          { type: 'bar', label: 'Invoice',          data: toCumulative(raw.invoiced),    backgroundColor: '#ec4899' },
+          { type: 'bar', label: 'DS Printed',       data: toCumulative(raw.ds_printed),  backgroundColor: '#06b6d4' },
+          { type: 'bar', label: 'Check',            data: toCumulative(raw.checking),    backgroundColor: '#f59e0b' },
+          { type: 'bar', label: 'Loaded',           data: toCumulative(raw.loaded),      backgroundColor: '#10b981' },
+          { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 9 } } },
-          y: { grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1, font: { size: 9 } } }
+          x: { title: { display: true, text: 'Hour', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
+          y: {
+            beginAtZero: true,
+            max: yMax,
+            grace: '10%',
+            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor },
+            title: { display: true, text: 'Cumulative Count', color: textColor },
+            grid: { color: gridColor }
+          },
         },
         plugins: {
           legend: { labels: { color: textColor } },
@@ -1095,7 +1165,6 @@ const App = {
       },
     });
   },
-
   /* ---------------- REALTIME ---------------- */
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
@@ -1103,32 +1172,12 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, () => this.loadTrucks())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rdd_masters' }, () => this.loadRDDs())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
-      .subscribe((status) => {
-        const statEl = document.getElementById('connection-status');
-        if (!statEl) return;
-        if (status === 'SUBSCRIBED') {
-          statEl.textContent = '●  connected';
-          statEl.className = 'p-4 text-[11px] text-emerald-500 font-bold border-t border-slate-800 min-w-[15rem]';
-        } else {
-          statEl.textContent = '●  connecting…';
-          statEl.className = 'p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]';
-        }
+      .subscribe(status => {
+        const el = document.getElementById('connection-status');
+        el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
       });
   },
-
-  /* ---------------- INIT ---------------- */
-  initApp() {
-    this.loadRDDs();
-    this.loadPersonnel();
-  },
-  start() {
-    this.initTheme();
-    this.setupRealtimeSubscriptions();
-    Chart.register(ChartDataLabels);
-  }
 };
-
-window.addEventListener('DOMContentLoaded', () => App.start());
 </script>
 </body>
 </html>
