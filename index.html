@@ -1209,49 +1209,26 @@ const App = {
     const dispatchCount = this.state.dispatches.length;
     const rawMax = Math.max(planCount, dispatchCount, 10);
     const yMax = Math.ceil(rawMax / 10) * 10;
-    // Order: Loaded (top) → Checked → DS Printed → Invoiced → PGI → Picked → Avail. Trucks
     const series = [
-      { key: 'loaded',   label: 'Loaded',        color: '#10b981', data: toCumulative(raw.loaded) },
-      { key: 'check',    label: 'Checked',        color: '#f59e0b', data: toCumulative(raw.checking) },
-      { key: 'ds',       label: 'DS Printed',    color: '#06b6d4', data: toCumulative(raw.ds_printed) },
-      { key: 'invoiced', label: 'Invoiced',       color: '#ec4899', data: toCumulative(raw.invoiced) },
-      { key: 'pgi',      label: 'PGI',           color: '#8b5cf6', data: toCumulative(raw.pgi) },
-      { key: 'pick',     label: 'Picked',         color: '#3b82f6', data: toCumulative(raw.pick) },
-      { key: 'trucks',   label: 'Avail. Trucks', color: '#ef4444', data: cutFuture(availableTrend) },
+      { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
+      { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
+      { key: 'ds',       label: 'DS Printed',     color: '#1e293b', data: toCumulative(raw.ds_printed) },
+      { key: 'invoiced', label: 'Invoiced',        color: '#dc2626', data: toCumulative(raw.invoiced) },
+      { key: 'pgi',      label: 'PGI',            color: '#ec4899', data: toCumulative(raw.pgi) },
+      { key: 'pick',     label: 'Picked',          color: '#16a34a', data: toCumulative(raw.pick) },
+      { key: 'trucks',   label: 'Avail. Trucks',  color: '#eab308', data: cutFuture(availableTrend) },
     ];
     this.updateLiveSummaryBox(series, labels, nowBucket);
-
-    // Per-dataset vertical offsets to stagger callout labels and prevent overlap
-    const labelOffsets = [2, 14, 26, 38, 50, 62, 74];
-
     this.state.chartInstance = new Chart(ctx, {
       data: {
         labels,
-        datasets: series.map((s, i) => ({
-          type: 'bar',
-          label: s.label,
-          data: s.data,
-          backgroundColor: s.color,
-          datalabels: {
-            anchor: 'end',
-            align: 'end',
-            clamp: true,
-            offset: labelOffsets[i] || 2,
-            backgroundColor: s.color,
-            borderRadius: 6,
-            padding: { top: 2, bottom: 2, left: 5, right: 5 },
-            font: { size: 11, weight: 'bold' },
-            color: '#fff',
-            display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
-            formatter: (value) => value,
-          },
-        })),
+        datasets: series.map(s => ({ type: 'bar', label: s.label, data: s.data, backgroundColor: s.color })),
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        layout: { padding: { top: 90 } },
+        layout: { padding: { top: 18 } },
         categoryPercentage: 0.5,
         barPercentage: 0.62,
         scales: {
@@ -1273,7 +1250,14 @@ const App = {
             labels: { color: textColor, font: { size: 13, weight: 'bold' }, boxWidth: 16, boxHeight: 16, padding: 14 },
           },
           tooltip: { titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 }, padding: 10 },
-          datalabels: {},
+          datalabels: {
+            anchor: 'end', align: 'end', clamp: true, offset: 3,
+            backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
+            padding: { top: 3, bottom: 3, left: 6, right: 6 },
+            font: { size: 13, weight: 'bold' }, color: '#fff',
+            display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
+            formatter: (value) => value,
+          },
         },
       },
     });
