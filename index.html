@@ -9,8 +9,6 @@
   tailwind.config = {
     darkMode: 'class'
   }
-  // Place this at the beginning of your script configurations
-const customBarRemarks = {};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1260,21 +1258,6 @@ const App = {
       },
       options: {
         responsive: true,
-        // ADD THIS ONCLICK HANDLER BLOCK 👇
-  onClick: (event, elements, chart) => {
-    if (elements.length > 0) {
-      const elementIndex = elements[0].index;
-      const labelName = chart.data.labels[elementIndex];
-      
-      const existingNote = customBarRemarks[elementIndex] || "";
-      const userRemark = prompt(`Enter custom chart remarks for "${labelName}":`, existingNote);
-      
-      if (userRemark !== null) {
-        customBarRemarks[elementIndex] = userRemark.toUpperCase(); // Automatically makes text UPPERCASE
-        chart.update(); // Re-renders the chart with your new labels
-      }
-    }
-  },
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { top: 18 } },
@@ -1306,13 +1289,9 @@ const App = {
             padding: { top: 3, bottom: 3, left: 6, right: 6 },
             font: { size: 13, weight: 'bold' }, color: '#fff',
             display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
-            
-            // REPLACE FORMATTER WITH THIS VERSION 👇
-            formatter: (value, ctx) => {
-              const customRemark = customBarRemarks[ctx.dataIndex];
-              return customRemark ? `${value} \n [ ${customRemark} ]` : value;
-            },
+            formatter: (value) => value,
           },
+        },
       },
     });
   },
