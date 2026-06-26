@@ -1261,8 +1261,8 @@ const App = {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { top: 18 } },
-        categoryPercentage: 0.5,
-        barPercentage: 0.62,
+        categoryPercentage: 0.65,
+        barPercentage: 0.85,
         scales: {
           x: {
             title: { display: true, text: 'Hour', color: textColor, font: { size: 14, weight: 'bold' } },
@@ -1283,7 +1283,7 @@ const App = {
           },
           tooltip: { titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 }, padding: 10 },
           datalabels: {
-            anchor: 'end', align: 'end', clamp: true, offset: 3,
+            anchor: 'end', align: 'end', clamp: true, offset: 5,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
             padding: { top: 3, bottom: 3, left: 6, right: 6 },
             font: { size: 13, weight: 'bold' }, color: '#fff',
