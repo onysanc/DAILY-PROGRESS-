@@ -696,6 +696,10 @@ const App = {
       return (h - 5 + 24) % 24; // shift so 5AM = bucket 0
     };
 
+    // Don't draw anything for hours that haven't happened yet — no projecting into the future.
+    const nowBucket = bucketOf(new Date().toISOString());
+    const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
+
     const series = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'checking', 'loaded'].forEach(step => {
@@ -706,13 +710,11 @@ const App = {
 
     // Available trucks: how many were sitting "Available" (added but not yet loaded) by each hour bucket
     const availableTrend = Array(24).fill(0);
-    const totalTrucks = this.state.trucks.length;
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
       if (addedB === null) return;
       for (let h = addedB; h < 24; h++) availableTrend[h]++;
     });
-    // subtract ones loaded by each hour (based on dispatches.loaded_timestamp + assigned_truck_id)
     this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
       const b = bucketOf(d.loaded_timestamp);
       if (b === null) return;
@@ -723,12 +725,12 @@ const App = {
       data: {
         labels,
         datasets: [
-          { type: 'bar', label: 'Pick', data: series.pick, backgroundColor: '#3b82f6' },
-          { type: 'bar', label: 'PGI', data: series.pgi, backgroundColor: '#8b5cf6' },
-          { type: 'bar', label: 'Invoice', data: series.invoiced, backgroundColor: '#ec4899' },
-          { type: 'bar', label: 'Check', data: series.checking, backgroundColor: '#f59e0b' },
-          { type: 'bar', label: 'Loaded', data: series.loaded, backgroundColor: '#10b981' },
-          { type: 'line', label: 'Available Trucks', data: availableTrend, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.25, yAxisID: 'y1', fill: false },
+          { type: 'bar', label: 'Pick', data: cutFuture(series.pick), backgroundColor: '#3b82f6' },
+          { type: 'bar', label: 'PGI', data: cutFuture(series.pgi), backgroundColor: '#8b5cf6' },
+          { type: 'bar', label: 'Invoice', data: cutFuture(series.invoiced), backgroundColor: '#ec4899' },
+          { type: 'bar', label: 'Check', data: cutFuture(series.checking), backgroundColor: '#f59e0b' },
+          { type: 'bar', label: 'Loaded', data: cutFuture(series.loaded), backgroundColor: '#10b981' },
+          { type: 'line', label: 'Available Trucks', data: cutFuture(availableTrend), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.25, yAxisID: 'y1', fill: false, spanGaps: false },
         ],
       },
       options: {
@@ -736,8 +738,9 @@ const App = {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { stacked: true, title: { display: true, text: 'Hour' } },
-          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Milestones completed' } },
+          // stacked:false (the default) + multiple bar datasets = each checkbox gets its own bar, side by side, per hour
+          x: { title: { display: true, text: 'Hour' } },
+          y: { beginAtZero: true, max: 100, ticks: { stepSize: 10 }, title: { display: true, text: 'Milestones completed' } },
           y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Trucks available' } },
         },
       },
