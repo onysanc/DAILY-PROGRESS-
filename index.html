@@ -296,6 +296,8 @@ const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 // renamed to supabaseClient so it doesn't collide with the supabase-js global "supabase"
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// The datalabels plugin must be explicitly registered — loading the CDN script alone does not activate it.
+Chart.register(ChartDataLabels);
 
 /* ======================================================================
    USERS & ROLE PERMISSIONS
