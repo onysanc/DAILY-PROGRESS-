@@ -20,6 +20,8 @@
   ::-webkit-scrollbar{height:8px;width:8px}
   ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
   .dark ::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
+  #chart-card.chart-expanded{min-height:82vh!important}
+  #live-summary-box{min-width:170px}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
@@ -219,8 +221,17 @@
       </div>
       
       <div class="flex flex-col gap-4 flex-1 min-h-0">
-        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow flex-1 relative min-h-[340px] border dark:border-slate-800">
-          <canvas id="activityChart"></canvas>
+        <div id="chart-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col flex-1 min-h-[460px] relative transition-all duration-300">
+          <div class="flex justify-between items-center mb-2 shrink-0">
+            <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Activity Timeline</h2>
+            <button onclick="App.toggleChartExpand()" id="chart-resize-btn" title="Resize chart" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+              <svg id="chart-resize-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            </button>
+          </div>
+          <div id="live-summary-box" class="absolute top-12 right-5 z-10 bg-slate-900/95 text-white rounded-xl shadow-xl px-4 py-3 text-[13px] leading-tight hidden pointer-events-none"></div>
+          <div class="relative flex-1 min-h-0">
+            <canvas id="activityChart"></canvas>
+          </div>
         </div>
         
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2 shrink-0">
@@ -1034,12 +1045,44 @@ const App = {
       document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
     }
   },
+  updateLiveSummaryBox(series, labels, nowBucket) {
+    const box = document.getElementById('live-summary-box');
+    if (!box) return;
+    if (nowBucket === null || nowBucket < 0) { box.classList.add('hidden'); return; }
+    const rowsHtml = series.map(s => {
+      const val = s.data[nowBucket] ?? 0;
+      return `<div class="flex items-center gap-2 py-0.5">
+        <span class="inline-block w-3 h-3 rounded-sm shrink-0" style="background:${s.color}"></span>
+        <span class="flex-1 whitespace-nowrap">${s.label}:</span>
+        <span class="font-extrabold ml-2">${val}</span>
+      </div>`;
+    }).join('');
+    box.innerHTML = `<div class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-slate-600">
+        <span class="font-extrabold text-[14px]">${labels[nowBucket]}</span>
+        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-wide">● live</span>
+      </div>${rowsHtml}`;
+    box.classList.remove('hidden');
+  },
+  toggleChartExpand() {
+    const card = document.getElementById('chart-card');
+    const icon = document.getElementById('chart-resize-icon');
+    const expanded = card.classList.toggle('chart-expanded');
+    icon.innerHTML = expanded
+      ? '<path stroke-linecap="round" stroke-linejoin="round" d="M9 9V5m0 4H5m4 0L4 4m6 11v4m0-4H5m5 0l-5 5m11-15v4m0-4h4m-4 0l5-5m-5 15v4m0-4h4m-4 0l5 5"/>'
+      : '<path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>';
+    setTimeout(() => { if (this.state.chartInstance) this.state.chartInstance.resize(); }, 310);
+  },
   startDashboardClock() {
     const tick = () => {
       const el = document.getElementById('dashboard-heading-time');
       if (el) {
         const now = new Date();
         el.textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      }
+      const h = new Date().getHours();
+      const bucket = (h - 5 + 24) % 24;
+      if (bucket !== this.state.lastChartBucket && !document.getElementById('tab-analytics').classList.contains('hidden')) {
+        this.renderChart();
       }
     };
     tick();
@@ -1058,6 +1101,7 @@ const App = {
       return (h - 5 + 24) % 24;
     };
     const nowBucket = bucketOf(new Date().toISOString());
+    this.state.lastChartBucket = nowBucket;
     const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
@@ -1090,30 +1134,55 @@ const App = {
     const dispatchCount = this.state.dispatches.length;
     const rawMax = Math.max(planCount, dispatchCount, 10);
     const yMax = Math.ceil(rawMax / 10) * 10;
+    const series = [
+      { key: 'pick',     label: 'Pick',          color: '#3b82f6', data: toCumulative(raw.pick) },
+      { key: 'pgi',      label: 'PGI',           color: '#8b5cf6', data: toCumulative(raw.pgi) },
+      { key: 'invoiced', label: 'Invoice',       color: '#ec4899', data: toCumulative(raw.invoiced) },
+      { key: 'ds',       label: 'DS Printed',    color: '#06b6d4', data: toCumulative(raw.ds_printed) },
+      { key: 'check',    label: 'Check',         color: '#f59e0b', data: toCumulative(raw.checking) },
+      { key: 'loaded',   label: 'Loaded',        color: '#10b981', data: toCumulative(raw.loaded) },
+      { key: 'trucks',   label: 'Avail. Trucks', color: '#ef4444', data: cutFuture(availableTrend) },
+    ];
+    this.updateLiveSummaryBox(series, labels, nowBucket);
     this.state.chartInstance = new Chart(ctx, {
       data: {
         labels,
-        datasets: [
-          { type: 'bar', label: 'Pick',             data: toCumulative(raw.pick),        backgroundColor: '#3b82f6' },
-          { type: 'bar', label: 'PGI',              data: toCumulative(raw.pgi),         backgroundColor: '#8b5cf6' },
-          { type: 'bar', label: 'Invoice',          data: toCumulative(raw.invoiced),    backgroundColor: '#ec4899' },
-          { type: 'bar', label: 'DS Printed',       data: toCumulative(raw.ds_printed),  backgroundColor: '#06b6d4' },
-          { type: 'bar', label: 'Check',            data: toCumulative(raw.checking),    backgroundColor: '#f59e0b' },
-          { type: 'bar', label: 'Loaded',           data: toCumulative(raw.loaded),      backgroundColor: '#10b981' },
-          { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
-        ],
+        datasets: series.map(s => ({ type: 'bar', label: s.label, data: s.data, backgroundColor: s.color })),
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
+        layout: { padding: { top: 18 } },
+        categoryPercentage: 0.62,
+        barPercentage: 0.85,
         scales: {
-          x: { title: { display: true, text: 'Hour', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
-          y: { beginAtZero: true, max: yMax, grace: '10%', ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor }, title: { display: true, text: 'Cumulative Count', color: textColor }, grid: { color: gridColor } },
+          x: {
+            title: { display: true, text: 'Hour', color: textColor, font: { size: 14, weight: 'bold' } },
+            ticks: { color: textColor, font: { size: 13 } },
+            grid: { color: gridColor },
+          },
+          y: {
+            beginAtZero: true, max: yMax, grace: '10%',
+            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor, font: { size: 13 } },
+            title: { display: true, text: 'Cumulative Count', color: textColor, font: { size: 14, weight: 'bold' } },
+            grid: { color: gridColor },
+          },
         },
         plugins: {
-          legend: { labels: { color: textColor } },
-          datalabels: { anchor: 'end', align: 'end', clamp: true, offset: 2, backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8, padding: { top: 2, bottom: 2, left: 5, right: 5 }, font: { size: 10, weight: 'bold' }, color: '#fff', display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; }, formatter: (value) => value, },
+          legend: {
+            align: 'start',
+            labels: { color: textColor, font: { size: 13, weight: 'bold' }, boxWidth: 16, boxHeight: 16, padding: 14 },
+          },
+          tooltip: { titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 }, padding: 10 },
+          datalabels: {
+            anchor: 'end', align: 'end', clamp: true, offset: 3,
+            backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
+            padding: { top: 3, bottom: 3, left: 6, right: 6 },
+            font: { size: 13, weight: 'bold' }, color: '#fff',
+            display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
+            formatter: (value) => value,
+          },
         },
       },
     });
