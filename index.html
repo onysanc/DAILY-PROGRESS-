@@ -9,391 +9,467 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
-  .hidden{display:none!important}
-  .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
-  input[type=checkbox]{accent-color:#2563eb}
-  ::-webkit-scrollbar{height:8px;width:8px}
-  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+  .hidden { display: none !important; }
+  .disabled-checkbox { opacity: .25; cursor: not-allowed; filter: grayscale(100%); }
+  input[type=checkbox] { accent-color: #2563eb; }
+  
+  /* Precision Custom Dark Theme Scrollbars */
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-track { background: #0b0f19; }
+  ::-webkit-scrollbar-thumb { background: #1e2640; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2d385e; }
 </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-screen overflow-hidden">
-<!-- ===================== LOGIN ===================== -->
-<div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
-  <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
-    <h1 class="text-2xl font-bold mb-1 text-slate-800">Dispatch Tracker</h1>
-    <p class="text-sm text-slate-500 mb-6">Sign in with your username.</p>
+<body class="bg-[#0b0f19] text-slate-200 font-sans h-screen overflow-hidden antialiased selection:bg-blue-500/30 selection:text-blue-200">
+
+<div id="login-screen" class="fixed inset-0 bg-[#0b0f19] z-[100] flex items-center justify-center p-4">
+  <div class="bg-[#151c2e] p-8 rounded-xl shadow-2xl w-full max-w-md border border-slate-800/80">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold tracking-tight text-white">Dispatch Tracker</h1>
+      <p class="text-sm text-slate-400 mt-1">Sign in with your database identity credentials.</p>
+    </div>
     <form onsubmit="App.login(event)" class="space-y-4">
       <div>
-        <label class="block text-sm font-semibold mb-1">Username</label>
-        <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username</label>
+        <input type="text" id="login-username" autocomplete="username" 
+               class="w-full bg-[#1e2640] border border-slate-700/40 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm" required>
       </div>
       <div>
-        <label class="block text-sm font-semibold mb-1">Password</label>
-        <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" 
+               class="w-full bg-[#1e2640] border border-slate-700/40 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition text-sm" required>
       </div>
-      <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
-      <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
+      <div id="login-error" class="hidden text-red-400 text-xs font-semibold bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+        Invalid database username or password token assignment.
+      </div>
+      <button type="submit" class="w-full bg-[#1d5bf7] text-white font-bold py-3 rounded-lg hover:bg-blue-600 active:bg-blue-700 shadow-lg shadow-blue-500/10 transition text-sm mt-2">
+        Log In
+      </button>
     </form>
   </div>
 </div>
-<!-- ===================== APP ===================== -->
-<div id="app-wrapper" class="hidden flex h-full">
-  <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0">
-    <div class="p-5 border-b border-slate-700">
-      <div class="text-lg font-bold">Dispatch Tracker</div>
-      <div class="text-xs text-slate-400 mt-2">Logged in as</div>
-      <div id="display-username" class="font-bold"></div>
-      <div id="display-role" class="text-xs text-blue-400 mb-2"></div>
-      <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline">Log out</button>
+
+<div id="app-wrapper" class="hidden flex h-full w-full">
+  
+  <aside class="w-60 bg-[#151c2e] text-slate-200 flex flex-col shrink-0 border-r border-slate-800/60">
+    <div class="p-5 border-b border-slate-800/80">
+      <div class="flex items-center gap-2.5">
+        <div class="bg-blue-600 text-white font-black p-1.5 rounded-md text-xs tracking-wider shrink-0">DT</div>
+        <div class="text-base font-bold text-white tracking-tight">Dispatch Tracker</div>
+      </div>
+      <div class="mt-4 bg-[#1e2640]/50 rounded-lg p-3 border border-slate-700/30">
+        <div class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">User Identity</div>
+        <div id="display-username" class="font-bold text-white text-sm truncate mt-0.5"></div>
+        <div id="display-role" class="text-xs text-blue-400 font-medium"></div>
+        <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline font-medium mt-2 block">Log Out System</button>
+      </div>
     </div>
-    <nav class="flex-1 p-3 space-y-1">
-      <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg bg-blue-600">Dispatch Activity</button>
-      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
-      <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
-      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
+    
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" 
+              class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150">
+        Dispatch Activity
+      </button>
+      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" 
+              class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150">
+        Available Trucks
+      </button>
+      <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" 
+              class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150">
+        Dashboard Analytics
+      </button>
+      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" 
+              class="nav-btn w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150">
+        Personnel Control
+      </button>
     </nav>
-    <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800" id="connection-status">●  connecting…</div>
+    
+    <div class="p-4 text-[11px] font-medium border-t border-slate-800/80 uppercase tracking-widest bg-[#0b0f19]/30" id="connection-status">
+      <span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span> connecting…
+    </div>
   </aside>
-  <main class="flex-1 overflow-y-auto p-6">
-    <!-- ---------- TAB 1: DISPATCH ACTIVITY ---------- -->
+
+  <main class="flex-1 overflow-y-auto p-6 bg-[#0b0f19]">
+    
     <section id="tab-dispatch" class="tab-content">
-      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
-        <h1 class="text-2xl font-bold">Dispatch Activity</h1>
+      <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">Dispatch Activity Matrix</h1>
+          <p class="text-xs text-slate-400 mt-0.5">Manage chronological order fulfillment pipeline milestones.</p>
+        </div>
         <div class="flex space-x-3 items-center">
-          <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white">
-            <option value="">Select RDD…</option>
+          <select id="rdd-selector" onchange="App.selectRDD(this.value)" 
+                  class="p-2.5 bg-[#151c2e] border border-slate-700/50 rounded-lg text-sm text-slate-200 outline-none focus:border-blue-500 shadow-lg">
+            <option value="">Select RDD Engine…</option>
           </select>
-          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
+          <button onclick="App.openModal('rdd-modal')" 
+                  class="bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-lg shadow-emerald-700/10 hover:bg-emerald-500 text-sm font-semibold transition">
+            + Create New RDD
+          </button>
         </div>
       </div>
-      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
-      <div id="add-dispatch-panel" class="hidden bg-white p-5 rounded-xl shadow mb-5">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="font-bold">Add Dispatches</h2>
-          <button onclick="App.toggleAddDispatchPanel()" id="add-dispatch-toggle" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Minimize</button>
+      
+      <div id="rdd-summary" class="hidden mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      
+      <div id="add-dispatch-panel" class="hidden bg-[#151c2e] p-5 rounded-xl border border-slate-800/60 shadow-xl mb-6">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
+          <h2 class="font-bold text-white text-sm uppercase tracking-wider text-slate-300">Insert Dynamic Dispatches</h2>
+          <button onclick="App.toggleAddDispatchPanel()" id="add-dispatch-toggle" class="text-xs font-bold text-blue-400 hover:text-blue-300 bg-slate-800/60 px-2 py-1 rounded">Minimize</button>
         </div>
-        <div id="add-dispatch-content" class="grid grid-cols-2 gap-8">
-          <form onsubmit="App.addSingleDispatch(event)" class="space-y-2">
-            <h3 class="text-sm font-semibold text-slate-500">Single Entry</h3>
+        <div id="add-dispatch-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          <form onsubmit="App.addSingleDispatch(event)" class="space-y-3">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Single Row Matrix Entry</h3>
             <div class="flex space-x-2">
-              <select id="single-truck-type" class="p-2 border rounded-lg w-28" required>
+              <select id="single-truck-type" class="p-2.5 bg-[#1e2640] border border-slate-700/40 text-white rounded-lg text-sm w-32 focus:border-blue-500 outline-none" required>
                 <option value="">Type</option>
                 <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
               </select>
-              <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border rounded-lg flex-1" required>
-              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+              <input type="text" id="single-dispatch-no" placeholder="Dispatch Invoice #" 
+                     class="p-2.5 bg-[#1e2640] border border-slate-700/40 text-white placeholder-slate-600 rounded-lg text-sm flex-1 focus:border-blue-500 outline-none" required>
+              <button type="submit" class="bg-blue-600 text-white px-5 rounded-lg hover:bg-blue-500 text-sm font-bold transition">Add</button>
             </div>
           </form>
+          
           <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
-            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — one row per line: <code class="bg-slate-100 px-1 rounded">TYPE&lt;tab or space&gt;DISPATCH#</code></h3>
-            <textarea id="mass-dispatch-input" rows="10" oninput="App.previewMassDispatch()"
-                      placeholder="AUV&#9;10130422&#10;AUV&#9;10130423&#10;6W&#9;10130437&#10;4W&#9;10130438"
-                      class="w-full p-2 border rounded-lg font-mono text-xs"></textarea>
-            <div id="mass-dispatch-preview" class="text-xs text-slate-500 min-h-[1.2em]"></div>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold w-full">Add All</button>
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Mass Spreadsheet Paste Terminal — <code class="bg-slate-800 text-blue-400 px-1.5 py-0.5 rounded text-[11px]">TYPE&lt;tab/space&gt;DISPATCH#</code>
+            </h3>
+            <textarea id="mass-dispatch-input" rows="4" oninput="App.previewMassDispatch()"
+                      placeholder="AUV&#9;10130422&#10;6W&#9;10130437&#10;4W&#9;10130438"
+                      class="w-full p-3 bg-[#1e2640] border border-slate-700/40 text-white rounded-lg font-mono text-xs focus:border-blue-500 outline-none placeholder-slate-600"></textarea>
+            <div class="flex items-center justify-between gap-3 pt-1">
+              <div id="mass-dispatch-preview" class="text-xs text-slate-400 font-medium min-h-[1.5em]"></div>
+              <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 text-xs font-bold transition shrink-0">Execute Pipeline Injection</button>
+            </div>
           </form>
         </div>
       </div>
-      <div class="bg-white rounded-xl shadow overflow-x-auto">
-        <table class="w-full text-sm text-left whitespace-nowrap">
-          <thead class="bg-slate-50 border-b text-slate-500 text-xs uppercase">
-            <tr>
-              <th class="p-3">Type</th>
-              <th class="p-3">Dispatch No.</th>
-              <th class="p-3 text-center">Pick</th>
-              <th class="p-3 text-center">PGI</th>
-              <th class="p-3 text-center">Invoiced</th>
-              <th class="p-3 text-center">DS Printed</th>
-              <th class="p-3 text-center">Checking</th>
-              <th class="p-3 text-center">Loaded</th>
-              <th class="p-3">Status</th>
-              <th class="p-3 w-40">Progress</th>
-              <th id="actions-col-header" class="p-3 hidden">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="dispatch-tbody" class="divide-y divide-slate-100"></tbody>
-        </table>
-        <div id="dispatch-empty" class="p-8 text-center text-slate-400 text-sm">Select or create an RDD to see dispatches.</div>
+      
+      <div class="bg-[#151c2e] rounded-xl shadow-2xl border border-slate-800/60 overflow-hidden">
+        <div class="overflow-x-auto w-full">
+          <table class="w-full text-xs text-left whitespace-nowrap">
+            <thead class="bg-[#1e2640]/50 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+              <tr>
+                <th class="p-3.5">Fleet Type</th>
+                <th class="p-3.5">Dispatch Number</th>
+                <th class="p-3.5 text-center">Pick</th>
+                <th class="p-3.5 text-center">PGI</th>
+                <th class="p-3.5 text-center">Invoiced</th>
+                <th class="p-3.5 text-center">DS Printed</th>
+                <th class="p-3.5 text-center">Checking</th>
+                <th class="p-3.5 text-center">Loaded</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5 w-44">Visual Progress Track</th>
+                <th id="actions-col-header" class="p-3.5 hidden text-right">System Override</th>
+              </tr>
+            </thead>
+            <tbody id="dispatch-tbody" class="divide-y divide-slate-800/60 text-slate-300 font-medium"></tbody>
+          </table>
+        </div>
+        <div id="dispatch-empty" class="p-12 text-center text-slate-500 text-sm font-medium bg-[#151c2e]">
+          Select or initialize a system RDD mapping instance to inspect records.
+        </div>
       </div>
     </section>
-    <!-- ---------- TAB 2: AVAILABLE TRUCKS ---------- -->
+    
     <section id="tab-trucks" class="tab-content hidden">
-      <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
-      <div class="bg-white p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Active Available Fleet Pool</h1>
+        <p class="text-xs text-slate-400 mt-0.5">Register structural transport assets into the logistics deployment matrix.</p>
+      </div>
+      
+      <div class="bg-[#151c2e] p-5 rounded-xl border border-slate-800/60 shadow-xl mb-6 flex space-x-4 items-end flex-wrap gap-y-3">
         <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-500">Truck Type</label>
-          <select id="truck-type-input" class="p-2 border rounded-lg">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Truck Asset Type</label>
+          <select id="truck-type-input" class="p-2.5 bg-[#1e2640] border border-slate-700/40 text-white rounded-lg text-sm w-36 focus:border-blue-500 outline-none">
             <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-500">Plate Number</label>
-          <input type="text" id="truck-plate-input" class="p-2 border rounded-lg" placeholder="ABC 123">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Plate Identification</label>
+          <input type="text" id="truck-plate-input" class="p-2.5 bg-[#1e2640] border border-slate-700/40 text-white placeholder-slate-600 rounded-lg text-sm focus:border-blue-500 outline-none" placeholder="e.g., ABC 1234">
         </div>
-        <button onclick="App.addTruck()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add Truck</button>
+        <button onclick="App.addTruck()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-500 text-sm font-bold transition shadow-lg shadow-blue-600/10">
+          Inject Fleet Asset
+        </button>
       </div>
-      <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="trucks-grid"></div>
     </section>
-    <!-- ---------- TAB 3: DASHBOARD ---------- -->
-    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3">
-
-      <!-- HEADING -->
+    
+    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-4">
       <div>
-        <h1 class="text-xl font-extrabold tracking-tight">
-          PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-700">RDD —</span>
-          &nbsp;<span class="text-slate-500 font-semibold">AS OF</span>
-          <span id="dashboard-heading-time" class="text-blue-700"></span>
+        <h1 class="text-xl font-black tracking-tight text-white uppercase">
+          OPERATIONAL PROFILE FOR <span id="dashboard-heading-rdd" class="text-blue-500">RDD —</span>
+          &nbsp;<span class="text-slate-400 font-semibold">TIMESTAMP:</span>
+          <span id="dashboard-heading-time" class="text-blue-400 font-mono font-bold ml-1"></span>
         </h1>
       </div>
-
-      <!-- ROW 1: milestone table + bay grid -->
-      <div class="flex gap-3 flex-wrap">
-
-        <!-- Milestone progress table -->
-        <div class="bg-white rounded-xl shadow overflow-hidden shrink-0">
-          <table class="text-xs border-collapse" id="dash-milestone-table">
+      
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        
+        <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl overflow-hidden xl:col-span-5 flex flex-col justify-center">
+          <table class="text-[11px] border-collapse w-full text-slate-300 font-medium" id="dash-milestone-table">
             <thead>
-              <tr>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 w-24"></th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PICKED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PGI</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">INVOICED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">DS PRINTED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">CHECKED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">LOADED</th>
+              <tr class="bg-[#1e2640]/40 text-slate-400 uppercase tracking-wider font-bold">
+                <th class="border border-slate-800/80 px-3 py-2 w-20 text-left">STEP</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">PICK</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">PGI</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">INVOICE</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">DS PRNT</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">CHECK</th>
+                <th class="border border-slate-800/80 px-2 py-2 text-center">LOADED</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-800">
               <tr>
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-emerald-600">DONE</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pick-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pgi-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-invoiced-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-ds_printed-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-checking-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-loaded-done">—</td>
+                <td class="border border-slate-800/80 px-3 py-2.5 font-bold text-emerald-400 bg-[#0b0f19]/20">DONE</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-pick-done">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-pgi-done">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-invoiced-done">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-ds_printed-done">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-checking-done">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-emerald-400" id="dm-loaded-done">—</td>
               </tr>
               <tr>
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-amber-500">PENDING</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pick-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pgi-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-invoiced-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-ds_printed-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-checking-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-loaded-pending">—</td>
+                <td class="border border-slate-800/80 px-3 py-2.5 font-bold text-amber-500 bg-[#0b0f19]/20">PENDING</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-pick-pending">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-pgi-pending">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-invoiced-pending">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-ds_printed-pending">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-checking-pending">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center font-bold text-amber-500" id="dm-loaded-pending">—</td>
               </tr>
-              <tr class="bg-slate-50">
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-slate-600">PROGRESS</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pick-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pgi-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-invoiced-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-ds_printed-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-checking-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-loaded-pct">—</td>
+              <tr class="bg-[#1e2640]/20 font-bold text-white">
+                <td class="border border-slate-800/80 px-3 py-2.5 font-bold text-slate-400">RATIO</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-pick-pct">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-pgi-pct">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-invoiced-pct">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-ds_printed-pct">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-checking-pct">—</td>
+                <td class="border border-slate-800/80 px-2 py-2.5 text-center" id="dm-loaded-pct">—</td>
               </tr>
             </tbody>
           </table>
         </div>
-
-        <!-- Bay occupancy grid -->
-        <div class="bg-white rounded-xl shadow overflow-hidden flex-1 min-w-[420px]">
-          <table class="text-xs border-collapse w-full" id="dash-bay-table">
+        
+        <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl overflow-hidden xl:col-span-7 flex flex-col justify-center">
+          <table class="text-[10px] border-collapse w-full text-slate-300 font-medium" id="dash-bay-table">
             <thead>
-              <tr>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 w-8"></th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 1</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 2</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 3</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 4</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 5</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 6</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 7</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 8</th>
+              <tr class="bg-[#1e2640]/40 text-slate-400 uppercase tracking-wider font-bold">
+                <th class="border border-slate-800/80 px-2 py-2 w-8 text-center">BAY</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 1</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 2</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 3</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 4</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 5</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 6</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 7</th>
+                <th class="border border-slate-800/80 px-1 py-2 text-center">BAY 8</th>
               </tr>
             </thead>
-            <tbody id="dash-bay-tbody">
-              <!-- rendered by JS -->
-            </tbody>
+            <tbody id="dash-bay-tbody" class="divide-y divide-slate-800 text-center"></tbody>
           </table>
         </div>
       </div>
-
-      <!-- ROW 2: chart + right panel (remarks + truck pool table + truck pool list) -->
-      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
-
-        <!-- Chart -->
-        <div class="bg-white p-4 rounded-xl shadow flex-1 relative min-h-[340px]">
+      
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 flex-1 min-h-[380px]">
+        
+        <div class="bg-[#151c2e] p-4 rounded-xl border border-slate-800/60 shadow-xl xl:col-span-8 relative min-h-[340px]">
           <canvas id="activityChart"></canvas>
         </div>
-
-        <!-- Right panel -->
-        <div class="flex flex-col gap-0 shrink-0 w-72">
-
-          <!-- Remarks now -->
-          <div class="bg-white rounded-t-xl shadow border-b border-slate-100 px-4 py-2">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
-            <textarea id="dash-remarks-now" rows="3"
-              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Type current remarks…"></textarea>
+        
+        <div class="xl:col-span-4 flex flex-col gap-3 h-full">
+          
+          <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl px-4 py-3 flex flex-col">
+            <div class="text-[10px] font-bold text-blue-400 tracking-wider mb-2 uppercase">REMARKS — REALTIME ANNOTATION LOGS</div>
+            <textarea id="dash-remarks-now" rows="2"
+              class="w-full text-xs bg-[#1e2640] border border-slate-700/50 text-white placeholder-slate-600 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Inject current real-time data log metrics notes here…"></textarea>
           </div>
-
-          <!-- Truck pool summary table -->
-          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL</div>
-            <table class="text-xs border-collapse w-full">
+          
+          <div class="bg-[#151c2e] border border-slate-800/60 rounded-xl shadow-xl px-4 py-3 overflow-x-auto">
+            <div class="text-[10px] font-bold text-blue-400 tracking-wider mb-2 uppercase text-center">Fleet Asset Breakdown Analytics</div>
+            <table class="text-[10px] border-collapse w-full text-slate-300 font-medium">
               <thead>
-                <tr class="bg-slate-50">
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">TRUCK</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PLANNED</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">AVAILABLE</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">LOADED</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PROGRESS</th>
+                <tr class="bg-[#1e2640]/50 text-slate-400 font-bold uppercase">
+                  <th class="border border-slate-800 px-2 py-1 text-center">CLASS</th>
+                  <th class="border border-slate-800 px-2 py-1 text-center">PLAN</th>
+                  <th class="border border-slate-800 px-2 py-1 text-center">AVAL</th>
+                  <th class="border border-slate-800 px-2 py-1 text-center">DISP</th>
+                  <th class="border border-slate-800 px-2 py-1 text-center">RATIO</th>
                 </tr>
               </thead>
-              <tbody id="dash-truckpool-tbody"></tbody>
+              <tbody id="dash-truckpool-tbody" class="divide-y divide-slate-800 text-center"></tbody>
             </table>
           </div>
-
-          <!-- Remarks previous hours -->
-          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
-            <textarea id="dash-remarks-prev" rows="2"
-              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Previous hour notes…"></textarea>
+          
+          <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl px-4 py-3 flex flex-col">
+            <div class="text-[10px] font-bold text-slate-400 tracking-wider mb-2 uppercase">HISTORICAL NOTES — PRIOR HOURS ARCHIVE</div>
+            <textarea id="dash-remarks-prev" rows="1"
+              class="w-full text-xs bg-[#1e2640] border border-slate-700/50 text-white placeholder-slate-600 rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Static legacy transaction comments index log record buffer dashboard view…"></textarea>
           </div>
-
-          <!-- Available truck list by type -->
-          <div class="bg-white rounded-b-xl shadow px-4 py-2 flex-1 overflow-y-auto">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL — PLATES</div>
-            <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
-              <thead id="dash-truckpool-plates-head"></thead>
-              <tbody id="dash-truckpool-plates-body"></tbody>
+          
+          <div class="bg-[#151c2e] border border-slate-800/60 rounded-xl shadow-xl px-4 py-3 flex-1 overflow-y-auto min-h-[120px]">
+            <div class="text-[10px] font-bold text-slate-400 tracking-wider mb-2 uppercase text-center">READY FLEET PLATES</div>
+            <table class="text-[10px] border-collapse w-full text-slate-300 font-medium" id="dash-truckpool-plates-table">
+              <thead id="dash-truckpool-plates-head" class="text-slate-400 font-bold uppercase"></thead>
+              <tbody id="dash-truckpool-plates-body" class="text-center divide-y divide-slate-800"></tbody>
             </table>
           </div>
-
+          
         </div>
       </div>
-
     </section>
-    <!-- ---------- TAB 4: PERSONNEL ---------- -->
+    
     <section id="tab-personnel" class="tab-content hidden">
-      <h1 class="text-2xl font-bold mb-1">Personnel</h1>
-      <p class="text-sm text-slate-500 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span></p>
-      <div class="grid grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl shadow p-5">
-          <h2 class="font-bold mb-3">Picker Pool</h2>
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Personnel Pool Management</h1>
+        <p class="text-sm text-slate-400 mt-0.5">Maintain assigned personnel resources for Pick and Checking loops. <span id="personnel-admin-note" class="hidden text-amber-400 font-medium">Only root level database administrators can modify values.</span></p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl p-5">
+          <h2 class="font-bold mb-3 text-white text-sm uppercase tracking-wider text-slate-300">Picker Fleet Workforce</h2>
           <form id="add-picker-form" onsubmit="App.addPersonnel(event,'picker')" class="hidden flex space-x-2 mb-4">
-            <input type="text" id="new-picker-name" placeholder="e.g. R. ISUGA" class="flex-1 p-2 border rounded-lg">
-            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+            <input type="text" id="new-picker-name" placeholder="e.g., R. ISUGA" 
+                   class="flex-1 p-2 bg-[#1e2640] border border-slate-700/40 text-white placeholder-slate-600 text-sm rounded-lg focus:border-blue-500 outline-none">
+            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-500 text-sm font-bold transition">Inject</button>
           </form>
-          <ul id="picker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
+          <ul id="picker-list" class="space-y-1 text-sm max-h-80 overflow-y-auto divide-y divide-slate-800/40 text-slate-300"></ul>
         </div>
-        <div class="bg-white rounded-xl shadow p-5">
-          <h2 class="font-bold mb-3">Checker Pool</h2>
+        
+        <div class="bg-[#151c2e] rounded-xl border border-slate-800/60 shadow-xl p-5">
+          <h2 class="font-bold mb-3 text-white text-sm uppercase tracking-wider text-slate-300">Checker Fleet Workforce</h2>
           <form id="add-checker-form" onsubmit="App.addPersonnel(event,'checker')" class="hidden flex space-x-2 mb-4">
-            <input type="text" id="new-checker-name" placeholder="e.g. J. DELACRUZ" class="flex-1 p-2 border rounded-lg">
-            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+            <input type="text" id="new-checker-name" placeholder="e.g., J. DELACRUZ" 
+                   class="flex-1 p-2 bg-[#1e2640] border border-slate-700/40 text-white placeholder-slate-600 text-sm rounded-lg focus:border-blue-500 outline-none">
+            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-500 text-sm font-bold transition">Inject</button>
           </form>
-          <ul id="checker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
+          <ul id="checker-list" class="space-y-1 text-sm max-h-80 overflow-y-auto divide-y divide-slate-800/40 text-slate-300"></ul>
         </div>
       </div>
     </section>
   </main>
 </div>
-<!-- ===================== MODALS ===================== -->
-<div id="rdd-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h2 class="text-lg font-bold mb-4">Create New RDD</h2>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">RDD Date</label>
-    <input type="date" id="new-rdd-date" class="w-full p-2 border rounded-lg mb-3">
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Initial Planning Count</label>
-    <input type="number" min="0" id="new-rdd-count" placeholder="e.g. 45" class="w-full p-2 border rounded-lg mb-5">
-    <div class="flex justify-end space-x-2">
-      <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.createRDD()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold">Save</button>
+
+<div id="rdd-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-4 text-white tracking-tight">Initialize New RDD Master Map</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Target RDD Execution Date</label>
+        <input type="date" id="new-rdd-date" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Initial Planning Order Capacity Count Target</label>
+        <input type="number" min="0" id="new-rdd-count" placeholder="e.g., 45" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white placeholder-slate-600 rounded-lg text-sm outline-none focus:border-blue-500">
+      </div>
+    </div>
+    <div class="flex justify-end space-x-2 mt-6">
+      <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel Interface</button>
+      <button onclick="App.createRDD()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-lg shadow-emerald-600/10">Save Record Master</button>
     </div>
   </div>
 </div>
-<div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
-    <select id="pick-name" class="w-full p-2 border rounded-lg mb-5">
-      <option value="R. ISUGA">R. ISUGA</option>
-      <option value="E. ISIGE">E. ISIGE</option>
-    </select>
-    <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+
+<div id="pick-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-2 text-white tracking-tight">Assign Fleet Order Picker</h2>
+    <p class="text-xs text-slate-400 mb-4">Select an active operational user handle resource to track picking cycle tasks execution loops.</p>
+    <select id="pick-name" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500"></select>
+    <div class="flex justify-end space-x-2 mt-6">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel</button>
+      <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition">Confirm Tracking Assignment</button>
     </div>
   </div>
 </div>
-<div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h2 class="text-lg font-bold mb-4">Checking Details</h2>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Checkers (pick 1–6 from the pool)</label>
-    <div id="checking-checkbox-list" class="border rounded-lg p-2 mb-1 max-h-40 overflow-y-auto space-y-1 text-sm"></div>
-    <div id="checking-count-note" class="text-xs text-slate-400 mb-3"></div>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Bay Location</label>
-    <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5"></select>
-    <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+
+<div id="checking-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-1 text-white tracking-tight">Checking Process Detail Matrix</h2>
+    <p class="text-xs text-slate-400 mb-4">Configure checking operations workflow parameters tracking system states node loops.</p>
+    
+    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Checkers Allocation (Select 1–6 items max)</label>
+    <div id="checking-checkbox-list" class="bg-[#1e2640] border border-slate-700/50 rounded-lg p-2.5 mb-1 max-h-40 overflow-y-auto space-y-1 text-xs text-slate-200"></div>
+    <div id="checking-count-note" class="text-[11px] font-bold text-slate-500 mb-4"></div>
+    
+    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Physical Loading Dock Bay Allocation Position</label>
+    <select id="checking-bay" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500 mb-4"></select>
+    
+    <div class="flex justify-end space-x-2 mt-6">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel</button>
+      <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition">Confirm State Settings</button>
     </div>
   </div>
 </div>
-<div id="loaded-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h2 class="text-lg font-bold mb-4">Assign Truck (Loaded)</h2>
-    <select id="loaded-truck" class="w-full p-2 border rounded-lg mb-5"></select>
-    <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+
+<div id="loaded-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-2 text-white tracking-tight">Assign Asset Plate (Loaded Trigger State)</h2>
+    <p class="text-xs text-slate-400 mb-4">Bind an active waiting carrier asset loop to this single unique tracking line invoice row record element.</p>
+    <select id="loaded-truck" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500"></select>
+    <div class="flex justify-end space-x-2 mt-6">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel</button>
+      <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition">Deploy and Dispatch Asset</button>
     </div>
   </div>
 </div>
-<div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-[440px]">
-    <h2 class="text-lg font-bold mb-1 text-red-600">Admin Override</h2>
-    <p class="text-sm text-slate-500 mb-4">Edit the timestamp or completely untick this step (this will also wipe and uncheck every later step).</p>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Timestamp</label>
-    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded-lg mb-6">
+
+<div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-1 text-red-400 tracking-tight">Admin System State Override Engine</h2>
+    <p class="text-xs text-slate-400 mb-4">Modify the absolute chronological milestone index clock stamp or perform cascade reverse untick operations.</p>
+    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Milestone Target Clock Timestamp</label>
+    <input type="datetime-local" id="admin-edit-time" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500 mb-6">
     <div class="flex justify-between items-center">
-      <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Untick &amp; Clear</button>
+      <button onclick="App.adminUntickMilestone()" class="px-3 py-2 bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-700/40 font-bold rounded-lg text-xs transition">Untick &amp; Cascade Clear</button>
       <div class="space-x-2">
-        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Time</button>
+        <button onclick="App.cancelMilestone()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel</button>
+        <button onclick="App.adminUpdateTimestamp()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition">Update Chronology</button>
       </div>
     </div>
   </div>
 </div>
-<div id="row-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
-    <h2 class="text-lg font-bold mb-4">Edit Dispatch Row</h2>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Truck Type</label>
-    <select id="row-edit-type" class="w-full p-2 border rounded-lg mb-3">
-      <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
-    </select>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Dispatch Number</label>
-    <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-6">
-    <div class="flex justify-between items-center">
-      <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
+
+<div id="row-edit-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div class="bg-[#151c2e] p-6 rounded-xl shadow-2xl w-full max-w-md border border-slate-800">
+    <h2 class="text-lg font-bold mb-4 text-white tracking-tight">Modify Dispatch Entry Matrix Attributes</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Truck Classification Fleet Footprint</label>
+        <select id="row-edit-type" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500">
+          <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Unique Tracking Dispatch Document Index Number</label>
+        <input type="text" id="row-edit-number" class="w-full p-2.5 bg-[#1e2640] border border-slate-700/50 text-white rounded-lg text-sm outline-none focus:border-blue-500">
+      </div>
+    </div>
+    <div class="flex justify-between items-center mt-6">
+      <button onclick="App.deleteDispatchRow()" class="px-3 py-2 bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-700/40 font-bold rounded-lg text-xs transition">Delete Database Record Row</button>
       <div class="space-x-2">
-        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
+        <button onclick="App.cancelMilestone()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition">Cancel</button>
+        <button onclick="App.saveDispatchRowEdit()" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition">Apply System Variations</button>
       </div>
     </div>
   </div>
 </div>
+
 <script>
 /* ======================================================================
-   CONFIG
+   SUPABASE SERVICE NODE CONNECTOR ENDPOINT METADATA PARAMETERS
    ====================================================================== */
 const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 Chart.register(ChartDataLabels);
+
 /* ======================================================================
-   USERS & ROLE PERMISSIONS
+   USER DEFINITIONS & SECURITY SCHEMAS ROLE MAPPING SYSTEM
    ====================================================================== */
 const USERS = {
   admin:     { pass: 'superadmin', role: 'admin' },
@@ -411,6 +487,7 @@ const ROLE_PERMISSIONS = {
 };
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+
 const App = {
   state: {
     currentUser: null,
@@ -423,7 +500,8 @@ const App = {
     pendingRowEdit: null,
     chartInstance: null,
   },
-  /* ---------------- AUTH ---------------- */
+
+  /* ---------------- IDENTITY SIGN-IN SUITE CONTROL ---------------- */
   login(e) {
     e.preventDefault();
     const u = document.getElementById('login-username').value.toLowerCase().trim();
@@ -442,7 +520,8 @@ const App = {
     }
   },
   logout() { location.reload(); },
-  /* ---------------- INIT ---------------- */
+
+  /* ---------------- SYSTEM SUBSURFACE CODES INITIALIZATION RUNTIME ---------------- */
   async init() {
     this.populateBaySelect();
     if (this.state.currentUser.role === 'admin') {
@@ -456,6 +535,7 @@ const App = {
     await this.loadTrucks();
     await this.loadPersonnel();
     this.setupRealtimeSubscriptions();
+    this.switchTab('tab-dispatch'); // Bootstrap execution state tab context focus index focus node loop elements
   },
   populateBaySelect() {
     const sel = document.getElementById('checking-bay');
@@ -473,14 +553,26 @@ const App = {
     ext.textContent = 'Extended';
     sel.appendChild(ext);
   },
-  /* ---------------- TABS / MODALS ---------------- */
+
+  /* ---------------- LAYOUT SWAP INTERFACE MODAL CONTROLLERS ---------------- */
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
-    document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
-    document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
-    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
+    
+    document.querySelectorAll('.nav-btn').forEach(b => { 
+      b.classList.remove('bg-blue-600', 'text-white'); 
+      b.classList.add('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-slate-200'); 
+    });
+    
+    const activeBtn = document.getElementById(`btn-${tabId}`);
+    activeBtn.classList.add('bg-blue-600', 'text-white');
+    activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-slate-200');
+    
+    if (tabId === 'tab-analytics') { 
+      this.renderDashboardSummary(); 
+      this.renderChart(); 
+      this.startDashboardClock(); 
+    }
   },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
@@ -488,25 +580,26 @@ const App = {
     const content = document.getElementById('add-dispatch-content');
     const btn = document.getElementById('add-dispatch-toggle');
     const collapsed = content.classList.toggle('hidden');
-    btn.textContent = collapsed ? 'Expand' : 'Minimize';
+    btn.textContent = collapsed ? 'Expand Form Panel' : 'Minimize';
   },
   cancelMilestone() {
     this.state.pendingMilestoneUpdate = null;
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
-  /* ---------------- RDD ---------------- */
+
+  /* ---------------- RDD DATA PIPELINE MATRIX CONTROLLERS ---------------- */
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
     if (error) { console.error(error); return; }
     this.state.rdds = data;
     const sel = document.getElementById('rdd-selector');
     const prev = sel.value;
-    sel.innerHTML = '<option value="">Select RDD…</option>';
+    sel.innerHTML = '<option value="">Select RDD Engine…</option>';
     data.forEach(rdd => {
       const opt = document.createElement('option');
       opt.value = rdd.id;
-      opt.textContent = `${rdd.rdd_date}  (Plan: ${rdd.initial_planning_count})`;
+      opt.textContent = `${rdd.rdd_date}  (Plan Limit: ${rdd.initial_planning_count})`;
       sel.appendChild(opt);
     });
     if (prev) sel.value = prev;
@@ -514,9 +607,9 @@ const App = {
   async createRDD() {
     const rdd_date = document.getElementById('new-rdd-date').value;
     const count = document.getElementById('new-rdd-count').value;
-    if (!rdd_date || count === '') return alert('Please fill in both fields.');
+    if (!rdd_date || count === '') return alert('Please input logical parameters into both date and allocation fields.');
     const { error } = await supabaseClient.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count, 10) });
-    if (error) return alert('Could not create RDD: ' + error.message);
+    if (error) return alert('Could not formulate RDD master object: ' + error.message);
     document.getElementById('new-rdd-date').value = '';
     document.getElementById('new-rdd-count').value = '';
     this.closeModal('rdd-modal');
@@ -541,18 +634,19 @@ const App = {
     const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
     const pending = total - loaded;
     const cards = [
-      { label: 'Initial Plan', value: rdd.initial_planning_count },
-      { label: 'Dispatches Added', value: total },
-      { label: 'Loaded / Done', value: loaded },
-      { label: 'Pending', value: pending },
+      { label: 'Initial Target Plan', value: rdd.initial_planning_count, color: 'text-white' },
+      { label: 'Active Lines Added', value: total, color: 'text-blue-400' },
+      { label: 'Loaded Complete', value: loaded, color: 'text-emerald-400' },
+      { label: 'Pending Processing Pipeline', value: pending, color: 'text-amber-500' },
     ];
     box.innerHTML = cards.map(c => `
-      <div class="bg-white rounded-xl shadow p-4">
-        <div class="text-xs text-slate-500">${c.label}</div>
-        <div class="text-2xl font-bold">${c.value}</div>
+      <div class="bg-[#151c2e] rounded-xl shadow-xl border border-slate-800 p-4">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-400">${c.label}</div>
+        <div class="text-2xl font-bold mt-1 ${c.color}">${c.value}</div>
       </div>`).join('');
   },
-  /* ---------------- DISPATCHES ---------------- */
+
+  /* ---------------- TRACKING ENTRIES ROW DATA LOG ENGINE ---------------- */
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
       .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
@@ -564,7 +658,7 @@ const App = {
   },
   async addSingleDispatch(e) {
     e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    if (!this.state.currentRddId) return alert('Establish RDD focus scope target mapping first.');
     const truck_type = document.getElementById('single-truck-type').value;
     const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
     if (!truck_type || !dispatch_number) return;
@@ -604,14 +698,14 @@ const App = {
     const box = document.getElementById('mass-dispatch-preview');
     if (!text.trim()) { box.textContent = ''; return; }
     const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-    let msg = `<span class="text-emerald-600 font-semibold">${valid.length} ready to add</span>`;
-    if (duplicates.length) msg += ` · <span class="text-amber-600 font-semibold">${duplicates.length} duplicate (skipped)</span>`;
-    if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
+    let msg = `<span class="text-emerald-400 font-semibold">${valid.length} entries staged for push</span>`;
+    if (duplicates.length) msg += ` · <span class="text-amber-400 font-semibold">${duplicates.length} duplicate items blocked</span>`;
+    if (skipped.length) msg += ` · <span class="text-red-400 font-semibold">${skipped.length} unrecognized strings dropped</span>`;
     box.innerHTML = msg;
   },
   async addMassDispatch(e) {
     e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    if (!this.state.currentRddId) return alert('Establish RDD focus scope target mapping first.');
     const text = document.getElementById('mass-dispatch-input').value;
     const { valid, skipped, duplicates } = this.parseMassPasteText(text);
     if (valid.length) {
@@ -622,9 +716,9 @@ const App = {
       await this.loadDispatches();
     }
     if (skipped.length || duplicates.length) {
-      let report = `Added ${valid.length} dispatch(es).`;
-      if (duplicates.length) report += `\n\nSkipped ${duplicates.length} duplicate dispatch number(s):\n${duplicates.join('\n')}`;
-      if (skipped.length) report += `\n\nSkipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`;
+      let report = `Successfully processed and committed ${valid.length} logging index objects into storage.`;
+      if (duplicates.length) report += `\n\nIdentified ${duplicates.length} repetitive tracking values (Bypassed):\n${duplicates.join('\n')}`;
+      if (skipped.length) report += `\n\nDropped ${skipped.length} unformatted text blocks string index variants:\n${skipped.join('\n')}`;
       alert(report);
     }
   },
@@ -632,15 +726,15 @@ const App = {
     const tbody = document.getElementById('dispatch-tbody');
     const emptyEl = document.getElementById('dispatch-empty');
     tbody.innerHTML = '';
-    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
-    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
+    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or initialize a system RDD mapping instance to inspect records.'; emptyEl.classList.remove('hidden'); return; }
+    if (!this.state.dispatches.length) { emptyEl.textContent = 'No recorded items logged on this execution date framework instance. Pop standard rows above.'; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
     const role = this.state.currentUser.role;
     const allowed = ROLE_PERMISSIONS[role] || [];
     this.state.dispatches.forEach(d => {
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50';
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
+      tr.className = 'hover:bg-[#1e2640]/40 border-b border-slate-800/50 transition-colors';
+      let html = `<td class="p-3.5 font-bold text-white">${d.truck_type}</td><td class="p-3.5 text-slate-300 font-mono text-xs">${d.dispatch_number}</td>`;
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
@@ -649,23 +743,23 @@ const App = {
         const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
         const tip = isChecked
           ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
-          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-        html += `<td class="p-3 text-center" title="${tip}">
-                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
+          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} sequence dependency unfulfilled` : (!hasPermission ? 'Role structural permission boundary restriction mismatch' : 'Click to register milestone validation instance'));
+        html += `<td class="p-3.5 text-center" title="${tip}">
+                    <input type="checkbox" class="w-4 h-4 cursor-pointer rounded border-slate-700 bg-slate-800 ${!clickable ? 'disabled-checkbox' : ''}"
                            ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
                   </td>`;
       });
-      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">${d.status}</span></td>
-                <td class="p-3">
-                  <div class="w-full bg-slate-200 rounded-full h-2.5">
-                    <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
+      html += `<td class="p-3.5"><span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 tracking-wide uppercase">${d.status}</span></td>
+                <td class="p-3.5">
+                  <div class="w-full bg-[#1e2640] rounded-full h-1.5 border border-slate-800">
+                    <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-300 shadow-sm shadow-blue-500/50" style="width:${d.progress || 0}%"></div>
                   </div>
                 </td>`;
       if (role === 'admin') {
-        html += `<td class="p-3">
-                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3">Edit</button>
-                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete</button>
+        html += `<td class="p-3.5 text-right whitespace-nowrap">
+                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-400 hover:text-blue-300 text-xs font-bold mr-3 transition">Edit</button>
+                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-400 hover:text-red-300 text-xs font-bold transition">Delete</button>
                   </td>`;
       }
       tr.innerHTML = html;
@@ -678,26 +772,26 @@ const App = {
     const isChecked = dispatch[`${step}_checked`];
     if (isChecked) {
       if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
-      else alert('Only an admin can edit or untick a completed step.');
+      else alert('Administrative security authorization privileges required to alter executed processing records.');
       return;
     }
     this.state.pendingMilestoneUpdate = { dispatch, step };
     if (step === 'pick') {
       const sel = document.getElementById('pick-name');
       const pickers = this.state.personnel.filter(p => p.pool === 'picker');
-      if (!pickers.length) { alert('No pickers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
+      if (!pickers.length) { alert('No records assigned within Picker pool indexing. Setup tracking arrays inside personnel management tab.', this.state.pendingMilestoneUpdate = null); return; }
       sel.innerHTML = pickers.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
       this.openModal('pick-modal');
     } else if (step === 'checking') {
       const checkers = this.state.personnel.filter(p => p.pool === 'checker');
       const list = document.getElementById('checking-checkbox-list');
-      if (!checkers.length) { alert('No checkers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
+      if (!checkers.length) { alert('No data assigned inside checker pool indexing framework layers. Setup tracking parameters inside personnel panel structural views.', this.state.pendingMilestoneUpdate = null); return; }
       list.innerHTML = checkers.map(p => `
-        <label class="flex items-center space-x-2 px-1 py-0.5">
-          <input type="checkbox" value="${p.name}" onchange="App.enforceCheckerLimit()">
+        <label class="flex items-center space-x-2 px-1 py-0.5 cursor-pointer hover:bg-slate-700/50 rounded">
+          <input type="checkbox" value="${p.name}" class="rounded bg-slate-800 border-slate-700" onchange="App.enforceCheckerLimit()">
           <span>${p.name}</span>
         </label>`).join('');
-      document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
+      document.getElementById('checking-count-note').textContent = '0 of 6 selections committed (Allocate minimum 1 resource)';
       this.openModal('checking-modal');
     } else if (step === 'loaded') {
       this.openLoadedModal(dispatch);
@@ -708,13 +802,13 @@ const App = {
   enforceCheckerLimit() {
     const boxes = document.querySelectorAll('#checking-checkbox-list input[type=checkbox]');
     const checked = [...boxes].filter(b => b.checked);
-    document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selected (pick at least 1)`;
+    document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selections committed (Allocate minimum 1 resource)`;
     boxes.forEach(b => { if (!b.checked) b.disabled = checked.length >= 6; });
   },
   openLoadedModal(dispatch) {
     const sel = document.getElementById('loaded-truck');
     const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
-    if (!available.length) { alert(`No available ${dispatch.truck_type} trucks. Add one in the Available Trucks tab first.`); this.state.pendingMilestoneUpdate = null; return; }
+    if (!available.length) { alert(`No actively waiting ${dispatch.truck_type} truck inventory classes currently flagged as free. Provision assets inside the Available Trucks workspace layout grid layer first.`, this.state.pendingMilestoneUpdate = null); return; }
     sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
     this.openModal('loaded-modal');
   },
@@ -725,12 +819,12 @@ const App = {
       payload.pick_assigned_name = document.getElementById('pick-name').value;
     } else if (step === 'checking') {
       const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
-      if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
+      if (names.length < 1 || names.length > 6) return alert('Commit structural boundaries validation error: Assign between 1 to 6 resource identities.');
       payload.checking_assigned_names = names;
       payload.bay_location = document.getElementById('checking-bay').value;
     } else if (step === 'loaded') {
       const truckId = document.getElementById('loaded-truck').value;
-      if (!truckId) return alert('Select a truck.');
+      if (!truckId) return alert('Please highlight asset assignment index point.');
       payload.assigned_truck_id = truckId;
       const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
       if (tErr) return alert(tErr.message);
@@ -741,7 +835,8 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- ADMIN OVERRIDE ---------------- */
+
+  /* ---------------- ADMIN OVERRIDE CONTROL ARRAYS ---------------- */
   openAdminEditModal(dispatch, step) {
     this.state.pendingMilestoneUpdate = { dispatch, step };
     const current = dispatch[`${step}_timestamp`];
@@ -757,7 +852,7 @@ const App = {
   async adminUpdateTimestamp() {
     const { dispatch, step } = this.state.pendingMilestoneUpdate;
     const newTime = document.getElementById('admin-edit-time').value;
-    if (!newTime) return alert('Pick a date/time.');
+    if (!newTime) return alert('Select precise runtime coordinates.');
     const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
     if (error) return alert(error.message);
     this.cancelMilestone();
@@ -784,7 +879,8 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- ADMIN: EDIT / DELETE DISPATCH ROW ---------------- */
+
+  /* ---------------- ADMIN ROW MANIPULATION SUITE ---------------- */
   openRowEditModal(dispatchId) {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     this.state.pendingRowEdit = dispatch;
@@ -796,9 +892,9 @@ const App = {
     const dispatch = this.state.pendingRowEdit;
     const truck_type = document.getElementById('row-edit-type').value;
     const dispatch_number = document.getElementById('row-edit-number').value.trim();
-    if (!dispatch_number) return alert('Dispatch number cannot be empty.');
+    if (!dispatch_number) return alert('Identification data cannot process as a null index string block.');
     const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
-    if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
+    if (error) return alert(error.message.includes('duplicate') ? 'Unique index validation mismatch rule: This target tracking reference value exists within this RDD block array mapping structure already.' : error.message);
     this.state.pendingRowEdit = null;
     this.closeModal('row-edit-modal');
     await this.loadDispatches();
@@ -810,7 +906,7 @@ const App = {
   },
   async quickDeleteDispatch(dispatchId) {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    if (!confirm(`Delete dispatch ${dispatch.truck_type} ${dispatch.dispatch_number}? This cannot be undone.`)) return;
+    if (!confirm(`Purge logged record row item reference tracking point details for ${dispatch.truck_type} [ ${dispatch.dispatch_number} ] from the active cluster structure forever? This process drops unrecoverable database indexes values layers.`)) return;
     await this.performDispatchDelete(dispatch);
   },
   async performDispatchDelete(dispatch) {
@@ -822,7 +918,8 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- TRUCKS ---------------- */
+
+  /* ---------------- REVENUE ASSURANCES FLEET DATA SYSTEMS CONTROLLERS ---------------- */
   async loadTrucks() {
     const { data, error } = await supabaseClient.from('available_trucks').select('*').order('created_at', { ascending: true });
     if (error) { console.error(error); return; }
@@ -839,7 +936,7 @@ const App = {
   async addTruck() {
     const truck_type = document.getElementById('truck-type-input').value;
     const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
-    if (!plate_number) return alert('Enter a plate number.');
+    if (!plate_number) return alert('Type valid mechanical structural identification values mapping data reference tags.');
     const { error } = await supabaseClient.from('available_trucks').insert({ truck_type, plate_number });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
@@ -852,25 +949,26 @@ const App = {
     types.forEach(type => {
       const all = this.state.trucks.filter(t => t.truck_type === type);
       const available = all.filter(t => t.status === 'Available');
-      let html = `<div class="bg-white rounded-xl shadow p-4">
-                    <div class="flex justify-between items-baseline mb-3">
-                      <h3 class="font-bold">${type}</h3>
-                      <span class="text-xs text-slate-400">${available.length} available / ${all.length} total</span>
+      let html = `<div class="bg-[#151c2e] rounded-xl border border-slate-800 p-4 shadow-xl">
+                    <div class="flex justify-between items-baseline mb-3 border-b border-slate-800 pb-2">
+                      <h3 class="font-bold text-white text-sm">${type}</h3>
+                      <span class="text-[11px] font-bold text-slate-400">${available.length} free / ${all.length} total</span>
                     </div>
-                    <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
+                    <ul class="space-y-1.5 text-xs max-h-48 overflow-y-auto">`;
       all.forEach((t, i) => {
         const isAvail = t.status === 'Available';
-        html += `<li class="flex justify-between items-center">
-                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
-                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">${t.status}</span>
+        html += `<li class="flex justify-between items-center p-1 hover:bg-[#1e2640]/30 rounded transition-colors">
+                    <span class="text-slate-300">${type} ${i + 1}: <b class="font-mono text-white ml-1">${t.plate_number}</b></span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700/40'}">${t.status}</span>
                   </li>`;
       });
-      if (!all.length) html += `<li class="text-slate-400 italic">No trucks added yet</li>`;
+      if (!all.length) html += `<li class="text-slate-500 italic p-1">Empty asset array type index</li>`;
       html += `</ul></div>`;
       grid.innerHTML += html;
     });
   },
-  /* ---------------- PERSONNEL ---------------- */
+
+  /* ---------------- HUMAN CAPITAL ASSIGNMENTS DISPATCH INTERFACE CONTROLLERS ---------------- */
   async loadPersonnel() {
     const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
     if (error) { console.error(error); return; }
@@ -883,10 +981,10 @@ const App = {
       const list = document.getElementById(`${pool}-list`);
       const people = this.state.personnel.filter(p => p.pool === pool);
       list.innerHTML = people.map(p => `
-        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50">
-          <span>${p.name}</span>
-          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
-        </li>`).join('') || `<li class="text-slate-400 italic px-2">No names added yet</li>`;
+        <li class="flex justify-between items-center px-2 py-2 rounded border border-transparent hover:border-slate-800/80 hover:bg-[#1e2640]/30 transition-all">
+          <span class="font-semibold text-slate-200">${p.name}</span>
+          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-400 hover:text-red-300 text-xs font-bold transition">Remove</button>` : ''}
+        </li>`).join('') || `<li class="text-slate-500 italic p-2 text-xs">No entries cataloged inside cluster pool.</li>`;
     });
   },
   async addPersonnel(e, pool) {
@@ -895,22 +993,23 @@ const App = {
     const name = document.getElementById(inputId).value.trim();
     if (!name) return;
     const { error } = await supabaseClient.from('personnel').insert({ name, pool });
-    if (error) return alert(error.message.includes('duplicate') ? 'That name is already in this pool.' : error.message);
+    if (error) return alert(error.message.includes('duplicate') ? 'Unique identity restriction rule violation block: Identity tracking footprint tag configuration exists inside current pool cluster matrix.' : error.message);
     document.getElementById(inputId).value = '';
     await this.loadPersonnel();
   },
   async deletePersonnel(id) {
-    if (!confirm('Remove this person from the pool?')) return;
+    if (!confirm('Drop selected workforce entry reference details index out from live memory cluster maps?')) return;
     const { error } = await supabaseClient.from('personnel').delete().eq('id', id);
     if (error) return alert(error.message);
     await this.loadPersonnel();
   },
-  /* ---------------- DASHBOARD ---------------- */
+
+  /* ---------------- CONTROL PANEL ANALYTICS SUMMARY RENDER SUITE ---------------- */
   renderDashboardSummary() {
     const total = this.state.dispatches.length;
     const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 
-    // ── Milestone table ──
+    // Milestone processing array tables data parser calculations loop
     steps.forEach(step => {
       const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
       const pending = total - done;
@@ -923,9 +1022,7 @@ const App = {
       if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    // ── Bay occupancy grid ──
-    // Build a map: "bay-letter" → dispatch number (from checking data)
-    // bay_location is stored as e.g. "1A", "3C", "Extended"
+    // Loading Dock bay allocations array compiler parsing blocks loop
     const bayMap = {};
     this.state.dispatches.forEach(d => {
       if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
@@ -937,27 +1034,27 @@ const App = {
       tbody.innerHTML = '';
       ['A', 'B', 'C'].forEach(letter => {
         const tr = document.createElement('tr');
-        let html = `<td class="border border-slate-200 px-2 py-1.5 font-bold text-slate-600 text-center">${letter}</td>`;
+        tr.className = "hover:bg-[#1e2640]/20";
+        let html = `<td class="border border-slate-800/80 px-2 py-2 font-bold text-slate-400 bg-[#1e2640]/30 text-center uppercase tracking-wider">${letter}</td>`;
         for (let bay = 1; bay <= 8; bay++) {
           const key = `${bay}${letter}`;
           const occupied = bayMap[key];
           html += occupied
-            ? `<td class="border border-slate-200 px-1 py-1.5 text-center text-blue-700 font-semibold text-[11px]">${occupied}</td>`
-            : `<td class="border border-slate-200 px-1 py-1.5 text-center text-slate-300 text-[10px]">VACANT</td>`;
+            ? `<td class="border border-slate-800/80 px-1 py-2 text-center text-blue-400 font-mono font-bold text-[11px] bg-blue-500/5 shadow-inner" title="Occupied Docking Bay System Line Reference Entry Matrix Node">${occupied}</td>`
+            : `<td class="border border-slate-800/80 px-1 py-2 text-center text-slate-600 font-semibold text-[10px] tracking-wide uppercase">VACANT</td>`;
         }
         tr.innerHTML = html;
         tbody.appendChild(tr);
       });
     }
 
-    // ── Truck pool summary table ──
+    // Commercial logistics footprint metric summarizer elements loop parsing blocks
     const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     const tpTbody = document.getElementById('dash-truckpool-tbody');
     if (tpTbody) {
       let totalPlanned = 0, totalAvail = 0, totalLoaded = 0;
       let rows = '';
       truckTypes.forEach(type => {
-        // "planned" = all trucks of this type ever added
         const all      = this.state.trucks.filter(t => t.truck_type === type);
         const avail    = all.filter(t => t.status === 'Available').length;
         const loaded   = all.filter(t => t.status === 'Dispatched').length;
@@ -966,41 +1063,39 @@ const App = {
         totalPlanned  += planned;
         totalAvail    += avail;
         totalLoaded   += loaded;
-        rows += `<tr>
-          <td class="border border-slate-200 px-2 py-1 text-center font-semibold">${type}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center">${planned}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600 font-bold">${avail}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-blue-600 font-bold">${loaded}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-slate-600">${pct}%</td>
+        rows += `<tr class="hover:bg-[#1e2640]/30 transition-colors">
+          <td class="border border-slate-800 px-2 py-1.5 font-bold text-white">${type}</td>
+          <td class="border border-slate-800 px-2 py-1.5 text-slate-300 font-mono">${planned}</td>
+          <td class="border border-slate-800 px-2 py-1.5 font-bold text-emerald-400 font-mono">${avail}</td>
+          <td class="border border-slate-800 px-2 py-1.5 font-bold text-blue-400 font-mono">${loaded}</td>
+          <td class="border border-slate-800 px-2 py-1.5 text-slate-500 font-semibold font-mono">${pct}%</td>
         </tr>`;
       });
       const totPct = totalPlanned > 0 ? Math.round((totalLoaded / totalPlanned) * 100) : 0;
-      rows += `<tr class="bg-slate-50 font-bold">
-        <td class="border border-slate-200 px-2 py-1 text-center">TOTAL</td>
-        <td class="border border-slate-200 px-2 py-1 text-center">${totalPlanned}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600">${totalAvail}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center text-blue-600">${totalLoaded}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center">${totPct}%</td>
+      rows += `<tr class="bg-[#1e2640]/40 font-bold text-white uppercase tracking-wider">
+        <td class="border border-slate-800 px-2 py-2 font-black text-slate-400">TOTAL</td>
+        <td class="border border-slate-800 px-2 py-2 font-mono">${totalPlanned}</td>
+        <td class="border border-slate-800 px-2 py-2 text-emerald-400 font-mono">${totalAvail}</td>
+        <td class="border border-slate-800 px-2 py-2 text-blue-400 font-mono">${totalLoaded}</td>
+        <td class="border border-slate-800 px-2 py-2 text-slate-300 font-mono">${totPct}%</td>
       </tr>`;
       tpTbody.innerHTML = rows;
     }
 
-    // ── Truck pool plates list (columns per type) ──
+    // Active identification license plates registration summary visual rendering node block element sets compiler parser loop
     const thead = document.getElementById('dash-truckpool-plates-head');
     const pbody = document.getElementById('dash-truckpool-plates-body');
     if (thead && pbody) {
-      // Only types that have ≥1 available truck
       const activeCols = truckTypes.filter(type =>
         this.state.trucks.some(t => t.truck_type === type && t.status === 'Available')
       );
       if (!activeCols.length) {
         thead.innerHTML = '';
-        pbody.innerHTML = `<tr><td class="text-slate-400 italic px-2 py-1 text-center" colspan="6">No available trucks</td></tr>`;
+        pbody.innerHTML = `<tr><td class="text-slate-500 italic px-2 py-4 text-center text-xs" colspan="6">No logistics fleet units cataloged as available within local memory caches maps.</td></tr>`;
       } else {
         thead.innerHTML = `<tr>${activeCols.map(t =>
-          `<th class="border border-slate-200 px-2 py-1 bg-slate-50 font-bold text-slate-600">${t}</th>`
+          `<th class="border border-slate-800 px-2 py-1.5 bg-[#1e2640]/40 font-bold text-slate-400 tracking-wider text-[10px]">${t}</th>`
         ).join('')}</tr>`;
-        // Build columns
         const cols = activeCols.map(type => {
           return this.state.trucks
             .filter(t => t.truck_type === type && t.status === 'Available')
@@ -1009,15 +1104,15 @@ const App = {
         const maxRows = Math.max(...cols.map(c => c.length));
         let pbHtml = '';
         for (let r = 0; r < maxRows; r++) {
-          pbHtml += `<tr>${cols.map(col =>
-            `<td class="border border-slate-200 px-2 py-1 text-center text-slate-700">${col[r] || ''}</td>`
+          pbHtml += `<tr class="hover:bg-[#1e2640]/20">${cols.map(col =>
+            `<td class="border border-slate-800 px-2 py-1 text-slate-300 font-mono text-[10px]">${col[r] || ''}</td>`
           ).join('')}</tr>`;
         }
         pbody.innerHTML = pbHtml;
       }
     }
 
-    // ── Heading RDD label ──
+    // Configuration for real-time localized date layout translation maps elements
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     if (rdd) {
       const d = new Date(rdd.rdd_date + 'T00:00:00');
@@ -1038,11 +1133,13 @@ const App = {
     tick();
     if (!this._clockInterval) this._clockInterval = setInterval(tick, 1000);
   },
+
+  /* ---------------- MODERN CORE DASHBOARD TREND PLOT GRAPH ENGINE ---------------- */
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
 
-    // 24 hourly buckets: bucket 0 = 5 AM, bucket 23 = 4 AM next day
+    // 24 hourly buckets array elements configuration compiler parsing algorithms loops loops sequence indexes points
     const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
     const bucketOf = (isoString) => {
       if (!isoString) return null;
@@ -1052,7 +1149,7 @@ const App = {
 
     const nowBucket = bucketOf(new Date().toISOString());
 
-    // Per-hour event counts (raw)
+    // Processing matrix indices count configuration logging point layers elements parser compiler bounds loops
     const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
@@ -1061,7 +1158,6 @@ const App = {
       });
     });
 
-    // Convert to cumulative, mask future buckets with null
     const toCumulative = (arr) => {
       let running = 0;
       return arr.map((v, i) => {
@@ -1071,7 +1167,7 @@ const App = {
       });
     };
 
-    // Available trucks trend
+    // Calculation trend tracking array mapping calculations for actively provisioned transport vehicle classes
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
@@ -1109,25 +1205,33 @@ const App = {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { title: { display: true, text: 'Hour' } },
+          x: { 
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' } },
+            title: { display: true, text: 'Operational Timeline Hour Loop Tracker', color: '#64748b', font: { size: 11, weight: 'bold' } } 
+          },
           y: {
             beginAtZero: true,
             max: yMax,
             grace: '10%',
-            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)) },
-            title: { display: true, text: 'Cumulative Count' },
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: '#94a3b8', font: { size: 10, weight: 'bold' } },
+            title: { display: true, text: 'Running Cumulative Data Metrics Counts Index', color: '#64748b', font: { size: 11, weight: 'bold' } },
           },
         },
         plugins: {
+          legend: {
+            labels: { color: '#cbd5e1', font: { size: 11, weight: 'bold' } }
+          },
           datalabels: {
             anchor: 'end',
             align: 'end',
             clamp: true,
             offset: 2,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor,
-            borderRadius: 8,
-            padding: { top: 2, bottom: 2, left: 5, right: 5 },
-            font: { size: 10, weight: 'bold' },
+            borderRadius: 4,
+            padding: { top: 2, bottom: 2, left: 4, right: 4 },
+            font: { size: 9, weight: 'bold' },
             color: '#fff',
             display: (ctx) => {
               const v = ctx.dataset.data[ctx.dataIndex];
@@ -1139,7 +1243,8 @@ const App = {
       },
     });
   },
-  /* ---------------- REALTIME ---------------- */
+
+  /* ---------------- POSTGRES DATA-STREAM CHANNEL PIPELINE LISTENERS ---------------- */
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
@@ -1148,7 +1253,13 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .subscribe(status => {
         const el = document.getElementById('connection-status');
-        el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
+        if (status === 'SUBSCRIBED') {
+          el.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1.5"></span> live database sync`;
+          el.className = "p-4 text-[11px] font-bold border-t border-slate-800/80 uppercase tracking-widest text-emerald-400 bg-emerald-500/5";
+        } else {
+          el.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-pulse"></span> data state: ${status.toLowerCase()}`;
+          el.className = "p-4 text-[11px] font-bold border-t border-slate-800/80 uppercase tracking-widest text-red-400 bg-red-500/5";
+        }
       });
   },
 };
