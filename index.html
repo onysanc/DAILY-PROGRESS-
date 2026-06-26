@@ -955,10 +955,10 @@ const App = {
       if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    // Bay occupancy grid
+    // Bay occupancy grid - ONLY SHOWS IF CHECKED AND NOT YET LOADED
     const bayMap = {};
     this.state.dispatches.forEach(d => {
-      if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
+      if (d.checking_checked && !d.loaded_checked && d.bay_location && d.bay_location !== 'Extended') {
         bayMap[d.bay_location] = d.dispatch_number;
       }
     });
@@ -1037,7 +1037,7 @@ const App = {
         let pbHtml = '';
         for (let r = 0; r < maxRows; r++) {
           pbHtml += `<tr>${cols.map(col =>
-            `<td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-700 dark:text-slate-300">${col[r] || ''}</td>`
+            `td class="border border-slate-200 dark:border-slate-700 px-2 py-1 text-center text-slate-700 dark:text-slate-300">${col[r] || ''}</td>`
           ).join('')}</tr>`;
         }
         pbody.innerHTML = pbHtml;
@@ -1053,8 +1053,7 @@ const App = {
     } else {
       document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
     }
-  },
-  startDashboardClock() {
+  },  startDashboardClock() {
     const tick = () => {
       const el = document.getElementById('dashboard-heading-time');
       if (el) {
