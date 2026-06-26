@@ -1,707 +1,728 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Outbound Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
-        /* Precision Design Tokens Custom Enforcements */
-        body {
-            background-color: #0f111a;
-            color: #f1f5f9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-        .border-slate-custom {
-            border-color: #1e293b;
-        }
-        /* Custom scrollbar tracking for premium interface design */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f111a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1e293b;
-            border-radius: 3px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatch Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  .hidden{display:none!important}
+  .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
+  input[type=checkbox]{accent-color:#2563eb}
+  ::-webkit-scrollbar{height:8px;width:8px}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+</style>
 </head>
-<body class="min-h-screen flex flex-col antialiased">
+<body class="bg-slate-100 text-slate-800 font-sans h-screen overflow-hidden">
 
-    <header class="bg-[#141724] border-b border-slate-custom px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div class="flex items-center space-x-3">
-            <div class="h-9 w-9 bg-emerald-500 rounded-lg flex items-center justify-center text-black font-black shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                🚚
-            </div>
-            <div>
-                <h1 class="text-lg font-bold tracking-tight text-white">Logistics Outbound Tracker</h1>
-                <p class="text-xs text-slate-400">Enterprise Reverse & Outbound Logistics Orchestrator</p>
-            </div>
-        </div>
-        
-        <div class="flex items-center space-x-4 bg-[#0f111a] border border-slate-custom px-4 py-1.5 rounded-lg">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs text-slate-400 font-mono">Inherited Context RDD:</span>
-            <span id="globalRddBadge" class="text-xs font-bold text-emerald-400 font-mono">YYYY-MM-DD</span>
-        </div>
-    </header>
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
+  <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
+    <h1 class="text-2xl font-bold mb-1 text-slate-800">Dispatch Tracker</h1>
+    <p class="text-sm text-slate-500 mb-6">Sign in with your username.</p>
+    <form onsubmit="App.login(event)" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold mb-1">Username</label>
+        <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+      </div>
+      <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
+      <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
+    </form>
+  </div>
+</div>
 
-    <div class="flex flex-1 overflow-hidden">
-        <aside class="w-64 bg-[#141724] border-r border-slate-custom p-4 flex flex-col justify-between">
-            <nav class="space-y-1" id="appSidebarTabsNav">
-                <button data-tab="dispatch" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 bg-slate-800 text-white border-l-4 border-emerald-500">
-                    <span>📑</span> <span>Dispatch Tracker</span>
-                </button>
-                <button data-tab="trucks" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800/50 hover:text-white">
-                    <span>🚚</span> <span>Available Trucks</span>
-                </button>
-                <button data-tab="dashboard" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800/50 hover:text-white">
-                    <span>📊</span> <span>Dashboard</span>
-                </button>
-                <button data-tab="personnel" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800/50 hover:text-white">
-                    <span>👥</span> <span>Personnel List</span>
-                </button>
-                <button data-tab="users" class="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800/50 hover:text-white">
-                    <span>🔐</span> <span>User Management</span>
-                </button>
-            </nav>
-            
-            <div class="bg-[#0f111a] p-3 rounded-lg border border-slate-custom text-center">
-                <span class="text-[10px] text-slate-500 font-mono block">OPERATOR PROFILE</span>
-                <span class="text-xs font-semibold text-slate-300 block truncate" id="currentOperatorLabel">Ginalyn Cordero</span>
-                <span class="text-[9px] text-purple-400 font-mono">RL Supervisor</span>
-            </div>
-        </aside>
-
-        <main class="flex-1 overflow-y-auto p-6 bg-[#0f111a]" id="mainWorkspaceContainer">
-            
-            <section id="view-dispatch" class="space-y-6">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-custom pb-5">
-                    <div>
-                        <h2 class="text-2xl font-bold tracking-tight text-white">Outbound Operational Dispatch Matrix</h2>
-                        <p class="text-sm text-slate-400">Master operations dashboard executing physical milestone check-states.</p>
-                    </div>
-                    
-                    <div class="bg-[#141724] p-3 rounded-xl border border-slate-custom flex items-center space-x-3 shadow-lg">
-                        <label for="rddSelector" class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">Active RDD:</label>
-                        <select id="rddSelector" class="bg-[#0f111a] border border-slate-custom rounded-lg px-3 py-1.5 text-sm font-bold text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono cursor-pointer">
-                            <option value="2026-06-26">2026-06-26 (Active Execution)</option>
-                            <option value="2026-06-27">2026-06-27 (Next Shift)</option>
-                            <option value="2026-06-25">2026-06-25 (Historical)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="bg-[#141724] border border-slate-custom rounded-xl overflow-hidden shadow-2xl">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-custom bg-[#1a1e2e]/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    <th class="py-4 px-4 text-center w-16">Type</th>
-                                    <th class="py-4 px-5">Trip ID String</th>
-                                    <th class="py-4 px-4 text-center">Status</th>
-                                    <th class="py-4 px-4 text-center">Picked Milestone</th>
-                                    <th class="py-4 px-4 text-center">PGI Status</th>
-                                    <th class="py-4 px-4 text-center">Invoiced Check</th>
-                                    <th class="py-4 px-4 text-center">Security Checked</th>
-                                    <th class="py-4 px-4 text-center">Physical Loaded</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dispatchGridPayload" class="divide-y divide-[#1e293b]/50 text-sm">
-                                <tr>
-                                    <td colspan="8" class="text-center py-12 text-slate-500 animate-pulse font-mono text-xs">Querying Supabase Datastore Infrastructure Engine...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="view-trucks" class="hidden space-y-6">
-                <div class="border-b border-slate-custom pb-5">
-                    <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                        <span>🚚</span> Capacity Fleet Registry 
-                        <span class="text-xs bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 font-mono tracking-normal" id="trucksInheritedHeader">Inheriting RDD Context...</span>
-                    </h2>
-                    <p class="text-sm text-slate-400 mt-1">Available active execution fleet vehicles matching parameters of the Single Source of Truth timestamp criteria.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="trucksGridContent">
-                    </div>
-            </section>
-
-            <section id="view-dashboard" class="hidden space-y-6">
-                <div class="border-b border-slate-custom pb-5">
-                    <h2 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                        <span>📊</span> Real-Time Shift Analytics 
-                        <span class="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 font-mono tracking-normal" id="dashboardInheritedHeader">Inheriting RDD Context...</span>
-                    </h2>
-                    <p class="text-sm text-slate-400 mt-1">Calculations dynamically parsed from current global active database rows.</p>
-                </div>
-
-                <div class="grid grid-cols-2 lg:grid-cols-6 gap-4" id="summaryCardsGrid">
-                    </div>
-
-                <div class="bg-[#141724] border border-slate-custom p-6 rounded-xl shadow-xl">
-                    <div class="mb-4">
-                        <h3 class="text-md font-bold text-white">Logistical Operational Load Curve Profile</h3>
-                        <p class="text-xs text-slate-400">Chronological volume metrics shifted horizontally to align to a standard business operation day cycle **[05:00 AM Shift Start Point to 04:00 AM Next Day Terminal Close]**</p>
-                    </div>
-                    <div class="relative h-[340px]">
-                        <canvas id="logisticShiftTimeChart"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <section id="view-personnel" class="hidden space-y-6">
-                <div class="border-b border-slate-custom pb-5">
-                    <h2 class="text-2xl font-bold tracking-tight text-white">Active Floor Personnel Directory</h2>
-                    <p class="text-sm text-slate-400">Authenticated personnel mapping to verification triggers across operational lanes.</p>
-                </div>
-                <div class="bg-[#141724] border border-slate-custom p-6 rounded-xl text-center max-w-md mx-auto mt-12">
-                    <p class="text-slate-400 text-sm">Static Directory Infrastructure Node operational. Data reads directly from operational logs.</p>
-                </div>
-            </section>
-
-            <section id="view-users" class="hidden space-y-6">
-                <div class="border-b border-slate-custom pb-5">
-                    <h2 class="text-2xl font-bold tracking-tight text-white">System Security Access Permissions Layer</h2>
-                    <p class="text-sm text-slate-400">Manage user groups, RBAC tracking matrices, and operator signatures.</p>
-                </div>
-                <div class="bg-[#141724] border border-slate-custom p-6 rounded-xl text-center max-w-md mx-auto mt-12">
-                    <p class="text-slate-400 text-sm">Security Subsystem active. Authorized Profile Node: <strong class="text-emerald-400">Ginalyn Cordero</strong>.</p>
-                </div>
-            </section>
-
-        </main>
+<!-- ===================== APP ===================== -->
+<div id="app-wrapper" class="hidden flex h-full">
+  <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0">
+    <div class="p-5 border-b border-slate-700">
+      <div class="text-lg font-bold">Dispatch Tracker</div>
+      <div class="text-xs text-slate-400 mt-2">Logged in as</div>
+      <div id="display-username" class="font-bold"></div>
+      <div id="display-role" class="text-xs text-blue-400 mb-2"></div>
+      <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline">Log out</button>
     </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg bg-blue-600">Dispatch Activity</button>
+      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
+      <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
+    </nav>
+    <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800" id="connection-status">●  connecting…</div>
+  </aside>
 
-    <script>
-        // =========================================================================
-        // 🛠️ DATABASE INTERFACE CONFIGURATION (SUPABASE CLIENT CONNECTION)
-        // =========================================================================
-        // Replace with your precise Supabase Project endpoints
-        const SUPABASE_URL = "https://your-project-id.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-key-here";
-        
-        let supabaseClient = null;
-        try {
-            if(SUPABASE_URL.includes("your-project-id")) {
-                console.warn("Supabase Configuration placeholders detected. Running in Demo Mock Engine Driver Fallback mode.");
-            } else {
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-        } catch(err) {
-            console.error("Initialization fault linking Supabase Client Client library layer:", err);
-        }
+  <main class="flex-1 overflow-y-auto p-6">
 
-        // =========================================================================
-        // 📂 APPLICATION CORE STATE VARIABLE SCHEMATICS (SSoT ENGINE)
-        // =========================================================================
-        let currentGlobalRdd = "2026-06-26"; // The Application Absolute Central Single Source Of Truth
-        let runtimeActiveCacheMemory = []; // Local memory tracking grid payload
-        let activeChartInstance = null; // References current rendering engine instance
-        const currentActiveOperator = "Ginalyn Cordero"; // Logged in Supervisor Persona context
+    <!-- ---------- TAB 1: DISPATCH ACTIVITY ---------- -->
+    <section id="tab-dispatch" class="tab-content">
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 class="text-2xl font-bold">Dispatch Activity</h1>
+        <div class="flex space-x-3 items-center">
+          <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white">
+            <option value="">Select RDD…</option>
+          </select>
+          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
+        </div>
+      </div>
 
-        // Custom Shift Hour Configuration array parsing sequence matrix
-        // Defines mapping constraint layout sequence [05:00 -> 04:00 AM Next Day]
-        const OPERATIONAL_SHIFT_HOURS_MAP = [
-            "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
-            "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00",
-            "21:00", "22:00", "23:00", "00:00", "01:00", "02:00", "03:00", "04:00"
-        ];
+      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
 
-        // =========================================================================
-        // 🔄 APPLICATION LIFECYCLE ROUTERS & INITIALIZATION HOOKS
-        // =========================================================================
-        document.addEventListener("DOMContentLoaded", () => {
-            initializeGlobalNavigationRouter();
-            initializeStateSyncListeners();
-            executeDataLifecycleSyncEngine();
-        });
+      <div id="add-dispatch-panel" class="hidden bg-white p-5 rounded-xl shadow mb-5">
+        <h2 class="font-bold mb-3">Add Dispatches</h2>
+        <div class="grid grid-cols-2 gap-8">
+          <form onsubmit="App.addSingleDispatch(event)" class="space-y-2">
+            <h3 class="text-sm font-semibold text-slate-500">Single Entry</h3>
+            <div class="flex space-x-2">
+              <select id="single-truck-type" class="p-2 border rounded-lg w-28" required>
+                <option value="">Type</option>
+                <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
+              </select>
+              <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border rounded-lg flex-1" required>
+              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+            </div>
+          </form>
+          <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
+            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — "TYPE DISPATCH#" one per line</h3>
+            <div class="flex space-x-2">
+              <textarea id="mass-dispatch-input" rows="2" placeholder="AUV 12345678&#10;4W 87654321" class="flex-1 p-2 border rounded-lg font-mono text-xs"></textarea>
+              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold self-stretch">Add All</button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-        // Handles Tab View Intersections while safeguarding state boundaries
-        function initializeGlobalNavigationRouter() {
-            const tabs = document.querySelectorAll("#appSidebarTabsNav button");
-            tabs.forEach(tabBtn => {
-                tabBtn.addEventListener("click", () => {
-                    tabs.forEach(b => b.classList.remove("bg-slate-800", "text-white", "border-l-4", "border-emerald-500"));
-                    tabs.forEach(b => b.classList.add("text-slate-400"));
-                    
-                    tabBtn.classList.remove("text-slate-400");
-                    tabBtn.classList.add("bg-slate-800", "text-white", "border-l-4", "border-emerald-500");
-                    
-                    const targetedViewportId = tabBtn.getAttribute("data-tab");
-                    
-                    // Hide all sections inside execution canvas
-                    const views = document.querySelectorAll("main > section");
-                    views.forEach(v => v.classList.add("hidden"));
-                    
-                    // Reveal exact active interface route element
-                    const viewElement = document.getElementById(`view-${targetedViewportId}`);
-                    if(viewElement) {
-                        viewElement.classList.remove("hidden");
-                        // Execute context payload updates matching the SSoT rule requirements
-                        executeReactiveViewSubscribers(targetedViewportId);
-                    }
-                });
-            });
-        }
+      <div class="bg-white rounded-xl shadow overflow-x-auto">
+        <table class="w-full text-sm text-left whitespace-nowrap">
+          <thead class="bg-slate-50 border-b text-slate-500 text-xs uppercase">
+            <tr>
+              <th class="p-3">Type</th>
+              <th class="p-3">Dispatch No.</th>
+              <th class="p-3 text-center">Pick</th>
+              <th class="p-3 text-center">PGI</th>
+              <th class="p-3 text-center">Invoiced</th>
+              <th class="p-3 text-center">DS Printed</th>
+              <th class="p-3 text-center">Checking</th>
+              <th class="p-3 text-center">Loaded</th>
+              <th class="p-3">Status</th>
+              <th class="p-3 w-40">Progress</th>
+            </tr>
+          </thead>
+          <tbody id="dispatch-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+        <div id="dispatch-empty" class="p-8 text-center text-slate-400 text-sm">Select or create an RDD to see dispatches.</div>
+      </div>
+    </section>
 
-        // Binds event listeners directly to SSoT control nodes
-        function initializeStateSyncListeners() {
-            const rddControlDropdown = document.getElementById("rddSelector");
-            
-            // Set default initial visual state configuration values
-            rddControlDropdown.value = currentGlobalRdd;
-            document.getElementById("globalRddBadge").innerText = currentGlobalRdd;
+    <!-- ---------- TAB 2: AVAILABLE TRUCKS ---------- -->
+    <section id="tab-trucks" class="tab-content hidden">
+      <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
+      <div class="bg-white p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-500">Truck Type</label>
+          <select id="truck-type-input" class="p-2 border rounded-lg">
+            <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-500">Plate Number</label>
+          <input type="text" id="truck-plate-input" class="p-2 border rounded-lg" placeholder="ABC 123">
+        </div>
+        <button onclick="App.addTruck()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add Truck</button>
+      </div>
+      <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
+    </section>
 
-            // Intercept manual state Mutation Adjustments
-            rddControlDropdown.addEventListener("change", (e) => {
-                currentGlobalRdd = e.target.value;
-                
-                // Synchronize global visual tracking identifiers completely across app boundaries
-                document.getElementById("globalRddBadge").innerText = currentGlobalRdd;
-                
-                console.log(`[SSoT Mutation Core Event] State Vector updated: input='${currentGlobalRdd}'`);
-                
-                // Fire network operational reload lifecycle
-                executeDataLifecycleSyncEngine();
-            });
-        }
+    <!-- ---------- TAB 3: DASHBOARD ---------- -->
+    <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
+      <div class="flex justify-between items-center mb-5">
+        <h1 class="text-2xl font-bold">Hourly Accomplishment — 5:00 AM to 5:00 AM</h1>
+        <span class="text-xs text-slate-500">Based on the currently selected RDD</span>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow flex-1 relative min-h-[400px]">
+        <canvas id="activityChart"></canvas>
+      </div>
+    </section>
+  </main>
+</div>
 
-        // =========================================================================
-        // 📡 REAL-TIME DATA EXTRACTION ENGINE ARCHITECTURE (SUPABASE INTERCONNECT)
-        // =========================================================================
-        async function executeDataLifecycleSyncEngine() {
-            try {
-                if (supabaseClient) {
-                    // Pull record states matching SSoT key matching parameters directly from live database engine
-                    let { data: dispatches, error } = await supabaseClient
-                        .from('dispatches')
-                        .select('*')
-                        .eq('rdd', currentGlobalRdd)
-                        .order('trip_number', { ascending: true });
+<!-- ===================== MODALS ===================== -->
+<div id="rdd-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <h2 class="text-lg font-bold mb-4">Create New RDD</h2>
+    <label class="block text-xs font-semibold mb-1 text-slate-500">RDD Date</label>
+    <input type="date" id="new-rdd-date" class="w-full p-2 border rounded-lg mb-3">
+    <label class="block text-xs font-semibold mb-1 text-slate-500">Initial Planning Count</label>
+    <input type="number" min="0" id="new-rdd-count" placeholder="e.g. 45" class="w-full p-2 border rounded-lg mb-5">
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.createRDD()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold">Save</button>
+    </div>
+  </div>
+</div>
 
-                    if (error) throw error;
-                    runtimeActiveCacheMemory = dispatches || [];
-                } else {
-                    // Fire static demo sandbox array matrix data generation loop engine if client missing
-                    runtimeActiveCacheMemory = getMockDatabaseSandboxedData().filter(row => row.rdd === currentGlobalRdd);
-                }
-            } catch (networkFaultException) {
-                console.error("Database connection fault during datastore query sequence:", networkFaultException);
-                runtimeActiveCacheMemory = [];
-            }
+<div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
+    <select id="pick-name" class="w-full p-2 border rounded-lg mb-5">
+      <option value="R. ISUGA">R. ISUGA</option>
+      <option value="E. ISIGE">E. ISIGE</option>
+    </select>
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+    </div>
+  </div>
+</div>
 
-            // Instantly render primary Dispatch control workspace grid UI layer elements
-            compileDispatchWorkspaceMatrixGrid();
-            
-            // Detect active view node context and refresh dynamically
-            const activelyVisibleTabElement = document.querySelector("#appSidebarTabsNav button.bg-slate-800");
-            if (activelyVisibleTabElement) {
-                executeReactiveViewSubscribers(activelyVisibleTabElement.getAttribute("data-tab"));
-            }
-        }
+<div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <h2 class="text-lg font-bold mb-4">Checking Details</h2>
+    <label class="block text-xs font-semibold mb-1 text-slate-500">Checkers (comma separated, 1–6 names)</label>
+    <input type="text" id="checking-names" placeholder="Name 1, Name 2…" class="w-full p-2 border rounded-lg mb-3">
+    <label class="block text-xs font-semibold mb-1 text-slate-500">Bay Location</label>
+    <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5"></select>
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+    </div>
+  </div>
+</div>
 
-        // =========================================================================
-        // 📊 INHERITED STATE SUBSCRIPTION DISPATCHER
-        // =========================================================================
-        function executeReactiveViewSubscribers(activeViewId) {
-            // Force strict adherence to updating the targets using inherited state metadata
-            switch(activeViewId) {
-                case "trucks":
-                    document.getElementById("trucksInheritedHeader").innerText = `Inherited SSoT: [ ${currentGlobalRdd} ]`;
-                    renderAvailableTrucksCapacityCardsView();
-                    break;
-                case "dashboard":
-                    document.getElementById("dashboardInheritedHeader").innerText = `Inherited SSoT: [ ${currentGlobalRdd} ]`;
-                    calculateDashboardHighLevelSummaryCards();
-                    initializeAndRenderChartJsTimelineGraph();
-                    break;
-                default:
-                    break;
-            }
-        }
+<div id="loaded-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <h2 class="text-lg font-bold mb-4">Assign Truck (Loaded)</h2>
+    <select id="loaded-truck" class="w-full p-2 border rounded-lg mb-5"></select>
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+    </div>
+  </div>
+</div>
 
-        // =========================================================================
-        // 📑 RENDER ENGINE MODULE: DISPATCH TRACKER WORKSPACE GRID
-        // =========================================================================
-        function compileDispatchWorkspaceMatrixGrid() {
-            const tableBodyNode = document.getElementById("dispatchGridPayload");
-            if(runtimeActiveCacheMemory.length === 0) {
-                tableBodyNode.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="text-center py-16 text-slate-500 font-mono text-xs tracking-wide">
-                            No dispatch records linked to active RDD window context state registry configuration parameters.
-                        </td>
-                    </tr>`;
-                return;
-            }
+<div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-[440px]">
+    <h2 class="text-lg font-bold mb-1 text-red-600">Admin Override</h2>
+    <p class="text-sm text-slate-500 mb-4">Edit the timestamp or completely untick this step (this will also wipe and uncheck every later step).</p>
+    <label class="block text-xs font-semibold mb-1 text-slate-500">Timestamp</label>
+    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded-lg mb-6">
+    <div class="flex justify-between items-center">
+      <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Untick &amp; Clear</button>
+      <div class="space-x-2">
+        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
+        <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Time</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-            let computedHtmlBuffer = "";
-            runtimeActiveCacheMemory.forEach(record => {
-                
-                // Color formatting token determinations
-                const vehicleBadgeColorClass = record.type === '4W' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : 
-                                               record.type === 'AUV' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 
-                                               'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+<script>
+/* ======================================================================
+   CONFIG — your Supabase project. The "anon/publishable" key is meant to
+   be public; real protection comes from Row Level Security on the tables.
+   ====================================================================== */
+const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
+// renamed to supabaseClient so it doesn't collide with the supabase-js global "supabase"
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-                const stateStatusBadgeTokenColor = record.status === 'DONE' ? 
-                    'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]' : 
-                    'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+/* ======================================================================
+   USERS & ROLE PERMISSIONS
+   This is a lightweight client-side login (no email, just username),
+   matching what you asked for. It is NOT Supabase Auth — change these
+   passwords before sharing the file/link with your team.
+   ====================================================================== */
+const USERS = {
+  admin:     { pass: 'superadmin', role: 'admin' },
+  outbound:  { pass: 'outbound',   role: 'outbound' },
+  pgi:       { pass: 'pgi',        role: 'pgi' },
+  invoice:   { pass: 'invoice',    role: 'invoice' },
+  transport: { pass: 'transport',  role: 'transport' },
+};
 
-                computedHtmlBuffer += `
-                    <tr class="hover:bg-slate-800/30 transition-colors border-b border-slate-800/60 text-slate-300">
-                        <td class="py-4 px-4 text-center">
-                            <span class="text-xs font-mono font-bold px-2.5 py-1 rounded ${vehicleBadgeColorClass}">${record.type}</span>
-                        </td>
-                        <td class="py-4 px-5 font-mono font-bold text-white tracking-wide">
-                            ${record.trip_number}
-                        </td>
-                        <td class="py-4 px-4 text-center">
-                            <span class="text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-full ${stateStatusBadgeTokenColor}">
-                                ${record.status}
-                            </span>
-                        </td>
-                        
-                        ${renderInteractiveMilestoneCell(record, 'picked')}
-                        ${renderInteractiveMilestoneCell(record, 'pgi')}
-                        ${renderInteractiveMilestoneCell(record, 'invoiced')}
-                        ${renderInteractiveMilestoneCell(record, 'checked')}
-                        ${renderInteractiveMilestoneCell(record, 'loaded')}
-                    </tr>
-                `;
-            });
-            tableBodyNode.innerHTML = computedHtmlBuffer;
-        }
+const ROLE_PERMISSIONS = {
+  admin:     ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
+  outbound:  ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
+  pgi:       ['pgi'],
+  invoice:   ['invoiced'],
+  transport: ['ds_printed', 'loaded'],
+};
 
-        // Sub-Label Core Module Render Architecture: Formatted DateTime and Truncated User Signatures
-        function renderInteractiveMilestoneCell(record, milestoneKey) {
-            const isChecked = record[milestoneKey];
-            const timestampVal = record[`${milestoneKey}_timestamp`];
-            const operatorSignature = record[`${milestoneKey}_by`];
+const PICK_NAMES = ['R. ISUGA', 'E. ISIGE'];
+const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 
-            let cellMetadataMarkupSublabel = `<span class="text-slate-600 block italic font-serif">Unprocessed</span>`;
-            
-            if(isChecked && timestampVal) {
-                const dateObj = new Date(timestampVal);
-                // Standard visual format alignment configuration requirement: MM/DD/YYYY HH:MM
-                const formattedDateStr = `${String(dateObj.getMonth()+1).padStart(2,'0')}/${String(dateObj.getDate()).padStart(2,'0')}/${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
-                
-                cellMetadataMarkupSublabel = `
-                    <span class="text-emerald-400 font-mono block font-medium tracking-tight">${formattedDateStr}</span>
-                    <span class="text-slate-400 block truncate font-sans tracking-wide max-w-[120px] text-center mx-auto" title="${operatorSignature}">👤 ${operatorSignature || 'System'}</span>
-                `;
-            }
+const App = {
+  state: {
+    currentUser: null,
+    currentRddId: null,
+    rdds: [],
+    dispatches: [],
+    trucks: [],
+    pendingMilestoneUpdate: null,
+    chartInstance: null,
+  },
 
-            return `
-                <td class="py-3 px-4 text-center border-l border-[#1e293b]/30">
-                    <div class="flex flex-col items-center space-y-1.5">
-                        <input type="checkbox" 
-                            ${isChecked ? 'checked' : ''} 
-                            onchange="executeDatabaseMilestoneToggleMutation('${record.id}', '${milestoneKey}', this.checked)"
-                            class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900 focus:ring-2 cursor-pointer transition-transform duration-100 transform hover:scale-110">
-                        <div class="text-[10px] leading-tight space-y-0.5">
-                            ${cellMetadataMarkupSublabel}
-                        </div>
+  /* ---------------- AUTH ---------------- */
+  login(e) {
+    e.preventDefault();
+    const u = document.getElementById('login-username').value.toLowerCase().trim();
+    const p = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+
+    if (USERS[u] && USERS[u].pass === p) {
+      this.state.currentUser = { username: u, role: USERS[u].role };
+      errEl.classList.add('hidden');
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-wrapper').classList.remove('hidden');
+      document.getElementById('display-username').textContent = u.toUpperCase();
+      document.getElementById('display-role').textContent = USERS[u].role.toUpperCase();
+      this.init();
+    } else {
+      errEl.classList.remove('hidden');
+    }
+  },
+
+  logout() { location.reload(); },
+
+  /* ---------------- INIT ---------------- */
+  async init() {
+    this.populateBaySelect();
+    await this.loadRDDs();
+    await this.loadTrucks();
+    this.setupRealtimeSubscriptions();
+  },
+
+  populateBaySelect() {
+    const sel = document.getElementById('checking-bay');
+    sel.innerHTML = '';
+    for (let i = 1; i <= 8; i++) {
+      ['A', 'B', 'C'].forEach(letter => {
+        const opt = document.createElement('option');
+        opt.value = `${i}${letter}`;
+        opt.textContent = `${i}${letter}`;
+        sel.appendChild(opt);
+      });
+    }
+    const ext = document.createElement('option');
+    ext.value = 'Extended';
+    ext.textContent = 'Extended';
+    sel.appendChild(ext);
+  },
+
+  /* ---------------- TABS / MODALS ---------------- */
+  switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(tabId).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
+    const btn = document.getElementById('btn-' + tabId.replace('tab-', 'tab-'));
+    document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
+    document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
+    if (tabId === 'tab-analytics') this.renderChart();
+  },
+
+  openModal(id) { document.getElementById(id).classList.remove('hidden'); },
+  closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+  cancelMilestone() {
+    this.state.pendingMilestoneUpdate = null;
+    document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
+  },
+
+  /* ---------------- RDD ---------------- */
+  async loadRDDs() {
+    const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
+    if (error) { console.error(error); return; }
+    this.state.rdds = data;
+    const sel = document.getElementById('rdd-selector');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Select RDD…</option>';
+    data.forEach(rdd => {
+      const opt = document.createElement('option');
+      opt.value = rdd.id;
+      opt.textContent = `${rdd.rdd_date}  (Plan: ${rdd.initial_planning_count})`;
+      sel.appendChild(opt);
+    });
+    if (prev) sel.value = prev;
+  },
+
+  async createRDD() {
+    const rdd_date = document.getElementById('new-rdd-date').value;
+    const count = document.getElementById('new-rdd-count').value;
+    if (!rdd_date || count === '') return alert('Please fill in both fields.');
+
+    const { error } = await supabaseClient.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count, 10) });
+    if (error) return alert('Could not create RDD: ' + error.message);
+
+    document.getElementById('new-rdd-date').value = '';
+    document.getElementById('new-rdd-count').value = '';
+    this.closeModal('rdd-modal');
+    await this.loadRDDs();
+  },
+
+  async selectRDD(id) {
+    this.state.currentRddId = id || null;
+    document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
+    document.getElementById('rdd-summary').classList.toggle('hidden', !id);
+    if (!id) {
+      this.state.dispatches = [];
+      this.renderDispatches();
+      return;
+    }
+    await this.loadDispatches();
+  },
+
+  renderRddSummary() {
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const box = document.getElementById('rdd-summary');
+    if (!rdd) { box.innerHTML = ''; return; }
+    const total = this.state.dispatches.length;
+    const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
+    const pending = total - loaded;
+    const cards = [
+      { label: 'Initial Plan', value: rdd.initial_planning_count },
+      { label: 'Dispatches Added', value: total },
+      { label: 'Loaded / Done', value: loaded },
+      { label: 'Pending', value: pending },
+    ];
+    box.innerHTML = cards.map(c => `
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500">${c.label}</div>
+        <div class="text-2xl font-bold">${c.value}</div>
+      </div>`).join('');
+  },
+
+  /* ---------------- DISPATCHES ---------------- */
+  async loadDispatches() {
+    const { data, error } = await supabaseClient.from('dispatches').select('*')
+      .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
+    if (error) { console.error(error); return; }
+    this.state.dispatches = data;
+    this.renderDispatches();
+    this.renderRddSummary();
+  },
+
+  async addSingleDispatch(e) {
+    e.preventDefault();
+    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    const truck_type = document.getElementById('single-truck-type').value;
+    const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
+    if (!truck_type || !dispatch_number) return;
+
+    const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
+    if (error) return alert(error.message);
+    e.target.reset();
+    await this.loadDispatches();
+  },
+
+  async addMassDispatch(e) {
+    e.preventDefault();
+    if (!this.state.currentRddId) return alert('Select an RDD first.');
+    const text = document.getElementById('mass-dispatch-input').value;
+    const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    const inserts = [];
+    const skipped = [];
+
+    text.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const parts = trimmed.split(/\s+/);
+      const type = (parts[0] || '').toUpperCase();
+      const num = parts[1];
+      if (parts.length >= 2 && validTypes.includes(type) && num) {
+        inserts.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
+      } else {
+        skipped.push(trimmed);
+      }
+    });
+
+    if (inserts.length) {
+      const { error } = await supabaseClient.from('dispatches').insert(inserts);
+      if (error) return alert(error.message);
+      document.getElementById('mass-dispatch-input').value = '';
+      await this.loadDispatches();
+    }
+    if (skipped.length) alert(`Added ${inserts.length}. Skipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`);
+  },
+
+  renderDispatches() {
+    const tbody = document.getElementById('dispatch-tbody');
+    const emptyEl = document.getElementById('dispatch-empty');
+    tbody.innerHTML = '';
+
+    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
+    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
+    emptyEl.classList.add('hidden');
+
+    const role = this.state.currentUser.role;
+    const allowed = ROLE_PERMISSIONS[role] || [];
+
+    this.state.dispatches.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50';
+      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
+
+      MILESTONE_FLOW.forEach((step, idx) => {
+        const isChecked = d[`${step}_checked`];
+        const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
+        const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
+        const hasPermission = allowed.includes(step);
+
+        // unchecked -> clickable only if chronology met AND role allowed
+        // checked   -> clickable only by admin (to open the override modal)
+        const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
+
+        const tip = isChecked
+          ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
+          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
+
+        html += `<td class="p-3 text-center" title="${tip}">
+                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
+                           ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
+                           onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
+                  </td>`;
+      });
+
+      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">${d.status}</span></td>
+                <td class="p-3">
+                  <div class="w-full bg-slate-200 rounded-full h-2.5">
+                    <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
+                  </div>
+                </td>`;
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+  },
+
+  handleMilestoneClick(event, dispatchId, step) {
+    event.preventDefault();
+    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
+    const isChecked = dispatch[`${step}_checked`];
+
+    if (isChecked) {
+      if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
+      else alert('Only an admin can edit or untick a completed step.');
+      return;
+    }
+
+    this.state.pendingMilestoneUpdate = { dispatch, step };
+    if (step === 'pick') {
+      const sel = document.getElementById('pick-name');
+      sel.innerHTML = PICK_NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
+      this.openModal('pick-modal');
+    } else if (step === 'checking') {
+      document.getElementById('checking-names').value = '';
+      this.openModal('checking-modal');
+    } else if (step === 'loaded') {
+      this.openLoadedModal(dispatch);
+    } else {
+      this.confirmMilestone(step);
+    }
+  },
+
+  openLoadedModal(dispatch) {
+    const sel = document.getElementById('loaded-truck');
+    const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
+    if (!available.length) { alert(`No available ${dispatch.truck_type} trucks. Add one in the Available Trucks tab first.`); this.state.pendingMilestoneUpdate = null; return; }
+    sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
+    this.openModal('loaded-modal');
+  },
+
+  async confirmMilestone(step) {
+    const { dispatch } = this.state.pendingMilestoneUpdate;
+    const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
+
+    if (step === 'pick') {
+      payload.pick_assigned_name = document.getElementById('pick-name').value;
+    } else if (step === 'checking') {
+      const names = document.getElementById('checking-names').value.split(',').map(n => n.trim()).filter(Boolean);
+      if (names.length < 1 || names.length > 6) return alert('Enter between 1 and 6 names.');
+      payload.checking_assigned_names = names;
+      payload.bay_location = document.getElementById('checking-bay').value;
+    } else if (step === 'loaded') {
+      const truckId = document.getElementById('loaded-truck').value;
+      if (!truckId) return alert('Select a truck.');
+      payload.assigned_truck_id = truckId;
+      const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
+      if (tErr) return alert(tErr.message);
+    }
+
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
+    if (error) { alert(error.message); return; }
+
+    this.cancelMilestone();
+    await this.loadDispatches();
+    await this.loadTrucks();
+  },
+
+  /* ---------------- ADMIN OVERRIDE ---------------- */
+  openAdminEditModal(dispatch, step) {
+    this.state.pendingMilestoneUpdate = { dispatch, step };
+    const current = dispatch[`${step}_timestamp`];
+    if (current) {
+      const dt = new Date(current);
+      dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+      document.getElementById('admin-edit-time').value = dt.toISOString().slice(0, 16);
+    } else {
+      document.getElementById('admin-edit-time').value = '';
+    }
+    this.openModal('admin-edit-modal');
+  },
+
+  async adminUpdateTimestamp() {
+    const { dispatch, step } = this.state.pendingMilestoneUpdate;
+    const newTime = document.getElementById('admin-edit-time').value;
+    if (!newTime) return alert('Pick a date/time.');
+    const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
+    if (error) return alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  async adminUntickMilestone() {
+    const { dispatch, step } = this.state.pendingMilestoneUpdate;
+    const startIdx = MILESTONE_FLOW.indexOf(step);
+    const toUncheck = MILESTONE_FLOW.slice(startIdx);
+    const payload = {};
+
+    toUncheck.forEach(s => {
+      payload[`${s}_checked`] = false;
+      payload[`${s}_timestamp`] = null;
+      if (s === 'pick') payload.pick_assigned_name = null;
+      if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
+      if (s === 'loaded' && dispatch.assigned_truck_id) {
+        supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
+        payload.assigned_truck_id = null;
+      }
+    });
+
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
+    if (error) return alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+    await this.loadTrucks();
+  },
+
+  /* ---------------- TRUCKS ---------------- */
+  async loadTrucks() {
+    const { data, error } = await supabaseClient.from('available_trucks').select('*').order('created_at', { ascending: true });
+    if (error) { console.error(error); return; }
+    this.state.trucks = data;
+    this.renderTrucks();
+  },
+
+  async addTruck() {
+    const truck_type = document.getElementById('truck-type-input').value;
+    const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
+    if (!plate_number) return alert('Enter a plate number.');
+    const { error } = await supabaseClient.from('available_trucks').insert({ truck_type, plate_number });
+    if (error) return alert(error.message);
+    document.getElementById('truck-plate-input').value = '';
+    await this.loadTrucks();
+  },
+
+  renderTrucks() {
+    const grid = document.getElementById('trucks-grid');
+    grid.innerHTML = '';
+    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+
+    types.forEach(type => {
+      const all = this.state.trucks.filter(t => t.truck_type === type);
+      const available = all.filter(t => t.status === 'Available');
+      let html = `<div class="bg-white rounded-xl shadow p-4">
+                    <div class="flex justify-between items-baseline mb-3">
+                      <h3 class="font-bold">${type}</h3>
+                      <span class="text-xs text-slate-400">${available.length} available / ${all.length} total</span>
                     </div>
-                </td>
-            `;
-        }
+                    <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
+      all.forEach((t, i) => {
+        const isAvail = t.status === 'Available';
+        html += `<li class="flex justify-between items-center">
+                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
+                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">${t.status}</span>
+                  </li>`;
+      });
+      if (!all.length) html += `<li class="text-slate-400 italic">No trucks added yet</li>`;
+      html += `</ul></div>`;
+      grid.innerHTML += html;
+    });
+  },
 
-        // Mutation Request Processing Node Wrapper
-        async function executeDatabaseMilestoneToggleMutation(recordId, milestoneField, booleanMutationState) {
-            const generatedIsoTimestampString = booleanMutationState ? new Date().toISOString() : null;
-            const activeUserSignatureString = booleanMutationState ? currentActiveOperator : null;
+  /* ---------------- DASHBOARD ---------------- */
+  renderChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    if (this.state.chartInstance) this.state.chartInstance.destroy();
 
-            console.log(`[Mutation Database Execution Pipeline] Target ID: ${recordId} Update Parameter: ${milestoneField} State: ${booleanMutationState}`);
+    // 24 hourly buckets starting 5 AM through 4 AM the next day
+    const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
+    const bucketOf = (isoString) => {
+      if (!isoString) return null;
+      const h = new Date(isoString).getHours();
+      return (h - 5 + 24) % 24; // shift so 5AM = bucket 0
+    };
 
-            try {
-                if(supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('dispatches')
-                        .update({ 
-                            [milestoneField]: booleanMutationState,
-                            [`${milestoneField}_timestamp`]: generatedIsoTimestampString,
-                            [`${milestoneField}_by`]: activeUserSignatureString
-                        })
-                        .eq('id', recordId);
+    const series = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    this.state.dispatches.forEach(d => {
+      ['pick', 'pgi', 'invoiced', 'checking', 'loaded'].forEach(step => {
+        const b = bucketOf(d[`${step === 'invoiced' ? 'invoice' : step}_timestamp`]);
+        if (b !== null) series[step][b]++;
+      });
+    });
 
-                    if (error) throw error;
-                } else {
-                    // Update cache directly in local fallback memory context simulation structure
-                    const trackingCachedRowTarget = runtimeActiveCacheMemory.find(item => item.id === recordId);
-                    if(trackingCachedRowTarget) {
-                        trackingCachedRowTarget[milestoneField] = booleanMutationState;
-                        trackingCachedRowTarget[`${milestoneField}_timestamp`] = generatedIsoTimestampString;
-                        trackingCachedRowTarget[`${milestoneField}_by`] = activeUserSignatureString;
-                        
-                        // Recalculate status state variable alignment
-                        const allStepsCompleted = trackingCachedRowTarget.picked && trackingCachedRowTarget.pgi && 
-                                                 trackingCachedRowTarget.invoiced && trackingCachedRowTarget.checked && 
-                                                 trackingCachedRowTarget.loaded;
-                        trackingCachedRowTarget.status = allStepsCompleted ? 'DONE' : 'PENDING';
-                    }
-                }
-            } catch (exceptionErr) {
-                console.error("Mutation processing failure event reported:", exceptionErr);
-                alert("Critical Write Pipeline Fault. Reverting transactional UI changes.");
-            } finally {
-                // Instantly sync datastore pipelines and update running interfaces
-                compileDispatchWorkspaceMatrixGrid();
-                
-                // Propagate mutation lifecycle state data into background subscriber components if needed
-                const activelyVisibleTabElement = document.querySelector("#appSidebarTabsNav button.bg-slate-800");
-                if (activelyVisibleTabElement) {
-                    executeReactiveViewSubscribers(activelyVisibleTabElement.getAttribute("data-tab"));
-                }
-            }
-        }
+    // Available trucks: how many were sitting "Available" (added but not yet loaded) by each hour bucket
+    const availableTrend = Array(24).fill(0);
+    const totalTrucks = this.state.trucks.length;
+    this.state.trucks.forEach(t => {
+      const addedB = bucketOf(t.created_at);
+      if (addedB === null) return;
+      for (let h = addedB; h < 24; h++) availableTrend[h]++;
+    });
+    // subtract ones loaded by each hour (based on dispatches.loaded_timestamp + assigned_truck_id)
+    this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
+      const b = bucketOf(d.loaded_timestamp);
+      if (b === null) return;
+      for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
+    });
 
-        // =========================================================================
-        // 🚚 RENDER ENGINE MODULE: CAPACITY REGISTRY VIEWS (SUBSCRIBER BOUND)
-        // =========================================================================
-        function renderAvailableTrucksCapacityCardsView() {
-            const containerNodeGrid = document.getElementById("trucksGridContent");
-            
-            if(runtimeActiveCacheMemory.length === 0) {
-                containerNodeGrid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 font-mono text-xs">No active vehicle units configured under target RDD window criteria parameters.</div>`;
-                return;
-            }
+    this.state.chartInstance = new Chart(ctx, {
+      data: {
+        labels,
+        datasets: [
+          { type: 'bar', label: 'Pick', data: series.pick, backgroundColor: '#3b82f6' },
+          { type: 'bar', label: 'PGI', data: series.pgi, backgroundColor: '#8b5cf6' },
+          { type: 'bar', label: 'Invoice', data: series.invoiced, backgroundColor: '#ec4899' },
+          { type: 'bar', label: 'Check', data: series.checking, backgroundColor: '#f59e0b' },
+          { type: 'bar', label: 'Loaded', data: series.loaded, backgroundColor: '#10b981' },
+          { type: 'line', label: 'Available Trucks', data: availableTrend, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.25, yAxisID: 'y1', fill: false },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { stacked: true, title: { display: true, text: 'Hour' } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Milestones completed' } },
+          y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Trucks available' } },
+        },
+      },
+    });
+  },
 
-            containerNodeGrid.innerHTML = runtimeActiveCacheMemory.map(rec => {
-                return `
-                    <div class="bg-[#141724] border border-slate-custom p-5 rounded-xl shadow-md relative overflow-hidden group hover:border-slate-700 transition-all duration-200">
-                        <div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition-all"></div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-xs uppercase font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">${rec.type} Allocation Node</span>
-                            <span class="text-[10px] font-mono text-slate-500">${rec.id.substring(0,8)}</span>
-                        </div>
-                        <h4 class="text-lg font-mono font-bold text-white tracking-wide">${rec.trip_number}</h4>
-                        <div class="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
-                            <span>Processing State Profile:</span>
-                            <strong class="${rec.status === 'DONE' ? 'text-emerald-400' : 'text-amber-400'} font-mono font-extrabold">${rec.status}</strong>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // =========================================================================
-        // 📊 RENDER ENGINE MODULE: REAL-TIME ANALYTICAL METRICS CONTROL CARDS
-        // =========================================================================
-        function calculateDashboardHighLevelSummaryCards() {
-            const containerGrid = document.getElementById("summaryCardsGrid");
-            
-            // Generate analytics counters directly out of master active store cache
-            const totalCount = runtimeActiveCacheMemory.length;
-            const pickedCount = runtimeActiveCacheMemory.filter(r => r.picked).length;
-            const pgiCount = runtimeActiveCacheMemory.filter(r => r.pgi).length;
-            const invoicedCount = runtimeActiveCacheMemory.filter(r => r.invoiced).length;
-            const checkedCount = runtimeActiveCacheMemory.filter(r => r.checked).length;
-            const loadedCount = runtimeActiveCacheMemory.filter(r => r.loaded).length;
-            
-            // Calculate downstream operational backlog metric calculations
-            const pendingProcessCount = totalCount - runtimeActiveCacheMemory.filter(r => r.status === 'DONE').length;
-
-            const structuredSummarySchemaArray = [
-                { title: "Total Dispatches", count: totalCount, subtitle: `${pendingProcessCount} Pending Workloads`, color: "text-blue-400", border: "border-blue-500/20" },
-                { title: "Total Picked", count: pickedCount, subtitle: `${totalCount - pickedCount} Left in Lane`, color: "text-cyan-400", border: "border-slate-800" },
-                { title: "Total PGI Issue", count: pgiCount, subtitle: `${totalCount - pgiCount} Queued Delivery`, color: "text-purple-400", border: "border-slate-800" },
-                { title: "Total Invoiced", count: invoicedCount, subtitle: `${totalCount - invoicedCount} Documentation`, color: "text-indigo-400", border: "border-slate-800" },
-                { title: "Total Checked", count: checkedCount, subtitle: `${totalCount - checkedCount} Security Holds`, color: "text-amber-400", border: "border-slate-800" },
-                { title: "Total Loaded", count: loadedCount, subtitle: `${totalCount - loadedCount} Pending Manifest`, color: "text-emerald-400", border: "border-emerald-500/20" }
-            ];
-
-            containerGrid.innerHTML = structuredSummarySchemaArray.map(card => {
-                return `
-                    <div class="bg-[#141724] border ${card.border} p-4 rounded-xl flex flex-col justify-between shadow-md">
-                        <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">${card.title}</span>
-                        <span class="text-2xl font-black font-mono my-2 tracking-tight ${card.color}">${card.count}</span>
-                        <span class="text-[10px] font-sans text-slate-500 block truncate">${card.subtitle}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // =========================================================================
-        // 📈 PARSING TIMELINE ENGINE LOGIC: GRAPH TIME-STRIP SHIFT SYSTEM
-        // =========================================================================
-        function initializeAndRenderChartJsTimelineGraph() {
-            const chartCanvasElementNode = document.getElementById("logisticShiftTimeChart");
-            if(!chartCanvasElementNode) return;
-
-            // Kill and clear memory footprints of structural tracking graph instances during reload iterations
-            if(activeChartInstance) {
-                activeChartInstance.destroy();
-            }
-
-            // Zero-initialize data buckets mapped dynamically across operational array ranges
-            const aggregatedHourlyVolumeBucketArray = new Array(24).fill(0);
-
-            // RUNTIME PARSING ENGINE MATHEMATICAL LOGIC BLOCK
-            runtimeActiveCacheMemory.forEach(record => {
-                // Evaluates the physical system loading action timestamp markers
-                if(record.loaded && record.loaded_timestamp) {
-                    const executionDateObjectInstance = new Date(record.loaded_timestamp);
-                    const integerExtractionHourValue = executionDateObjectInstance.getHours(); // Standard Local 24hr format int [0 - 23]
-                    
-                    // CRITICAL TEMPORAL ALGORITHM TRANSFORMATION RULE
-                    // Operational Offset: Shift start parameter = 05:00 AM (Index Position 0)
-                    // Operational Close parameter = 04:00 AM Next Day Terminal Close (Index Position 23)
-                    let computedShiftArrayTargetIndex = 0;
-                    if (integerExtractionHourValue >= 5) {
-                        computedShiftArrayTargetIndex = integerExtractionHourValue - 5;
-                    } else {
-                        computedShiftArrayTargetIndex = integerExtractionHourValue + 19;
-                    }
-
-                    // Increment matching bucket slot array position safely within range bounds
-                    if(computedShiftArrayTargetIndex >= 0 && computedShiftArrayTargetIndex < 24) {
-                        aggregatedHourlyVolumeBucketArray[computedShiftArrayTargetIndex]++;
-                    }
-                }
-            });
-
-            // Initialize visual canvas graph engine via standard Chart.js configurations
-            activeChartInstance = new Chart(chartCanvasElementNode, {
-                type: 'bar',
-                data: {
-                    labels: OPERATIONAL_SHIFT_HOURS_MAP,
-                    datasets: [{
-                        label: 'Completed Output Dispatches (Loaded Matrix Complete)',
-                        data: aggregatedHourlyVolumeBucketArray,
-                        backgroundColor: 'rgba(16, 185, 129, 0.25)',
-                        borderColor: 'rgb(16, 185, 129)',
-                        borderWidth: 2,
-                        borderRadius: 4,
-                        hoverBackgroundColor: 'rgba(16, 185, 129, 0.55)',
-                        barPercentage: 0.7
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: { color: '#94a3b8', font: { family: 'monospace', size: 11 } }
-                        },
-                        tooltip: {
-                            backgroundColor: '#141724',
-                            titleColor: '#fff',
-                            bodyColor: '#10b981',
-                            borderColor: '#1e293b',
-                            borderWidth: 1,
-                            titleFont: { family: 'monospace' },
-                            bodyFont: { family: 'monospace' }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: 'rgba(30, 41, 59, 0.4)', drawOnChartArea: true },
-                            ticks: { color: '#64748b', font: { family: 'monospace', size: 10 } }
-                        },
-                        y: {
-                            grid: { color: 'rgba(30, 41, 59, 0.4)', drawOnChartArea: true },
-                            ticks: { 
-                                color: '#64748b', 
-                                font: { family: 'monospace', size: 10 },
-                                stepSize: 1,
-                                precision: 0
-                            },
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // =========================================================================
-        // 🧪 HIGH-QUALITY DATA SANDBOX MOCK GENERATOR (FALLBACK LAYER ENGINE)
-        // =========================================================================
-        function getMockDatabaseSandboxedData() {
-            return [
-                {
-                    id: "cf1142da-1601-4470-8b65-e9df2a386120",
-                    rdd: "2026-06-26",
-                    type: "4W",
-                    trip_number: "TRIP-2026-001",
-                    picked: true, picked_timestamp: "2026-06-26T05:30:00.000Z", picked_by: "Alex Chen",
-                    pgi: true, pgi_timestamp: "2026-06-26T06:15:00.000Z", pgi_by: "Sarah Jenkins",
-                    invoiced: true, invoiced_timestamp: "2026-06-26T07:00:00.000Z", invoiced_by: "Mike Ross",
-                    checked: true, checked_timestamp: "2026-06-26T08:30:00.000Z", checked_by: "David Kim",
-                    loaded: true, loaded_timestamp: "2026-06-26T09:15:00.000Z", loaded_by: "David Kim",
-                    status: "DONE"
-                },
-                {
-                    id: "49e7b231-15cc-4eb1-99ad-2bf8696ca26c",
-                    rdd: "2026-06-26",
-                    type: "AUV",
-                    trip_number: "TRIP-2026-002",
-                    picked: true, picked_timestamp: "2026-06-26T06:45:00.000Z", picked_by: "Alex Chen",
-                    pgi: true, pgi_timestamp: "2026-06-26T08:00:00.000Z", pgi_by: "Sarah Jenkins",
-                    invoiced: false, invoiced_timestamp: null, invoiced_by: null,
-                    checked: false, checked_timestamp: null, checked_by: null,
-                    loaded: false, loaded_timestamp: null, loaded_by: null,
-                    status: "PENDING"
-                },
-                {
-                    id: "721da7ff-99ef-4bf8-912c-5df200080ab4",
-                    rdd: "2026-06-26",
-                    type: "10W",
-                    trip_number: "TRIP-2026-003",
-                    picked: true, picked_timestamp: "2026-06-26T14:20:00.000Z", picked_by: "Ray Allen",
-                    pgi: true, pgi_timestamp: "2026-06-26T16:10:00.000Z", pgi_by: "Sarah Jenkins",
-                    invoiced: true, invoiced_timestamp: "2026-06-26T18:05:00.000Z", invoiced_by: "Elena Rostova",
-                    checked: false, checked_timestamp: null, checked_by: null,
-                    loaded: false, loaded_timestamp: null, loaded_by: null,
-                    status: "PENDING"
-                },
-                {
-                    id: "a310cba5-2bc3-488b-a018-cb123da6b6ff",
-                    rdd: "2026-06-26",
-                    type: "6W",
-                    trip_number: "TRIP-2026-004",
-                    picked: true, picked_timestamp: "2026-06-27T01:15:00.000Z", picked_by: "Ray Allen",
-                    pgi: true, pgi_timestamp: "2026-06-27T02:30:00.000Z", pgi_by: "Chris Pratt",
-                    invoiced: true, invoiced_timestamp: "2026-06-27T03:00:00.000Z", invoiced_by: "Elena Rostova",
-                    checked: true, checked_timestamp: "2026-06-27T03:45:00.000Z", checked_by: "David Kim",
-                    loaded: true, loaded_timestamp: "2026-06-27T04:10:00.000Z", loaded_by: "David Kim",
-                    status: "DONE"
-                },
-                {
-                    id: "167dfaac-933e-4b2a-b67f-ea989ab234c0",
-                    rdd: "2026-06-26",
-                    type: "4W",
-                    trip_number: "TRIP-2026-005",
-                    picked: false, picked_timestamp: null, picked_by: null,
-                    pgi: false, pgi_timestamp: null, pgi_by: null,
-                    invoiced: false, invoiced_timestamp: null, invoiced_by: null,
-                    checked: false, checked_timestamp: null, checked_by: null,
-                    loaded: false, loaded_timestamp: null, loaded_by: null,
-                    status: "PENDING"
-                },
-                {
-                    id: "bc87efda-8123-4567-90ab-cdef12345678",
-                    rdd: "2026-06-27",
-                    type: "4W",
-                    trip_number: "TRIP-2026-006",
-                    picked: false, picked_timestamp: null, picked_by: null,
-                    pgi: false, pgi_timestamp: null, pgi_by: null,
-                    invoiced: false, invoiced_timestamp: null, invoiced_by: null,
-                    checked: false, checked_timestamp: null, checked_by: null,
-                    loaded: false, loaded_timestamp: null, loaded_by: null,
-                    status: "PENDING"
-                }
-            ];
-        }
-    </script>
+  /* ---------------- REALTIME ---------------- */
+  setupRealtimeSubscriptions() {
+    supabaseClient.channel('dispatch-app-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, () => this.loadTrucks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rdd_masters' }, () => this.loadRDDs())
+      .subscribe(status => {
+        const el = document.getElementById('connection-status');
+        el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
+      });
+  },
+};
+</script>
 </body>
 </html>
