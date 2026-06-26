@@ -217,11 +217,13 @@
           </table>
         </div>
       </div>
-      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
+      <!-- CHANGED FORUM CONTAINER TO FLEX-COL TO STACK VERTICALLY -->
+      <div class="flex flex-col gap-4 flex-1 min-h-0">
         <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow flex-1 relative min-h-[340px] border dark:border-slate-800">
           <canvas id="activityChart"></canvas>
         </div>
-        <div class="flex flex-col gap-0 shrink-0 w-72">
+        <!-- CHANGED PANEL CONTAINER TO W-FULL INSTEAD OF W-72 -->
+        <div class="flex flex-col gap-0 shrink-0 w-full">
           <div class="bg-white dark:bg-slate-900 rounded-t-xl shadow border-b border-slate-100 dark:border-slate-800 px-4 py-2">
             <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
             <textarea id="dash-remarks-now" rows="3"
@@ -922,7 +924,7 @@ const App = {
   async addPersonnel(e, pool) {
     e.preventDefault();
     const inputId = pool === 'picker' ? 'new-picker-name' : 'new-checker-name';
-    const name = document.getElementById(inputId).value.trim();
+    const name = document.getElementById(inputid).value.trim();
     if (!name) return;
     const { error } = await supabaseClient.from('personnel').insert({ name, pool });
     if (error) return alert(error.message.includes('duplicate') ? 'That name is already in this pool.' : error.message);
