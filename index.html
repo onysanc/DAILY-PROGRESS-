@@ -699,7 +699,7 @@ const App = {
     const series = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'checking', 'loaded'].forEach(step => {
-        const b = bucketOf(d[`${step === 'invoiced' ? 'invoice' : step}_timestamp`]);
+        const b = bucketOf(d[`${step}_timestamp`]);
         if (b !== null) series[step][b]++;
       });
     });
