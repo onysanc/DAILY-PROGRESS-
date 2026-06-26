@@ -17,7 +17,6 @@
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans h-screen overflow-hidden">
-
 <!-- ===================== LOGIN ===================== -->
 <div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
   <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
@@ -37,7 +36,6 @@
     </form>
   </div>
 </div>
-
 <!-- ===================== APP ===================== -->
 <div id="app-wrapper" class="hidden flex h-full">
   <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0">
@@ -56,9 +54,7 @@
     </nav>
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800" id="connection-status">●  connecting…</div>
   </aside>
-
   <main class="flex-1 overflow-y-auto p-6">
-
     <!-- ---------- TAB 1: DISPATCH ACTIVITY ---------- -->
     <section id="tab-dispatch" class="tab-content">
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
@@ -70,9 +66,7 @@
           <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
-
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
-
       <div id="add-dispatch-panel" class="hidden bg-white p-5 rounded-xl shadow mb-5">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold">Add Dispatches</h2>
@@ -100,7 +94,6 @@
           </form>
         </div>
       </div>
-
       <div class="bg-white rounded-xl shadow overflow-x-auto">
         <table class="w-full text-sm text-left whitespace-nowrap">
           <thead class="bg-slate-50 border-b text-slate-500 text-xs uppercase">
@@ -123,7 +116,6 @@
         <div id="dispatch-empty" class="p-8 text-center text-slate-400 text-sm">Select or create an RDD to see dispatches.</div>
       </div>
     </section>
-
     <!-- ---------- TAB 2: AVAILABLE TRUCKS ---------- -->
     <section id="tab-trucks" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
@@ -142,14 +134,12 @@
       </div>
       <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
     </section>
-
     <!-- ---------- TAB 3: DASHBOARD ---------- -->
     <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
       <div class="flex justify-between items-center mb-3">
         <h1 class="text-2xl font-bold">Hourly Accomplishment — 5:00 AM to 5:00 AM</h1>
         <span class="text-xs text-slate-500">Based on the currently selected RDD</span>
       </div>
-
       <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-start gap-8 flex-wrap">
         <div class="flex-1 min-w-[280px]">
           <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">DONE</div>
@@ -162,18 +152,15 @@
           <div id="dashboard-truck-pool" class="text-xs text-right space-y-0.5"></div>
         </div>
       </div>
-
       <div class="bg-white p-5 rounded-xl shadow flex-1 relative min-h-[400px]">
         <canvas id="activityChart"></canvas>
       </div>
     </section>
-
     <!-- ---------- TAB 4: PERSONNEL ---------- -->
     <section id="tab-personnel" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-1">Personnel</h1>
       <p class="text-sm text-slate-500 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span></p>
       <div class="grid grid-cols-2 gap-6">
-
         <div class="bg-white rounded-xl shadow p-5">
           <h2 class="font-bold mb-3">Picker Pool</h2>
           <form id="add-picker-form" onsubmit="App.addPersonnel(event,'picker')" class="hidden flex space-x-2 mb-4">
@@ -182,7 +169,6 @@
           </form>
           <ul id="picker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
         </div>
-
         <div class="bg-white rounded-xl shadow p-5">
           <h2 class="font-bold mb-3">Checker Pool</h2>
           <form id="add-checker-form" onsubmit="App.addPersonnel(event,'checker')" class="hidden flex space-x-2 mb-4">
@@ -191,12 +177,10 @@
           </form>
           <ul id="checker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
         </div>
-
       </div>
     </section>
   </main>
 </div>
-
 <!-- ===================== MODALS ===================== -->
 <div id="rdd-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-96">
@@ -211,7 +195,6 @@
     </div>
   </div>
 </div>
-
 <div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-96">
     <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
@@ -225,7 +208,6 @@
     </div>
   </div>
 </div>
-
 <div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-96">
     <h2 class="text-lg font-bold mb-4">Checking Details</h2>
@@ -240,7 +222,6 @@
     </div>
   </div>
 </div>
-
 <div id="loaded-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-96">
     <h2 class="text-lg font-bold mb-4">Assign Truck (Loaded)</h2>
@@ -251,7 +232,6 @@
     </div>
   </div>
 </div>
-
 <div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-[440px]">
     <h2 class="text-lg font-bold mb-1 text-red-600">Admin Override</h2>
@@ -267,7 +247,6 @@
     </div>
   </div>
 </div>
-
 <div id="row-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white p-6 rounded-xl shadow-xl w-96">
     <h2 class="text-lg font-bold mb-4">Edit Dispatch Row</h2>
@@ -286,24 +265,16 @@
     </div>
   </div>
 </div>
-
 <script>
 /* ======================================================================
-   CONFIG — your Supabase project. The "anon/publishable" key is meant to
-   be public; real protection comes from Row Level Security on the tables.
+   CONFIG
    ====================================================================== */
 const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
-// renamed to supabaseClient so it doesn't collide with the supabase-js global "supabase"
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// The datalabels plugin must be explicitly registered — loading the CDN script alone does not activate it.
 Chart.register(ChartDataLabels);
-
 /* ======================================================================
    USERS & ROLE PERMISSIONS
-   This is a lightweight client-side login (no email, just username),
-   matching what you asked for. It is NOT Supabase Auth — change these
-   passwords before sharing the file/link with your team.
    ====================================================================== */
 const USERS = {
   admin:     { pass: 'superadmin', role: 'admin' },
@@ -312,7 +283,6 @@ const USERS = {
   invoice:   { pass: 'invoice',    role: 'invoice' },
   transport: { pass: 'transport',  role: 'transport' },
 };
-
 const ROLE_PERMISSIONS = {
   admin:     ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
   outbound:  ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
@@ -320,10 +290,8 @@ const ROLE_PERMISSIONS = {
   invoice:   ['invoiced'],
   transport: ['ds_printed', 'loaded'],
 };
-
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
-
 const App = {
   state: {
     currentUser: null,
@@ -336,14 +304,12 @@ const App = {
     pendingRowEdit: null,
     chartInstance: null,
   },
-
   /* ---------------- AUTH ---------------- */
   login(e) {
     e.preventDefault();
     const u = document.getElementById('login-username').value.toLowerCase().trim();
     const p = document.getElementById('login-password').value;
     const errEl = document.getElementById('login-error');
-
     if (USERS[u] && USERS[u].pass === p) {
       this.state.currentUser = { username: u, role: USERS[u].role };
       errEl.classList.add('hidden');
@@ -356,9 +322,7 @@ const App = {
       errEl.classList.remove('hidden');
     }
   },
-
   logout() { location.reload(); },
-
   /* ---------------- INIT ---------------- */
   async init() {
     this.populateBaySelect();
@@ -374,7 +338,6 @@ const App = {
     await this.loadPersonnel();
     this.setupRealtimeSubscriptions();
   },
-
   populateBaySelect() {
     const sel = document.getElementById('checking-bay');
     sel.innerHTML = '';
@@ -391,18 +354,15 @@ const App = {
     ext.textContent = 'Extended';
     sel.appendChild(ext);
   },
-
   /* ---------------- TABS / MODALS ---------------- */
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
-    const btn = document.getElementById('btn-' + tabId.replace('tab-', 'tab-'));
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); }
   },
-
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
   toggleAddDispatchPanel() {
@@ -416,7 +376,6 @@ const App = {
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
-
   /* ---------------- RDD ---------------- */
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
@@ -433,21 +392,17 @@ const App = {
     });
     if (prev) sel.value = prev;
   },
-
   async createRDD() {
     const rdd_date = document.getElementById('new-rdd-date').value;
     const count = document.getElementById('new-rdd-count').value;
     if (!rdd_date || count === '') return alert('Please fill in both fields.');
-
     const { error } = await supabaseClient.from('rdd_masters').insert({ rdd_date, initial_planning_count: parseInt(count, 10) });
     if (error) return alert('Could not create RDD: ' + error.message);
-
     document.getElementById('new-rdd-date').value = '';
     document.getElementById('new-rdd-count').value = '';
     this.closeModal('rdd-modal');
     await this.loadRDDs();
   },
-
   async selectRDD(id) {
     this.state.currentRddId = id || null;
     document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
@@ -459,7 +414,6 @@ const App = {
     }
     await this.loadDispatches();
   },
-
   renderRddSummary() {
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const box = document.getElementById('rdd-summary');
@@ -479,7 +433,6 @@ const App = {
         <div class="text-2xl font-bold">${c.value}</div>
       </div>`).join('');
   },
-
   /* ---------------- DISPATCHES ---------------- */
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
@@ -490,20 +443,17 @@ const App = {
     this.renderRddSummary();
     this.refreshDashboardIfVisible();
   },
-
   async addSingleDispatch(e) {
     e.preventDefault();
     if (!this.state.currentRddId) return alert('Select an RDD first.');
     const truck_type = document.getElementById('single-truck-type').value;
     const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
     if (!truck_type || !dispatch_number) return;
-
     const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
     if (error) return alert(error.message);
     e.target.reset();
     await this.loadDispatches();
   },
-
   parseMassPasteText(text) {
     const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     const existingNumbers = new Set(this.state.dispatches.map(d => d.dispatch_number));
@@ -511,14 +461,12 @@ const App = {
     const valid = [];
     const skipped = [];
     const duplicates = [];
-
     text.split('\n').forEach(line => {
       const trimmed = line.trim();
       if (!trimmed) return;
       const parts = trimmed.split(/\s+/);
       const type = (parts[0] || '').toUpperCase();
       const num = parts[1];
-
       if (parts.length < 2 || !validTypes.includes(type) || !num) {
         skipped.push(trimmed);
         return;
@@ -530,10 +478,8 @@ const App = {
       seenInPaste.add(num);
       valid.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
     });
-
     return { valid, skipped, duplicates };
   },
-
   previewMassDispatch() {
     const text = document.getElementById('mass-dispatch-input').value;
     const box = document.getElementById('mass-dispatch-preview');
@@ -544,13 +490,11 @@ const App = {
     if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
     box.innerHTML = msg;
   },
-
   async addMassDispatch(e) {
     e.preventDefault();
     if (!this.state.currentRddId) return alert('Select an RDD first.');
     const text = document.getElementById('mass-dispatch-input').value;
     const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-
     if (valid.length) {
       const { error } = await supabaseClient.from('dispatches').insert(valid);
       if (error) return alert(error.message);
@@ -565,45 +509,34 @@ const App = {
       alert(report);
     }
   },
-
   renderDispatches() {
     const tbody = document.getElementById('dispatch-tbody');
     const emptyEl = document.getElementById('dispatch-empty');
     tbody.innerHTML = '';
-
     if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
     if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
-
     const role = this.state.currentUser.role;
     const allowed = ROLE_PERMISSIONS[role] || [];
-
     this.state.dispatches.forEach(d => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50';
       let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
-
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
         const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
         const hasPermission = allowed.includes(step);
-
-        // unchecked -> clickable only if chronology met AND role allowed
-        // checked   -> clickable only by admin (to open the override modal)
         const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
-
         const tip = isChecked
           ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-
         html += `<td class="p-3 text-center" title="${tip}">
                     <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
                            ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
                   </td>`;
       });
-
       html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">${d.status}</span></td>
                 <td class="p-3">
                   <div class="w-full bg-slate-200 rounded-full h-2.5">
@@ -620,18 +553,15 @@ const App = {
       tbody.appendChild(tr);
     });
   },
-
   handleMilestoneClick(event, dispatchId, step) {
     event.preventDefault();
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     const isChecked = dispatch[`${step}_checked`];
-
     if (isChecked) {
       if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
       else alert('Only an admin can edit or untick a completed step.');
       return;
     }
-
     this.state.pendingMilestoneUpdate = { dispatch, step };
     if (step === 'pick') {
       const sel = document.getElementById('pick-name');
@@ -656,14 +586,12 @@ const App = {
       this.confirmMilestone(step);
     }
   },
-
   enforceCheckerLimit() {
     const boxes = document.querySelectorAll('#checking-checkbox-list input[type=checkbox]');
     const checked = [...boxes].filter(b => b.checked);
     document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selected (pick at least 1)`;
     boxes.forEach(b => { if (!b.checked) b.disabled = checked.length >= 6; });
   },
-
   openLoadedModal(dispatch) {
     const sel = document.getElementById('loaded-truck');
     const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
@@ -671,11 +599,9 @@ const App = {
     sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
     this.openModal('loaded-modal');
   },
-
   async confirmMilestone(step) {
     const { dispatch } = this.state.pendingMilestoneUpdate;
     const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
-
     if (step === 'pick') {
       payload.pick_assigned_name = document.getElementById('pick-name').value;
     } else if (step === 'checking') {
@@ -690,15 +616,12 @@ const App = {
       const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
       if (tErr) return alert(tErr.message);
     }
-
     const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
     if (error) { alert(error.message); return; }
-
     this.cancelMilestone();
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
   /* ---------------- ADMIN OVERRIDE ---------------- */
   openAdminEditModal(dispatch, step) {
     this.state.pendingMilestoneUpdate = { dispatch, step };
@@ -712,7 +635,6 @@ const App = {
     }
     this.openModal('admin-edit-modal');
   },
-
   async adminUpdateTimestamp() {
     const { dispatch, step } = this.state.pendingMilestoneUpdate;
     const newTime = document.getElementById('admin-edit-time').value;
@@ -722,13 +644,11 @@ const App = {
     this.cancelMilestone();
     await this.loadDispatches();
   },
-
   async adminUntickMilestone() {
     const { dispatch, step } = this.state.pendingMilestoneUpdate;
     const startIdx = MILESTONE_FLOW.indexOf(step);
     const toUncheck = MILESTONE_FLOW.slice(startIdx);
     const payload = {};
-
     toUncheck.forEach(s => {
       payload[`${s}_checked`] = false;
       payload[`${s}_timestamp`] = null;
@@ -739,14 +659,12 @@ const App = {
         payload.assigned_truck_id = null;
       }
     });
-
     const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
     if (error) return alert(error.message);
     this.cancelMilestone();
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
   /* ---------------- ADMIN: EDIT / DELETE DISPATCH ROW ---------------- */
   openRowEditModal(dispatchId) {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
@@ -755,34 +673,28 @@ const App = {
     document.getElementById('row-edit-number').value = dispatch.dispatch_number;
     this.openModal('row-edit-modal');
   },
-
   async saveDispatchRowEdit() {
     const dispatch = this.state.pendingRowEdit;
     const truck_type = document.getElementById('row-edit-type').value;
     const dispatch_number = document.getElementById('row-edit-number').value.trim();
     if (!dispatch_number) return alert('Dispatch number cannot be empty.');
-
     const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
     if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
     this.state.pendingRowEdit = null;
     this.closeModal('row-edit-modal');
     await this.loadDispatches();
   },
-
   async deleteDispatchRow() {
     const dispatch = this.state.pendingRowEdit;
     await this.performDispatchDelete(dispatch);
     this.closeModal('row-edit-modal');
   },
-
   async quickDeleteDispatch(dispatchId) {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     if (!confirm(`Delete dispatch ${dispatch.truck_type} ${dispatch.dispatch_number}? This cannot be undone.`)) return;
     await this.performDispatchDelete(dispatch);
   },
-
   async performDispatchDelete(dispatch) {
-    // free up the assigned truck if this dispatch had one loaded
     if (dispatch.assigned_truck_id) {
       await supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id);
     }
@@ -791,7 +703,6 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-
   /* ---------------- TRUCKS ---------------- */
   async loadTrucks() {
     const { data, error } = await supabaseClient.from('available_trucks').select('*').order('created_at', { ascending: true });
@@ -800,14 +711,12 @@ const App = {
     this.renderTrucks();
     this.refreshDashboardIfVisible();
   },
-
   refreshDashboardIfVisible() {
     if (!document.getElementById('tab-analytics').classList.contains('hidden')) {
       this.renderDashboardSummary();
       this.renderChart();
     }
   },
-
   async addTruck() {
     const truck_type = document.getElementById('truck-type-input').value;
     const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
@@ -817,12 +726,10 @@ const App = {
     document.getElementById('truck-plate-input').value = '';
     await this.loadTrucks();
   },
-
   renderTrucks() {
     const grid = document.getElementById('trucks-grid');
     grid.innerHTML = '';
     const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-
     types.forEach(type => {
       const all = this.state.trucks.filter(t => t.truck_type === type);
       const available = all.filter(t => t.status === 'Available');
@@ -844,15 +751,13 @@ const App = {
       grid.innerHTML += html;
     });
   },
-
-  /* ---------------- PERSONNEL (picker / checker pools) ---------------- */
+  /* ---------------- PERSONNEL ---------------- */
   async loadPersonnel() {
     const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
     if (error) { console.error(error); return; }
     this.state.personnel = data;
     this.renderPersonnel();
   },
-
   renderPersonnel() {
     const isAdmin = this.state.currentUser.role === 'admin';
     ['picker', 'checker'].forEach(pool => {
@@ -865,7 +770,6 @@ const App = {
         </li>`).join('') || `<li class="text-slate-400 italic px-2">No names added yet</li>`;
     });
   },
-
   async addPersonnel(e, pool) {
     e.preventDefault();
     const inputId = pool === 'picker' ? 'new-picker-name' : 'new-checker-name';
@@ -876,32 +780,27 @@ const App = {
     document.getElementById(inputId).value = '';
     await this.loadPersonnel();
   },
-
   async deletePersonnel(id) {
     if (!confirm('Remove this person from the pool?')) return;
     const { error } = await supabaseClient.from('personnel').delete().eq('id', id);
     if (error) return alert(error.message);
     await this.loadPersonnel();
   },
-
   /* ---------------- DASHBOARD ---------------- */
   renderDashboardSummary() {
     const total = this.state.dispatches.length;
     const colors = { pick: '#3b82f6', pgi: '#8b5cf6', invoiced: '#ec4899', ds_printed: '#06b6d4', checking: '#f59e0b', loaded: '#10b981' };
     const labels = { pick: 'Picked', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checked', loaded: 'Loaded' };
-
     const doneRow = document.getElementById('dashboard-done-row');
     const pendingRow = document.getElementById('dashboard-pending-row');
     doneRow.innerHTML = '';
     pendingRow.innerHTML = '';
-
     MILESTONE_FLOW.forEach(step => {
       const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
       const pending = total - done;
       doneRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold text-white" style="background:${colors[step]}">${labels[step]} ${done}</span>`;
       pendingRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">${labels[step]} ${pending}</span>`;
     });
-
     const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     const pool = document.getElementById('dashboard-truck-pool');
     pool.innerHTML = truckTypes.map(type => {
@@ -909,7 +808,6 @@ const App = {
       return `<div>${type} - <b>${count}</b></div>`;
     }).join('');
   },
-
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
@@ -919,10 +817,9 @@ const App = {
     const bucketOf = (isoString) => {
       if (!isoString) return null;
       const h = new Date(isoString).getHours();
-      return (h - 5 + 24) % 24; // shift so 5AM = bucket 0
+      return (h - 5 + 24) % 24;
     };
 
-    // Don't draw anything for hours that haven't happened yet — no projecting into the future.
     const nowBucket = bucketOf(new Date().toISOString());
     const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
 
@@ -934,7 +831,6 @@ const App = {
       });
     });
 
-    // Available trucks: how many were sitting "Available" (added but not yet loaded) by each hour bucket
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
@@ -947,9 +843,6 @@ const App = {
       for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
 
-    // Y-axis scale: use whichever is bigger — how many dispatches are actually listed for this
-    // RDD, or the RDD's original initial planning count — so the chart never looks squashed
-    // or oversized relative to the real workload.
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
     const dispatchCount = this.state.dispatches.length;
@@ -960,12 +853,12 @@ const App = {
       data: {
         labels,
         datasets: [
-          { type: 'bar', label: 'Pick', data: cutFuture(series.pick), backgroundColor: '#3b82f6' },
-          { type: 'bar', label: 'PGI', data: cutFuture(series.pgi), backgroundColor: '#8b5cf6' },
-          { type: 'bar', label: 'Invoice', data: cutFuture(series.invoiced), backgroundColor: '#ec4899' },
-          { type: 'bar', label: 'Check', data: cutFuture(series.checking), backgroundColor: '#f59e0b' },
-          { type: 'bar', label: 'Loaded', data: cutFuture(series.loaded), backgroundColor: '#10b981' },
-          { type: 'bar', label: 'Available Trucks', data: cutFuture(availableTrend), backgroundColor: '#ef4444' },
+          { type: 'bar', label: 'Pick',             data: cutFuture(series.pick),        backgroundColor: '#3b82f6' },
+          { type: 'bar', label: 'PGI',              data: cutFuture(series.pgi),         backgroundColor: '#8b5cf6' },
+          { type: 'bar', label: 'Invoice',          data: cutFuture(series.invoiced),    backgroundColor: '#ec4899' },
+          { type: 'bar', label: 'Check',            data: cutFuture(series.checking),    backgroundColor: '#f59e0b' },
+          { type: 'bar', label: 'Loaded',           data: cutFuture(series.loaded),      backgroundColor: '#10b981' },
+          { type: 'bar', label: 'Available Trucks', data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
         ],
       },
       options: {
@@ -973,15 +866,21 @@ const App = {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          // stacked:false (the default) + multiple bar datasets = each checkbox (and trucks) gets its own bar, side by side, per hour
           x: { title: { display: true, text: 'Hour' } },
-          y: { beginAtZero: true, max: yMax, ticks: { stepSize: Math.max(1, Math.round(yMax / 10)) }, title: { display: true, text: 'Count' } },
+          y: {
+            beginAtZero: true,
+            max: yMax,
+            grace: '10%',   // ← extra headroom so labels near the top don't clip
+            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)) },
+            title: { display: true, text: 'Count' },
+          },
         },
         plugins: {
           datalabels: {
             anchor: 'end',
-            align: 'top',
-            offset: -2,
+            align: 'end',     // renders label inside the bar at its top edge — never above canvas
+            clamp: true,      // forces any overflowing label back inside the chart boundary
+            offset: 2,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor,
             borderRadius: 8,
             padding: { top: 2, bottom: 2, left: 5, right: 5 },
@@ -997,7 +896,6 @@ const App = {
       },
     });
   },
-
   /* ---------------- REALTIME ---------------- */
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
