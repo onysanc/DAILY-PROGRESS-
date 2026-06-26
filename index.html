@@ -137,8 +137,7 @@
     <!-- ---------- TAB 3: DASHBOARD ---------- -->
     <section id="tab-analytics" class="tab-content hidden h-full flex flex-col">
       <div class="flex justify-between items-center mb-3">
-        <h1 class="text-2xl font-bold">Hourly Accomplishment — 5:00 AM to 5:00 AM</h1>
-        <span class="text-xs text-slate-500">Based on the currently selected RDD</span>
+        <h1 class="text-2xl font-bold">Hourly Accomplishment — <span id="dashboard-heading-rdd">RDD</span> &nbsp;<span class="text-slate-400 font-normal text-xl">as of</span> <span id="dashboard-heading-time" class="text-blue-600"></span></h1>
       </div>
       <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-start gap-8 flex-wrap">
         <div class="flex-1 min-w-[280px]">
@@ -147,8 +146,8 @@
           <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide">PENDING</div>
           <div id="dashboard-pending-row" class="flex gap-2 flex-wrap"></div>
         </div>
-        <div class="shrink-0">
-          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide text-right">TRUCK POOL</div>
+        <div class="shrink-0 min-w-[140px]">
+          <div class="text-xs font-bold text-slate-400 mb-1.5 tracking-wide text-right">AVAILABLE TRUCKS</div>
           <div id="dashboard-truck-pool" class="text-xs text-right space-y-0.5"></div>
         </div>
       </div>
@@ -361,7 +360,7 @@ const App = {
     document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
-    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); }
+    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
   },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
@@ -801,18 +800,45 @@ const App = {
       doneRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold text-white" style="background:${colors[step]}">${labels[step]} ${done}</span>`;
       pendingRow.innerHTML += `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">${labels[step]} ${pending}</span>`;
     });
+
+    // Truck pool: individual plates grouped by type, only Available ones
     const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     const pool = document.getElementById('dashboard-truck-pool');
-    pool.innerHTML = truckTypes.map(type => {
-      const count = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-      return `<div>${type} - <b>${count}</b></div>`;
-    }).join('');
+    let poolHtml = '';
+    let anyTruck = false;
+    truckTypes.forEach(type => {
+      const available = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available');
+      if (!available.length) return;
+      anyTruck = true;
+      // type header
+      poolHtml += `<div class="text-slate-400 font-bold mt-1 first:mt-0">${type}</div>`;
+      available.forEach((t, i) => {
+        poolHtml += `<div class="text-slate-600">${type}${i + 1} &nbsp;<span class="text-slate-400">${t.plate_number}</span></div>`;
+      });
+    });
+    pool.innerHTML = anyTruck ? poolHtml : `<div class="text-slate-400 italic">No available trucks</div>`;
+
+    // Update heading: RDD date + live time
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const rddLabel = rdd ? rdd.rdd_date : '—';
+    document.getElementById('dashboard-heading-rdd').textContent = `RDD ${rddLabel}`;
+  },
+  startDashboardClock() {
+    const tick = () => {
+      const el = document.getElementById('dashboard-heading-time');
+      if (el) {
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      }
+    };
+    tick();
+    if (!this._clockInterval) this._clockInterval = setInterval(tick, 1000);
   },
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
 
-    // 24 hourly buckets starting 5 AM through 4 AM the next day
+    // 24 hourly buckets: bucket 0 = 5 AM, bucket 23 = 4 AM next day
     const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
     const bucketOf = (isoString) => {
       if (!isoString) return null;
@@ -821,16 +847,27 @@ const App = {
     };
 
     const nowBucket = bucketOf(new Date().toISOString());
-    const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
 
-    const series = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    // Per-hour event counts (raw)
+    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
-      ['pick', 'pgi', 'invoiced', 'checking', 'loaded'].forEach(step => {
+      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
         const b = bucketOf(d[`${step}_timestamp`]);
-        if (b !== null) series[step][b]++;
+        if (b !== null) raw[step][b]++;
       });
     });
 
+    // Convert to cumulative and mask future buckets with null
+    const toCumulative = (arr) => {
+      let running = 0;
+      return arr.map((v, i) => {
+        if (i > nowBucket) return null;
+        running += v;
+        return running;
+      });
+    };
+
+    // Available trucks cumulative trend (already inherently cumulative logic)
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
@@ -842,6 +879,7 @@ const App = {
       if (b === null) return;
       for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
+    const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
 
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
@@ -853,11 +891,12 @@ const App = {
       data: {
         labels,
         datasets: [
-          { type: 'bar', label: 'Pick',             data: cutFuture(series.pick),        backgroundColor: '#3b82f6' },
-          { type: 'bar', label: 'PGI',              data: cutFuture(series.pgi),         backgroundColor: '#8b5cf6' },
-          { type: 'bar', label: 'Invoice',          data: cutFuture(series.invoiced),    backgroundColor: '#ec4899' },
-          { type: 'bar', label: 'Check',            data: cutFuture(series.checking),    backgroundColor: '#f59e0b' },
-          { type: 'bar', label: 'Loaded',           data: cutFuture(series.loaded),      backgroundColor: '#10b981' },
+          { type: 'bar', label: 'Pick',             data: toCumulative(raw.pick),        backgroundColor: '#3b82f6' },
+          { type: 'bar', label: 'PGI',              data: toCumulative(raw.pgi),         backgroundColor: '#8b5cf6' },
+          { type: 'bar', label: 'Invoice',          data: toCumulative(raw.invoiced),    backgroundColor: '#ec4899' },
+          { type: 'bar', label: 'DS Printed',       data: toCumulative(raw.ds_printed),  backgroundColor: '#06b6d4' },
+          { type: 'bar', label: 'Check',            data: toCumulative(raw.checking),    backgroundColor: '#f59e0b' },
+          { type: 'bar', label: 'Loaded',           data: toCumulative(raw.loaded),      backgroundColor: '#10b981' },
           { type: 'bar', label: 'Available Trucks', data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
         ],
       },
@@ -870,16 +909,16 @@ const App = {
           y: {
             beginAtZero: true,
             max: yMax,
-            grace: '10%',   // ← extra headroom so labels near the top don't clip
+            grace: '10%',
             ticks: { stepSize: Math.max(1, Math.round(yMax / 10)) },
-            title: { display: true, text: 'Count' },
+            title: { display: true, text: 'Cumulative Count' },
           },
         },
         plugins: {
           datalabels: {
             anchor: 'end',
-            align: 'end',     // renders label inside the bar at its top edge — never above canvas
-            clamp: true,      // forces any overflowing label back inside the chart boundary
+            align: 'end',
+            clamp: true,
             offset: 2,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor,
             borderRadius: 8,
