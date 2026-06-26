@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dispatch Tracker</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+  }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -14,89 +19,121 @@
   input[type=checkbox]{accent-color:#2563eb}
   ::-webkit-scrollbar{height:8px;width:8px}
   ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+  .dark ::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
 </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans h-screen overflow-hidden">
-<!-- ===================== LOGIN ===================== -->
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-200">
 <div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
-  <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
-    <h1 class="text-2xl font-bold mb-1 text-slate-800">Dispatch Tracker</h1>
-    <p class="text-sm text-slate-500 mb-6">Sign in with your username.</p>
+  <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-2xl w-96 transition-colors duration-200">
+    <h1 class="text-2xl font-bold mb-1 text-slate-800 dark:text-white">Dispatch Tracker</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in with your username.</p>
     <form onsubmit="App.login(event)" class="space-y-4">
       <div>
-        <label class="block text-sm font-semibold mb-1">Username</label>
-        <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        <label class="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Username</label>
+        <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 border dark:border-slate-700 rounded-lg bg-transparent focus:ring-2 focus:ring-blue-500 outline-none" required>
       </div>
       <div>
-        <label class="block text-sm font-semibold mb-1">Password</label>
-        <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        <label class="block text-sm font-semibold mb-1 text-slate-700 dark:text-slate-300">Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 border dark:border-slate-700 rounded-lg bg-transparent focus:ring-2 focus:ring-blue-500 outline-none" required>
       </div>
       <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
       <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
     </form>
   </div>
 </div>
-<!-- ===================== APP ===================== -->
-<div id="app-wrapper" class="hidden flex h-full">
-  <aside class="w-60 bg-slate-900 text-white flex flex-col shrink-0">
-    <div class="p-5 border-b border-slate-700">
-      <div class="text-lg font-bold">Dispatch Tracker</div>
+
+<div id="app-wrapper" class="hidden flex h-full w-full">
+  <aside id="sidebar-panel" class="w-60 bg-slate-900 text-white flex flex-col shrink-0 transition-all duration-300 relative border-r border-slate-800">
+    <button onclick="App.toggleSidebar()" class="absolute top-4 -right-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 shadow-lg z-50 transition focus:outline-none">
+      <svg id="sidebar-toggle-icon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+    </button>
+
+    <div class="p-5 border-b border-slate-800 sidebar-hide-content overflow-hidden whitespace-nowrap">
+      <div class="text-lg font-bold tracking-wide text-blue-400">Dispatch Tracker</div>
       <div class="text-xs text-slate-400 mt-2">Logged in as</div>
-      <div id="display-username" class="font-bold"></div>
+      <div id="display-username" class="font-bold text-white"></div>
       <div id="display-role" class="text-xs text-blue-400 mb-2"></div>
       <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline">Log out</button>
     </div>
-    <nav class="flex-1 p-3 space-y-1">
-      <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg bg-blue-600">Dispatch Activity</button>
-      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
-      <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
-      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
+
+    <div class="p-3 border-b border-slate-800 sidebar-hide-content flex items-center justify-between">
+      <span class="text-xs text-slate-400 font-semibold">Appearance</span>
+      <button onclick="App.toggleTheme()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-1.5 rounded-lg text-xs flex items-center gap-1 transition">
+        <span id="theme-btn-text">Light Mode</span>
+      </button>
+    </div>
+
+    <nav class="flex-1 p-3 space-y-1 overflow-x-hidden">
+      <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg bg-blue-600 flex items-center gap-3 transition">
+        <span class="font-medium text-sm sidebar-hide-content">Dispatch Activity</span>
+      </button>
+      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-3 transition">
+        <span class="font-medium text-sm sidebar-hide-content">Available Trucks</span>
+      </button>
+      <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-3 transition">
+        <span class="font-medium text-sm sidebar-hide-content">Dashboard</span>
+      </button>
+      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-3 transition">
+        <span class="font-medium text-sm sidebar-hide-content">Personnel</span>
+      </button>
     </nav>
-    <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800" id="connection-status">●  connecting…</div>
+
+    <div class="p-3 bg-slate-950 border-t border-slate-800 space-y-2 sidebar-hide-content">
+      <button onclick="App.manualRefresh()" class="w-full py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 rounded font-semibold transition flex items-center justify-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"></path></svg>
+        Refresh Now
+      </button>
+      <div class="flex items-center justify-between text-[10px] text-slate-500">
+        <span id="connection-status">● connecting…</span>
+        <span id="auto-refresh-timer">Sync: 60s</span>
+      </div>
+    </div>
   </aside>
-  <main class="flex-1 overflow-y-auto p-6">
-    <!-- ---------- TAB 1: DISPATCH ACTIVITY ---------- -->
-    <section id="tab-dispatch" class="tab-content">
-      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
-        <h1 class="text-2xl font-bold">Dispatch Activity</h1>
+
+  <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 min-w-0">
+    <section id="tab-dispatch" class="tab-content flex flex-col gap-4 h-full">
+      <div class="flex justify-between items-center flex-wrap gap-3">
+        <h1 class="text-2xl font-bold tracking-tight">Dispatch Activity</h1>
         <div class="flex space-x-3 items-center">
-          <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white">
+          <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border dark:border-slate-700 rounded-lg shadow-sm bg-white dark:bg-slate-800 text-sm">
             <option value="">Select RDD…</option>
           </select>
-          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
+          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold transition">+ Create RDD</button>
         </div>
       </div>
-      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
-      <div id="add-dispatch-panel" class="hidden bg-white p-5 rounded-xl shadow mb-5">
+      <div id="rdd-summary" class="hidden grid grid-cols-1 md:grid-cols-4 gap-3"></div>
+      
+      <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-800 p-5 rounded-xl shadow border dark:border-slate-700 transition-colors duration-200">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="font-bold">Add Dispatches</h2>
-          <button onclick="App.toggleAddDispatchPanel()" id="add-dispatch-toggle" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Minimize</button>
+          <h2 class="font-bold text-sm">Add Dispatches</h2>
+          <button onclick="App.toggleAddDispatchPanel()" id="add-dispatch-toggle" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">Minimize</button>
         </div>
-        <div id="add-dispatch-content" class="grid grid-cols-2 gap-8">
+        <div id="add-dispatch-content" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <form onsubmit="App.addSingleDispatch(event)" class="space-y-2">
             <h3 class="text-sm font-semibold text-slate-500">Single Entry</h3>
             <div class="flex space-x-2">
-              <select id="single-truck-type" class="p-2 border rounded-lg w-28" required>
+              <select id="single-truck-type" class="p-2 border dark:border-slate-700 rounded-lg bg-transparent w-28 text-sm" required>
                 <option value="">Type</option>
                 <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
               </select>
-              <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border rounded-lg flex-1" required>
-              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+              <input type="text" id="single-dispatch-no" placeholder="Dispatch Number" class="p-2 border dark:border-slate-700 rounded-lg bg-transparent flex-1 text-sm" required>
+              <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold transition">Add</button>
             </div>
           </form>
           <form onsubmit="App.addMassDispatch(event)" class="space-y-2">
-            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — one row per line: <code class="bg-slate-100 px-1 rounded">TYPE&lt;tab or space&gt;DISPATCH#</code></h3>
-            <textarea id="mass-dispatch-input" rows="10" oninput="App.previewMassDispatch()"
-                      placeholder="AUV&#9;10130422&#10;AUV&#9;10130423&#10;6W&#9;10130437&#10;4W&#9;10130438"
-                      class="w-full p-2 border rounded-lg font-mono text-xs"></textarea>
+            <h3 class="text-sm font-semibold text-slate-500">Mass Paste — <code class="bg-slate-100 dark:bg-slate-700 px-1 rounded text-xs">TYPE&lt;tab or space&gt;DISPATCH#</code></h3>
+            <textarea id="mass-dispatch-input" rows="3" oninput="App.previewMassDispatch()"
+                      placeholder="AUV&#9;10130422&#10;6W&#9;10130437"
+                      class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
             <div id="mass-dispatch-preview" class="text-xs text-slate-500 min-h-[1.2em]"></div>
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold w-full">Add All</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold w-full transition">Add All Rows</button>
           </form>
         </div>
       </div>
-      <div class="bg-white rounded-xl shadow overflow-x-auto">
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 overflow-x-auto flex-1">
         <table class="w-full text-sm text-left whitespace-nowrap">
-          <thead class="bg-slate-50 border-b text-slate-500 text-xs uppercase">
+          <thead class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
             <tr>
               <th class="p-3">Type</th>
               <th class="p-3">Dispatch No.</th>
@@ -111,188 +148,190 @@
               <th id="actions-col-header" class="p-3 hidden">Actions</th>
             </tr>
           </thead>
-          <tbody id="dispatch-tbody" class="divide-y divide-slate-100"></tbody>
+          <tbody id="dispatch-tbody" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
         </table>
-        <div id="dispatch-empty" class="p-8 text-center text-slate-400 text-sm">Select or create an RDD to see dispatches.</div>
+        <div id="dispatch-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select or create an RDD to see dispatches.</div>
       </div>
     </section>
-    <!-- ---------- TAB 2: AVAILABLE TRUCKS ---------- -->
-    <section id="tab-trucks" class="tab-content hidden">
-      <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
-      <div class="bg-white p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3">
+
+    <section id="tab-trucks" class="tab-content hidden flex flex-col gap-4">
+      <h1 class="text-2xl font-bold tracking-tight">Available Trucks</h1>
+      <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow border dark:border-slate-700 flex flex-wrap gap-4 items-end">
         <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-500">Truck Type</label>
-          <select id="truck-type-input" class="p-2 border rounded-lg">
+          <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
+          <select id="truck-type-input" class="p-2 border dark:border-slate-700 rounded-lg bg-transparent text-sm">
             <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-500">Plate Number</label>
-          <input type="text" id="truck-plate-input" class="p-2 border rounded-lg" placeholder="ABC 123">
+          <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Plate Number</label>
+          <input type="text" id="truck-plate-input" class="p-2 border dark:border-slate-700 rounded-lg bg-transparent text-sm" placeholder="ABC 123">
         </div>
-        <button onclick="App.addTruck()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add Truck</button>
+        <button onclick="App.addTruck()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold transition">Add Truck</button>
       </div>
-      <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="trucks-grid"></div>
     </section>
-    <!-- ---------- TAB 3: DASHBOARD ---------- -->
-    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3">
 
-      <!-- HEADING -->
-      <div>
-        <h1 class="text-xl font-extrabold tracking-tight">
-          PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-700">RDD —</span>
-          &nbsp;<span class="text-slate-500 font-semibold">AS OF</span>
-          <span id="dashboard-heading-time" class="text-blue-700"></span>
+    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-4 h-full w-full">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b dark:border-slate-700 pb-2">
+        <h1 class="text-xl font-extrabold tracking-tight uppercase flex items-center gap-2">
+          PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-600 dark:text-blue-400">RDD —</span>
+          <span class="text-slate-400 font-normal text-sm">AS OF</span>
+          <span id="dashboard-heading-time" class="text-blue-600 dark:text-blue-400"></span>
         </h1>
       </div>
 
-      <!-- ROW 1: milestone table + bay grid -->
-      <div class="flex gap-3 flex-wrap">
-
-        <!-- Milestone progress table -->
-        <div class="bg-white rounded-xl shadow overflow-hidden shrink-0">
-          <table class="text-xs border-collapse" id="dash-milestone-table">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start w-full">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 overflow-hidden lg:col-span-6">
+          <table class="text-xs border-collapse w-full" id="dash-milestone-table">
             <thead>
-              <tr>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 w-24"></th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PICKED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">PGI</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">INVOICED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">DS PRINTED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">CHECKED</th>
-                <th class="border border-slate-200 px-3 py-1.5 bg-slate-50 font-bold text-slate-600">LOADED</th>
+              <tr class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700">
+                <th class="p-2.5 w-20 text-left"></th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">PICKED</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">PGI</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">INVOICED</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">DS PRINTED</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">CHECKED</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">LOADED</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               <tr>
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-emerald-600">DONE</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pick-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-pgi-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-invoiced-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-ds_printed-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-checking-done">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-emerald-600" id="dm-loaded-done">—</td>
+                <td class="p-2.5 font-bold text-emerald-600 dark:text-emerald-400">DONE</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-pick-done">—</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-pgi-done">—</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-invoiced-done">—</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-ds_printed-done">—</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-checking-done">—</td>
+                <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-loaded-done">—</td>
               </tr>
               <tr>
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-amber-500">PENDING</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pick-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-pgi-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-invoiced-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-ds_printed-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-checking-pending">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-bold text-amber-500" id="dm-loaded-pending">—</td>
+                <td class="p-2.5 font-bold text-amber-500">PENDING</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-pick-pending">—</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-pgi-pending">—</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-invoiced-pending">—</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-ds_printed-pending">—</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-checking-pending">—</td>
+                <td class="p-2.5 text-center font-bold text-amber-500" id="dm-loaded-pending">—</td>
               </tr>
-              <tr class="bg-slate-50">
-                <td class="border border-slate-200 px-3 py-1.5 font-bold text-slate-600">PROGRESS</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pick-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-pgi-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-invoiced-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-ds_printed-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-checking-pct">—</td>
-                <td class="border border-slate-200 px-3 py-1.5 text-center font-semibold text-slate-700" id="dm-loaded-pct">—</td>
+              <tr class="bg-slate-50 dark:bg-slate-900/50 font-semibold">
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">PROGRESS</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-pick-pct">—</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-pgi-pct">—</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-invoiced-pct">—</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-ds_printed-pct">—</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-checking-pct">—</td>
+                <td class="p-2.5 text-center text-slate-700 dark:text-slate-300" id="dm-loaded-pct">—</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Bay occupancy grid -->
-        <div class="bg-white rounded-xl shadow overflow-hidden flex-1 min-w-[420px]">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 overflow-hidden lg:col-span-4">
           <table class="text-xs border-collapse w-full" id="dash-bay-table">
             <thead>
-              <tr>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 w-8"></th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 1</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 2</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 3</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 4</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 5</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 6</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 7</th>
-                <th class="border border-slate-200 px-2 py-1.5 bg-slate-50 font-bold text-slate-600">BAY 8</th>
+              <tr class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700">
+                <th class="p-2.5 w-8"></th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B1</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B2</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B3</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B4</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B5</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B6</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B7</th>
+                <th class="p-2.5 font-bold text-slate-600 dark:text-slate-300 text-center">B8</th>
               </tr>
             </thead>
-            <tbody id="dash-bay-tbody">
-              <!-- rendered by JS -->
-            </tbody>
+            <tbody id="dash-bay-tbody" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
           </table>
+        </div>
+
+        <div class="bg-slate-800 dark:bg-slate-950 text-slate-100 p-4 rounded-xl shadow-xl border border-slate-700 lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div id="real-hour-title" class="text-sm font-black border-b border-slate-700 pb-1.5 mb-2.5 text-blue-400 tracking-wide">16:00 (Real Hour)</div>
+            <div class="space-y-1.5 text-xs font-semibold">
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span>Pick:</div><span id="rh-pick">0</span></div>
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block"></span>PGI:</div><span id="rh-pgi">0</span></div>
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-pink-500 inline-block"></span>Invoice:</div><span id="rh-invoice">0</span></div>
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-cyan-500 inline-block"></span>DS Printed:</div><span id="rh-ds">0</span></div>
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span>Check:</div><span id="rh-check">0</span></div>
+              <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Loaded:</div><span id="rh-loaded">0</span></div>
+              <div class="flex items-center justify-between border-t border-slate-700/60 pt-1.5 mt-1.5 text-slate-400"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span>Avail. Trucks:</div><span id="rh-trucks" class="text-slate-200">0</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ROW 2: chart + right panel (remarks + truck pool table + truck pool list) -->
-      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
-
-        <!-- Chart -->
-        <div class="bg-white p-4 rounded-xl shadow flex-1 relative min-h-[340px]">
-          <canvas id="activityChart"></canvas>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch flex-1 min-h-0">
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow border dark:border-slate-700 lg:col-span-8 flex flex-col justify-center relative min-h-[350px]">
+          <canvas id="activityChart" class="w-full h-full aspect-[2/1] max-h-[420px]"></canvas>
         </div>
 
-        <!-- Right panel -->
-        <div class="flex flex-col gap-0 shrink-0 w-72">
-
-          <!-- Remarks now -->
-          <div class="bg-white rounded-t-xl shadow border-b border-slate-100 px-4 py-2">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
-            <textarea id="dash-remarks-now" rows="3"
-              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+        <div class="lg:col-span-4 flex flex-col gap-3 min-h-0">
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 p-3 flex flex-col">
+            <div class="text-[10px] font-extrabold text-slate-400 tracking-widest mb-1.5 uppercase">REMARKS — NOTES OF TIME NOW</div>
+            <textarea id="dash-remarks-now" rows="2"
+              class="w-full text-xs border dark:border-slate-700 bg-transparent rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-slate-700 dark:text-slate-200"
               placeholder="Type current remarks…"></textarea>
           </div>
 
-          <!-- Truck pool summary table -->
-          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL</div>
-            <table class="text-xs border-collapse w-full">
-              <thead>
-                <tr class="bg-slate-50">
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">TRUCK</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PLANNED</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">AVAILABLE</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">LOADED</th>
-                  <th class="border border-slate-200 px-2 py-1 font-bold text-slate-600">PROGRESS</th>
-                </tr>
-              </thead>
-              <tbody id="dash-truckpool-tbody"></tbody>
-            </table>
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 p-3 flex flex-col flex-1 min-h-[140px] overflow-hidden">
+            <div class="text-[10px] font-extrabold text-slate-400 tracking-widest mb-1.5 text-center uppercase">TRUCK POOL</div>
+            <div class="overflow-y-auto flex-1">
+              <table class="text-xs border-collapse w-full">
+                <thead>
+                  <tr class="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 sticky top-0">
+                    <th class="p-1.5 font-bold text-left text-slate-500">TRUCK</th>
+                    <th class="p-1.5 font-bold text-center text-slate-500">PLAN</th>
+                    <th class="p-1.5 font-bold text-center text-slate-500">AVAL</th>
+                    <th class="p-1.5 font-bold text-center text-slate-500">LOAD</th>
+                    <th class="p-1.5 font-bold text-right text-slate-500">PCT</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-truckpool-tbody" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
+              </table>
+            </div>
           </div>
 
-          <!-- Remarks previous hours -->
-          <div class="bg-white shadow px-4 py-2 border-b border-slate-100">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 p-3 flex flex-col">
+            <div class="text-[10px] font-extrabold text-slate-400 tracking-widest mb-1.5 uppercase">POST TIME REMARKS — PREVIOUS HOURS</div>
             <textarea id="dash-remarks-prev" rows="2"
-              class="w-full text-xs border border-slate-200 rounded p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+              class="w-full text-xs border dark:border-slate-700 bg-transparent rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400 text-slate-700 dark:text-slate-200"
               placeholder="Previous hour notes…"></textarea>
           </div>
 
-          <!-- Available truck list by type -->
-          <div class="bg-white rounded-b-xl shadow px-4 py-2 flex-1 overflow-y-auto">
-            <div class="text-[10px] font-extrabold text-slate-500 tracking-widest mb-1 text-center">TRUCK POOL — PLATES</div>
-            <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
-              <thead id="dash-truckpool-plates-head"></thead>
-              <tbody id="dash-truckpool-plates-body"></tbody>
-            </table>
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow border dark:border-slate-700 p-3 flex flex-col flex-1 min-h-[140px] overflow-hidden">
+            <div class="text-[10px] font-extrabold text-slate-400 tracking-widest mb-1.5 text-center uppercase">TRUCK POOL — PLATES</div>
+            <div class="overflow-y-auto flex-1">
+              <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
+                <thead id="dash-truckpool-plates-head" class="bg-slate-50 dark:bg-slate-900 sticky top-0 text-slate-500"></thead>
+                <tbody id="dash-truckpool-plates-body" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
+              </table>
+            </div>
           </div>
-
         </div>
       </div>
-
     </section>
-    <!-- ---------- TAB 4: PERSONNEL ---------- -->
-    <section id="tab-personnel" class="tab-content hidden">
-      <h1 class="text-2xl font-bold mb-1">Personnel</h1>
-      <p class="text-sm text-slate-500 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span></p>
-      <div class="grid grid-cols-2 gap-6">
-        <div class="bg-white rounded-xl shadow p-5">
-          <h2 class="font-bold mb-3">Picker Pool</h2>
+
+    <section id="tab-personnel" class="tab-content hidden flex flex-col gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">Personnel</h1>
+        <p class="text-sm text-slate-500">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden text-amber-500">Only admins can add or remove names.</span></p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow p-5">
+          <h2 class="font-bold mb-3 text-sm">Picker Pool</h2>
           <form id="add-picker-form" onsubmit="App.addPersonnel(event,'picker')" class="hidden flex space-x-2 mb-4">
-            <input type="text" id="new-picker-name" placeholder="e.g. R. ISUGA" class="flex-1 p-2 border rounded-lg">
-            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+            <input type="text" id="new-picker-name" placeholder="e.g. R. ISUGA" class="flex-1 p-2 border dark:border-slate-700 rounded-lg bg-transparent text-sm">
+            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold transition">Add</button>
           </form>
           <ul id="picker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
         </div>
-        <div class="bg-white rounded-xl shadow p-5">
-          <h2 class="font-bold mb-3">Checker Pool</h2>
+        <div class="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow p-5">
+          <h2 class="font-bold mb-3 text-sm">Checker Pool</h2>
           <form id="add-checker-form" onsubmit="App.addPersonnel(event,'checker')" class="hidden flex space-x-2 mb-4">
-            <input type="text" id="new-checker-name" placeholder="e.g. J. DELACRUZ" class="flex-1 p-2 border rounded-lg">
-            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold">Add</button>
+            <input type="text" id="new-checker-name" placeholder="e.g. J. DELACRUZ" class="flex-1 p-2 border dark:border-slate-700 rounded-lg bg-transparent text-sm">
+            <button type="submit" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 text-sm font-semibold transition">Add</button>
           </form>
           <ul id="checker-list" class="space-y-1.5 text-sm max-h-80 overflow-y-auto"></ul>
         </div>
@@ -300,90 +339,96 @@
     </section>
   </main>
 </div>
-<!-- ===================== MODALS ===================== -->
-<div id="rdd-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+
+<div id="rdd-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-4">Create New RDD</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500">RDD Date</label>
-    <input type="date" id="new-rdd-date" class="w-full p-2 border rounded-lg mb-3">
+    <input type="date" id="new-rdd-date" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-3 text-sm">
     <label class="block text-xs font-semibold mb-1 text-slate-500">Initial Planning Count</label>
-    <input type="number" min="0" id="new-rdd-count" placeholder="e.g. 45" class="w-full p-2 border rounded-lg mb-5">
+    <input type="number" min="0" id="new-rdd-count" placeholder="e.g. 45" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-5 text-sm">
     <div class="flex justify-end space-x-2">
-      <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.createRDD()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold">Save</button>
+      <button onclick="App.closeModal('rdd-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+      <button onclick="App.createRDD()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold transition">Save</button>
     </div>
   </div>
 </div>
-<div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+
+<div id="pick-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
-    <select id="pick-name" class="w-full p-2 border rounded-lg mb-5">
+    <select id="pick-name" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-5 text-sm">
       <option value="R. ISUGA">R. ISUGA</option>
       <option value="E. ISIGE">E. ISIGE</option>
     </select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+      <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold transition">Confirm</button>
     </div>
   </div>
 </div>
-<div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+
+<div id="checking-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-4">Checking Details</h2>
-    <label class="block text-xs font-semibold mb-1 text-slate-500">Checkers (pick 1–6 from the pool)</label>
-    <div id="checking-checkbox-list" class="border rounded-lg p-2 mb-1 max-h-40 overflow-y-auto space-y-1 text-sm"></div>
+    <label class="block text-xs font-semibold mb-1 text-slate-500">Checkers</label>
+    <div id="checking-checkbox-list" class="border dark:border-slate-700 rounded-lg p-2 mb-1 max-h-40 overflow-y-auto space-y-1 text-sm bg-transparent"></div>
     <div id="checking-count-note" class="text-xs text-slate-400 mb-3"></div>
     <label class="block text-xs font-semibold mb-1 text-slate-500">Bay Location</label>
-    <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5"></select>
+    <select id="checking-bay" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-5 text-sm"></select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+      <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold transition">Confirm</button>
     </div>
   </div>
 </div>
-<div id="loaded-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+
+<div id="loaded-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-4">Assign Truck (Loaded)</h2>
-    <select id="loaded-truck" class="w-full p-2 border rounded-lg mb-5"></select>
+    <select id="loaded-truck" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-5 text-sm"></select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-      <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+      <button onclick="App.confirmMilestone('loaded')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold transition">Confirm</button>
     </div>
   </div>
 </div>
-<div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-[440px]">
+
+<div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-1 text-red-600">Admin Override</h2>
-    <p class="text-sm text-slate-500 mb-4">Edit the timestamp or completely untick this step (this will also wipe and uncheck every later step).</p>
+    <p class="text-sm text-slate-500 mb-4">Edit timestamp or untick step.</p>
     <label class="block text-xs font-semibold mb-1 text-slate-500">Timestamp</label>
-    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded-lg mb-6">
+    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-6 text-sm">
     <div class="flex justify-between items-center">
-      <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Untick &amp; Clear</button>
+      <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm transition">Untick &amp; Clear</button>
       <div class="space-x-2">
-        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Time</button>
+        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+        <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm transition">Save Time</button>
       </div>
     </div>
   </div>
 </div>
-<div id="row-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+
+<div id="row-edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+  <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl w-full max-w-md border dark:border-slate-700">
     <h2 class="text-lg font-bold mb-4">Edit Dispatch Row</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500">Truck Type</label>
-    <select id="row-edit-type" class="w-full p-2 border rounded-lg mb-3">
+    <select id="row-edit-type" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-3 text-sm">
       <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
     </select>
     <label class="block text-xs font-semibold mb-1 text-slate-500">Dispatch Number</label>
-    <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-6">
+    <input type="text" id="row-edit-number" class="w-full p-2 border dark:border-slate-700 rounded-lg bg-transparent mb-6 text-sm">
     <div class="flex justify-between items-center">
-      <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
+      <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm transition">Delete Row</button>
       <div class="space-x-2">
-        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
+        <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm transition">Cancel</button>
+        <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm transition">Save</button>
       </div>
     </div>
   </div>
 </div>
+
 <script>
 /* ======================================================================
    CONFIG
@@ -392,6 +437,7 @@ const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 Chart.register(ChartDataLabels);
+
 /* ======================================================================
    USERS & ROLE PERMISSIONS
    ====================================================================== */
@@ -411,6 +457,7 @@ const ROLE_PERMISSIONS = {
 };
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+
 const App = {
   state: {
     currentUser: null,
@@ -422,7 +469,73 @@ const App = {
     pendingMilestoneUpdate: null,
     pendingRowEdit: null,
     chartInstance: null,
+    isSidebarCollapsed: false,
+    refreshIntervalId: null,
+    refreshCountdown: 60
   },
+
+  /* ---------------- CONFIG THEME / INTERACTION CONTROLS ---------------- */
+  toggleTheme() {
+    const htmlEl = document.documentElement;
+    const btnText = document.getElementById('theme-btn-text');
+    if (htmlEl.classList.contains('dark')) {
+      htmlEl.classList.remove('dark');
+      btnText.textContent = "Dark Mode";
+    } else {
+      htmlEl.classList.add('dark');
+      btnText.textContent = "Light Mode";
+    }
+  },
+
+  toggleSidebar() {
+    this.state.isSidebarCollapsed = !this.state.isSidebarCollapsed;
+    const sidebar = document.getElementById('sidebar-panel');
+    const toggleIcon = document.getElementById('sidebar-toggle-icon');
+    const hideElements = document.querySelectorAll('.sidebar-hide-content');
+
+    if (this.state.isSidebarCollapsed) {
+      sidebar.classList.remove('w-60');
+      sidebar.classList.add('w-14');
+      toggleIcon.classList.add('rotate-180');
+      hideElements.forEach(el => el.classList.add('hidden'));
+    } else {
+      sidebar.classList.remove('w-14');
+      sidebar.classList.add('w-60');
+      toggleIcon.classList.remove('rotate-180');
+      hideElements.forEach(el => el.classList.remove('hidden'));
+    }
+    if (this.state.chartInstance) {
+      setTimeout(() => this.state.chartInstance.resize(), 310);
+    }
+  },
+
+  startAutoRefreshScheduler() {
+    if (this.state.refreshIntervalId) clearInterval(this.state.refreshIntervalId);
+    this.state.refreshCountdown = 60;
+    
+    this.state.refreshIntervalId = setInterval(() => {
+      this.state.refreshCountdown--;
+      document.getElementById('auto-refresh-timer').textContent = `Sync: ${this.state.refreshCountdown}s`;
+      
+      if (this.state.refreshCountdown <= 0) {
+        this.manualRefresh();
+      }
+    }, 1000);
+  },
+
+  async manualRefresh() {
+    document.getElementById('connection-status').textContent = "● sync processing…";
+    await this.loadRDDs();
+    await this.loadTrucks();
+    await this.loadPersonnel();
+    if (this.state.currentRddId) {
+      await this.loadDispatches();
+      this.renderDashboardSummary();
+    }
+    document.getElementById('connection-status').textContent = "● synchronized";
+    this.state.refreshCountdown = 60;
+  },
+
   /* ---------------- AUTH ---------------- */
   login(e) {
     e.preventDefault();
@@ -442,6 +555,7 @@ const App = {
     }
   },
   logout() { location.reload(); },
+
   /* ---------------- INIT ---------------- */
   async init() {
     this.populateBaySelect();
@@ -456,7 +570,9 @@ const App = {
     await this.loadTrucks();
     await this.loadPersonnel();
     this.setupRealtimeSubscriptions();
+    this.startAutoRefreshScheduler();
   },
+
   populateBaySelect() {
     const sel = document.getElementById('checking-bay');
     sel.innerHTML = '';
@@ -473,6 +589,7 @@ const App = {
     ext.textContent = 'Extended';
     sel.appendChild(ext);
   },
+
   /* ---------------- TABS / MODALS ---------------- */
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -495,7 +612,8 @@ const App = {
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
-  /* ---------------- RDD ---------------- */
+
+  /* ---------------- RDD DATA OPERATIONS ---------------- */
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
     if (error) { console.error(error); return; }
@@ -511,6 +629,7 @@ const App = {
     });
     if (prev) sel.value = prev;
   },
+
   async createRDD() {
     const rdd_date = document.getElementById('new-rdd-date').value;
     const count = document.getElementById('new-rdd-count').value;
@@ -522,6 +641,7 @@ const App = {
     this.closeModal('rdd-modal');
     await this.loadRDDs();
   },
+
   async selectRDD(id) {
     this.state.currentRddId = id || null;
     document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
@@ -533,624 +653,524 @@ const App = {
     }
     await this.loadDispatches();
   },
-  renderRddSummary() {
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    const box = document.getElementById('rdd-summary');
-    if (!rdd) { box.innerHTML = ''; return; }
-    const total = this.state.dispatches.length;
-    const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
-    const pending = total - loaded;
-    const cards = [
-      { label: 'Initial Plan', value: rdd.initial_planning_count },
-      { label: 'Dispatches Added', value: total },
-      { label: 'Loaded / Done', value: loaded },
-      { label: 'Pending', value: pending },
-    ];
-    box.innerHTML = cards.map(c => `
-      <div class="bg-white rounded-xl shadow p-4">
-        <div class="text-xs text-slate-500">${c.label}</div>
-        <div class="text-2xl font-bold">${c.value}</div>
-      </div>`).join('');
+
+  /* ---------------- DYNAMIC METRIC RENDERING & DOCK CODES ---------------- */
+  startDashboardClock() {
+    const updateClock = () => {
+      const now = new Date();
+      const currentHourStr = String(now.getHours()).padStart(2, '0') + ":00";
+      document.getElementById('dashboard-heading-time').textContent = now.toLocaleTimeString();
+      document.getElementById('real-hour-title').textContent = `${currentHourStr} (Real Hour)`;
+      this.calculateRealHourMetrics(now.getHours());
+    };
+    updateClock();
+    if (this.state.clockInterval) clearInterval(this.state.clockInterval);
+    this.state.clockInterval = setInterval(updateClock, 1000);
   },
-  /* ---------------- DISPATCHES ---------------- */
-  async loadDispatches() {
-    const { data, error } = await supabaseClient.from('dispatches').select('*')
-      .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
-    if (error) { console.error(error); return; }
-    this.state.dispatches = data;
-    this.renderDispatches();
-    this.renderRddSummary();
-    this.refreshDashboardIfVisible();
-  },
-  async addSingleDispatch(e) {
-    e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
-    const truck_type = document.getElementById('single-truck-type').value;
-    const dispatch_number = document.getElementById('single-dispatch-no').value.trim();
-    if (!truck_type || !dispatch_number) return;
-    const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type, dispatch_number });
-    if (error) return alert(error.message);
-    e.target.reset();
-    await this.loadDispatches();
-  },
-  parseMassPasteText(text) {
-    const validTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const existingNumbers = new Set(this.state.dispatches.map(d => d.dispatch_number));
-    const seenInPaste = new Set();
-    const valid = [];
-    const skipped = [];
-    const duplicates = [];
-    text.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-      const parts = trimmed.split(/\s+/);
-      const type = (parts[0] || '').toUpperCase();
-      const num = parts[1];
-      if (parts.length < 2 || !validTypes.includes(type) || !num) {
-        skipped.push(trimmed);
-        return;
-      }
-      if (existingNumbers.has(num) || seenInPaste.has(num)) {
-        duplicates.push(`${type} ${num}`);
-        return;
-      }
-      seenInPaste.add(num);
-      valid.push({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_number: num });
-    });
-    return { valid, skipped, duplicates };
-  },
-  previewMassDispatch() {
-    const text = document.getElementById('mass-dispatch-input').value;
-    const box = document.getElementById('mass-dispatch-preview');
-    if (!text.trim()) { box.textContent = ''; return; }
-    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-    let msg = `<span class="text-emerald-600 font-semibold">${valid.length} ready to add</span>`;
-    if (duplicates.length) msg += ` · <span class="text-amber-600 font-semibold">${duplicates.length} duplicate (skipped)</span>`;
-    if (skipped.length) msg += ` · <span class="text-red-600 font-semibold">${skipped.length} unrecognized line(s)</span>`;
-    box.innerHTML = msg;
-  },
-  async addMassDispatch(e) {
-    e.preventDefault();
-    if (!this.state.currentRddId) return alert('Select an RDD first.');
-    const text = document.getElementById('mass-dispatch-input').value;
-    const { valid, skipped, duplicates } = this.parseMassPasteText(text);
-    if (valid.length) {
-      const { error } = await supabaseClient.from('dispatches').insert(valid);
-      if (error) return alert(error.message);
-      document.getElementById('mass-dispatch-input').value = '';
-      document.getElementById('mass-dispatch-preview').innerHTML = '';
-      await this.loadDispatches();
-    }
-    if (skipped.length || duplicates.length) {
-      let report = `Added ${valid.length} dispatch(es).`;
-      if (duplicates.length) report += `\n\nSkipped ${duplicates.length} duplicate dispatch number(s):\n${duplicates.join('\n')}`;
-      if (skipped.length) report += `\n\nSkipped ${skipped.length} line(s) that didn't match "TYPE NUMBER":\n${skipped.join('\n')}`;
-      alert(report);
-    }
-  },
-  renderDispatches() {
-    const tbody = document.getElementById('dispatch-tbody');
-    const emptyEl = document.getElementById('dispatch-empty');
-    tbody.innerHTML = '';
-    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
-    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
-    emptyEl.classList.add('hidden');
-    const role = this.state.currentUser.role;
-    const allowed = ROLE_PERMISSIONS[role] || [];
+
+  calculateRealHourMetrics(targetHour) {
+    let pick = 0, pgi = 0, invoice = 0, ds = 0, check = 0, loaded = 0;
+    
     this.state.dispatches.forEach(d => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50';
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
-      MILESTONE_FLOW.forEach((step, idx) => {
-        const isChecked = d[`${step}_checked`];
-        const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
-        const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
-        const hasPermission = allowed.includes(step);
-        const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
-        const tip = isChecked
-          ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
-          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-        html += `<td class="p-3 text-center" title="${tip}">
-                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
-                           ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
-                           onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
-                  </td>`;
-      });
-      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800">${d.status}</span></td>
-                <td class="p-3">
-                  <div class="w-full bg-slate-200 rounded-full h-2.5">
-                    <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
-                  </div>
-                </td>`;
-      if (role === 'admin') {
-        html += `<td class="p-3">
-                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3">Edit</button>
-                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 hover:text-red-800 text-xs font-semibold">Delete</button>
-                  </td>`;
+      if (d.pick_time && new Date(d.pick_time).getHours() === targetHour) pick++;
+      if (d.pgi_time && new Date(d.pgi_time).getHours() === targetHour) pgi++;
+      if (d.invoiced_time && new Date(d.invoiced_time).getHours() === targetHour) invoice++;
+      if (d.ds_printed_time && new Date(d.ds_printed_time).getHours() === targetHour) ds++;
+      if (d.checking_time && new Date(d.checking_time).getHours() === targetHour) check++;
+      if (d.loaded_time && new Date(d.loaded_time).getHours() === targetHour) loaded++;
+    });
+
+    document.getElementById('rh-pick').textContent = pick;
+    document.getElementById('rh-pgi').textContent = pgi;
+    document.getElementById('rh-invoice').textContent = invoice;
+    document.getElementById('rh-ds').textContent = ds;
+    document.getElementById('rh-check').textContent = check;
+    document.getElementById('rh-loaded').textContent = loaded;
+    document.getElementById('rh-trucks').textContent = this.state.trucks.length;
+  },
+
+  renderDashboardSummary() {
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    document.getElementById('dashboard-heading-rdd').textContent = rdd ? `RDD — ${rdd.rdd_date}` : 'RDD — NONE';
+    
+    const total = this.state.dispatches.length;
+    const milestones = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    
+    milestones.forEach(m => {
+      const done = this.state.dispatches.filter(d => d[`${m}_time`]).length;
+      const pending = total - done;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      
+      const mappedId = m === 'invoiced' ? 'invoiced' : m === 'checking' ? 'checking' : m;
+      if (document.getElementById(`dm-${mappedId}-done`)) {
+        document.getElementById(`dm-${mappedId}-done`).textContent = done;
+        document.getElementById(`dm-${mappedId}-pending`).textContent = pending;
+        document.getElementById(`dm-${mappedId}-pct`).textContent = `${pct}%`;
       }
-      tr.innerHTML = html;
+    });
+
+    this.renderBayGrid();
+    this.renderTruckPoolSummary();
+  },
+
+  renderBayGrid() {
+    const tbody = document.getElementById('dash-bay-tbody');
+    tbody.innerHTML = '';
+    const rows = ['A', 'B', 'C'];
+    
+    rows.forEach(letter => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.className = "p-2 font-bold text-slate-400 bg-slate-50 dark:bg-slate-900 text-center uppercase";
+      tdLabel.textContent = letter;
+      tr.appendChild(tdLabel);
+      
+      for (let i = 1; i <= 8; i++) {
+        const bayName = `${i}${letter}`;
+        const activeDisp = this.state.dispatches.find(d => d.bay_location === bayName && d.checking_time && !d.loaded_time);
+        const td = document.createElement('td');
+        td.className = "border dark:border-slate-700 p-2 text-center text-[10px] font-bold h-10 transition-colors";
+        
+        if (activeDisp) {
+          td.className += " bg-amber-500 text-white animate-pulse";
+          td.textContent = activeDisp.dispatch_no.slice(-4);
+        } else {
+          td.className += " text-slate-300 dark:text-slate-600";
+          td.textContent = '—';
+        }
+        tr.appendChild(td);
+      }
       tbody.appendChild(tr);
     });
   },
-  handleMilestoneClick(event, dispatchId, step) {
-    event.preventDefault();
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    const isChecked = dispatch[`${step}_checked`];
-    if (isChecked) {
-      if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
-      else alert('Only an admin can edit or untick a completed step.');
-      return;
-    }
-    this.state.pendingMilestoneUpdate = { dispatch, step };
-    if (step === 'pick') {
-      const sel = document.getElementById('pick-name');
-      const pickers = this.state.personnel.filter(p => p.pool === 'picker');
-      if (!pickers.length) { alert('No pickers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
-      sel.innerHTML = pickers.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-      this.openModal('pick-modal');
-    } else if (step === 'checking') {
-      const checkers = this.state.personnel.filter(p => p.pool === 'checker');
-      const list = document.getElementById('checking-checkbox-list');
-      if (!checkers.length) { alert('No checkers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
-      list.innerHTML = checkers.map(p => `
-        <label class="flex items-center space-x-2 px-1 py-0.5">
-          <input type="checkbox" value="${p.name}" onchange="App.enforceCheckerLimit()">
-          <span>${p.name}</span>
-        </label>`).join('');
-      document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
-      this.openModal('checking-modal');
-    } else if (step === 'loaded') {
-      this.openLoadedModal(dispatch);
-    } else {
-      this.confirmMilestone(step);
-    }
+
+  renderTruckPoolSummary() {
+    const poolBody = document.getElementById('dash-truckpool-tbody');
+    poolBody.innerHTML = '';
+    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    
+    types.forEach(t => {
+      const planned = this.state.dispatches.filter(d => d.truck_type === t).length;
+      const available = this.state.trucks.filter(tr => tr.truck_type === t).length;
+      const loaded = this.state.dispatches.filter(d => d.truck_type === t && d.loaded_time).length;
+      const pct = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
+      
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
+      tr.innerHTML = `
+        <td class="p-1.5 font-bold">${t}</td>
+        <td class="p-1.5 text-center">${planned}</td>
+        <td class="p-1.5 text-center text-blue-500 font-bold">${available}</td>
+        <td class="p-1.5 text-center text-emerald-600">${loaded}</td>
+        <td class="p-1.5 text-right font-semibold">${pct}%</td>
+      `;
+      poolBody.appendChild(tr);
+    });
+    this.renderTruckPlatesSubtable();
   },
-  enforceCheckerLimit() {
-    const boxes = document.querySelectorAll('#checking-checkbox-list input[type=checkbox]');
-    const checked = [...boxes].filter(b => b.checked);
-    document.getElementById('checking-count-note').textContent = `${checked.length} of 6 selected (pick at least 1)`;
-    boxes.forEach(b => { if (!b.checked) b.disabled = checked.length >= 6; });
-  },
-  openLoadedModal(dispatch) {
-    const sel = document.getElementById('loaded-truck');
-    const available = this.state.trucks.filter(t => t.truck_type === dispatch.truck_type && t.status === 'Available');
-    if (!available.length) { alert(`No available ${dispatch.truck_type} trucks. Add one in the Available Trucks tab first.`); this.state.pendingMilestoneUpdate = null; return; }
-    sel.innerHTML = available.map(t => `<option value="${t.id}">${t.plate_number}</option>`).join('');
-    this.openModal('loaded-modal');
-  },
-  async confirmMilestone(step) {
-    const { dispatch } = this.state.pendingMilestoneUpdate;
-    const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
-    if (step === 'pick') {
-      payload.pick_assigned_name = document.getElementById('pick-name').value;
-    } else if (step === 'checking') {
-      const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
-      if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
-      payload.checking_assigned_names = names;
-      payload.bay_location = document.getElementById('checking-bay').value;
-    } else if (step === 'loaded') {
-      const truckId = document.getElementById('loaded-truck').value;
-      if (!truckId) return alert('Select a truck.');
-      payload.assigned_truck_id = truckId;
-      const { error: tErr } = await supabaseClient.from('available_trucks').update({ status: 'Dispatched' }).eq('id', truckId);
-      if (tErr) return alert(tErr.message);
-    }
-    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
-    if (error) { alert(error.message); return; }
-    this.cancelMilestone();
-    await this.loadDispatches();
-    await this.loadTrucks();
-  },
-  /* ---------------- ADMIN OVERRIDE ---------------- */
-  openAdminEditModal(dispatch, step) {
-    this.state.pendingMilestoneUpdate = { dispatch, step };
-    const current = dispatch[`${step}_timestamp`];
-    if (current) {
-      const dt = new Date(current);
-      dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-      document.getElementById('admin-edit-time').value = dt.toISOString().slice(0, 16);
-    } else {
-      document.getElementById('admin-edit-time').value = '';
-    }
-    this.openModal('admin-edit-modal');
-  },
-  async adminUpdateTimestamp() {
-    const { dispatch, step } = this.state.pendingMilestoneUpdate;
-    const newTime = document.getElementById('admin-edit-time').value;
-    if (!newTime) return alert('Pick a date/time.');
-    const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
-    if (error) return alert(error.message);
-    this.cancelMilestone();
-    await this.loadDispatches();
-  },
-  async adminUntickMilestone() {
-    const { dispatch, step } = this.state.pendingMilestoneUpdate;
-    const startIdx = MILESTONE_FLOW.indexOf(step);
-    const toUncheck = MILESTONE_FLOW.slice(startIdx);
-    const payload = {};
-    toUncheck.forEach(s => {
-      payload[`${s}_checked`] = false;
-      payload[`${s}_timestamp`] = null;
-      if (s === 'pick') payload.pick_assigned_name = null;
-      if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
-      if (s === 'loaded' && dispatch.assigned_truck_id) {
-        supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
-        payload.assigned_truck_id = null;
+
+  renderTruckPlatesSubtable() {
+    const head = document.getElementById('dash-truckpool-plates-head');
+    const body = document.getElementById('dash-truckpool-plates-body');
+    head.innerHTML = `<tr><th class="p-1 text-left">TYPE</th><th class="p-1 text-left">AVAILABLE PLATES</th></tr>`;
+    body.innerHTML = '';
+    
+    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
+    types.forEach(t => {
+      const plates = this.state.trucks.filter(tr => tr.truck_type === t).map(tr => tr.plate_number).join(', ');
+      if (plates.length > 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="p-1 font-bold text-slate-400">${t}</td><td class="p-1 text-blue-500 font-mono text-[11px]">${plates}</td>`;
+        body.appendChild(tr);
       }
     });
-    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
-    if (error) return alert(error.message);
-    this.cancelMilestone();
-    await this.loadDispatches();
-    await this.loadTrucks();
   },
-  /* ---------------- ADMIN: EDIT / DELETE DISPATCH ROW ---------------- */
-  openRowEditModal(dispatchId) {
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    this.state.pendingRowEdit = dispatch;
-    document.getElementById('row-edit-type').value = dispatch.truck_type;
-    document.getElementById('row-edit-number').value = dispatch.dispatch_number;
-    this.openModal('row-edit-modal');
-  },
-  async saveDispatchRowEdit() {
-    const dispatch = this.state.pendingRowEdit;
-    const truck_type = document.getElementById('row-edit-type').value;
-    const dispatch_number = document.getElementById('row-edit-number').value.trim();
-    if (!dispatch_number) return alert('Dispatch number cannot be empty.');
-    const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
-    if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
-    this.state.pendingRowEdit = null;
-    this.closeModal('row-edit-modal');
-    await this.loadDispatches();
-  },
-  async deleteDispatchRow() {
-    const dispatch = this.state.pendingRowEdit;
-    await this.performDispatchDelete(dispatch);
-    this.closeModal('row-edit-modal');
-  },
-  async quickDeleteDispatch(dispatchId) {
-    const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
-    if (!confirm(`Delete dispatch ${dispatch.truck_type} ${dispatch.dispatch_number}? This cannot be undone.`)) return;
-    await this.performDispatchDelete(dispatch);
-  },
-  async performDispatchDelete(dispatch) {
-    if (dispatch.assigned_truck_id) {
-      await supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id);
+
+  renderChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+    
+    const datasets = MILESTONE_FLOW.map((m, idx) => {
+      const colors = ['#3b82f6', '#a855f7', '#ec4899', '#06b6d4', '#f59e0b', '#10b981'];
+      const data = Array(24).fill(0);
+      
+      this.state.dispatches.forEach(d => {
+        const t = d[`${m}_time`];
+        if (t) {
+          const hr = new Date(t).getHours();
+          data[hr]++;
+        }
+      });
+
+      return {
+        label: MILESTONE_LABELS[m].toUpperCase(),
+        data,
+        borderColor: colors[idx],
+        backgroundColor: colors[idx],
+        borderWidth: 2.5,
+        tension: 0.2,
+        pointRadius: 3
+      };
+    });
+
+    if (this.state.chartInstance) {
+      this.state.chartInstance.data.datasets = datasets;
+      this.state.chartInstance.update();
+    } else {
+      this.state.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: hours, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
+            datalabels: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
+            x: { ticks: { font: { size: 9 } } }
+          }
+        }
+      });
     }
-    const { error } = await supabaseClient.from('dispatches').delete().eq('id', dispatch.id);
-    if (error) return alert(error.message);
-    await this.loadDispatches();
-    await this.loadTrucks();
   },
-  /* ---------------- TRUCKS ---------------- */
-  async loadTrucks() {
-    const { data, error } = await supabaseClient.from('available_trucks').select('*').order('created_at', { ascending: true });
-    if (error) { console.error(error); return; }
-    this.state.trucks = data;
-    this.renderTrucks();
-    this.refreshDashboardIfVisible();
-  },
-  refreshDashboardIfVisible() {
-    if (!document.getElementById('tab-analytics').classList.contains('hidden')) {
+
+  /* ---------------- ORIGINAL DISPATCH OPERATIONAL PIPELINES ---------------- */
+  async loadDispatches() {
+    if (!this.state.currentRddId) return;
+    const { data, error } = await supabaseClient.from('dispatches').select('*').eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
+    if (error) return console.error(error);
+    this.state.dispatches = data;
+    this.renderDispatches();
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    if (rdd) {
+      const total = data.length;
+      const loaded = data.filter(d => d.loaded_time).length;
+      const box = document.getElementById('rdd-summary');
+      box.innerHTML = `
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow border dark:border-slate-700 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Initial Plan</div><div class="text-2xl font-black">${rdd.initial_planning_count}</div></div>
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow border dark:border-slate-700 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Total Rows Added</div><div class="text-2xl font-black text-blue-600 dark:text-blue-400">${total}</div></div>
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow border dark:border-slate-700 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Dispatched / Loaded</div><div class="text-2xl font-black text-emerald-600 dark:text-emerald-400">${loaded}</div></div>
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow border dark:border-slate-700 text-center"><div class="text-xs text-slate-400 font-semibold uppercase">Variance</div><div class="text-2xl font-black ${total - rdd.initial_planning_count < 0 ? 'text-red-500':'text-slate-700 dark:text-slate-300'}">${total - rdd.initial_planning_count}</div></div>
+      `;
+    }
+    if (document.getElementById('tab-analytics').classList.contains('hidden') === false) {
       this.renderDashboardSummary();
       this.renderChart();
     }
   },
+
+  renderDispatches() {
+    const tbody = document.getElementById('dispatch-tbody');
+    tbody.innerHTML = '';
+    document.getElementById('dispatch-empty').classList.toggle('hidden', this.state.dispatches.length > 0);
+    
+    this.state.dispatches.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors";
+      
+      let statusText = 'Pending Pick', progressPct = 0;
+      if (d.pick_time) { statusText = 'Picked'; progressPct = 16; }
+      if (d.pgi_time) { statusText = 'PGI Done'; progressPct = 33; }
+      if (d.invoiced_time) { statusText = 'Invoiced'; progressPct = 50; }
+      if (d.ds_printed_time) { statusText = 'DS Printed'; progressPct = 66; }
+      if (d.checking_time) { statusText = `Checking (${d.bay_location})`; progressPct = 83; }
+      if (d.loaded_time) { statusText = `Loaded (${d.loaded_truck_plate || ''})`; progressPct = 100; }
+
+      let milestonesHtml = '';
+      MILESTONE_FLOW.forEach(m => {
+        const t = d[`${m}_time`];
+        const isChecked = !!t;
+        const canUserClick = ROLE_PERMISSIONS[this.state.currentUser.role]?.includes(m);
+        const disabledClass = !canUserClick ? 'disabled-checkbox' : '';
+        
+        let metaHint = '';
+        if (m === 'pick' && d.picker_name) metaHint = `title="Picker: ${d.picker_name}"`;
+        if (m === 'checking' && d.checkers_list) metaHint = `title="Checkers: ${d.checkers_list}"`;
+        
+        milestonesHtml += `
+          <td class="p-3 text-center">
+            <input type="checkbox" ${isChecked ? 'checked':''} ${metaHint} class="w-4 h-4 rounded ${disabledClass}" 
+                   onclick="App.handleMilestoneClick(event, '${d.id}', '${m}', ${isChecked})">
+          </td>`;
+      });
+
+      let actionBtnHtml = '';
+      if (this.state.currentUser.role === 'admin') {
+        actionBtnHtml = `<td class="p-3"><button onclick="App.openRowEditModal('${d.id}')" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Modify</button></td>`;
+      }
+
+      tr.innerHTML = `
+        <td class="p-3 font-bold">${d.truck_type}</td>
+        <td class="p-3 font-mono text-xs">${d.dispatch_no}</td>
+        ${milestonesHtml}
+        <td class="p-3 text-xs font-semibold">${statusText}</td>
+        <td class="p-3">
+          <div class="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+            <div class="bg-blue-600 h-full transition-all duration-300" style="width: ${progressPct}%"></div>
+          </div>
+        </td>
+        ${actionBtnHtml}
+      `;
+      tbody.appendChild(tr);
+    });
+  },
+
+  async addSingleDispatch(e) {
+    e.preventDefault();
+    const type = document.getElementById('single-truck-type').value;
+    const no = document.getElementById('single-dispatch-no').value.trim();
+    if (!type || !no) return;
+    const { error } = await supabaseClient.from('dispatches').insert({ rdd_id: this.state.currentRddId, truck_type: type, dispatch_no: no });
+    if (error) return alert(error.message);
+    document.getElementById('single-dispatch-no').value = '';
+    await this.loadDispatches();
+  },
+
+  previewMassDispatch() {
+    const raw = document.getElementById('mass-dispatch-input').value;
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    document.getElementById('mass-dispatch-preview').textContent = `${lines.length} rows parsed valid.`;
+  },
+
+  async addMassDispatch(e) {
+    e.preventDefault();
+    const raw = document.getElementById('mass-dispatch-input').value;
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const records = [];
+    
+    for (let line of lines) {
+      const parts = line.split(/[\s,]++/);
+      if (parts.length >= 2) {
+        records.push({ rdd_id: this.state.currentRddId, truck_type: parts[0].toUpperCase(), dispatch_no: parts[1] });
+      }
+    }
+    if (records.length === 0) return alert('No valid data found format.');
+    const { error } = await supabaseClient.from('dispatches').insert(records);
+    if (error) return alert(error.message);
+    document.getElementById('mass-dispatch-input').value = '';
+    document.getElementById('mass-dispatch-preview').textContent = '';
+    await this.loadDispatches();
+  },
+
+  handleMilestoneClick(e, id, milestone, isCurrentlyChecked) {
+    e.preventDefault();
+    const role = this.state.currentUser.role;
+    if (!ROLE_PERMISSIONS[role]?.includes(milestone)) return;
+    
+    if (role === 'admin' && isCurrentlyChecked) {
+      const disp = this.state.dispatches.find(d => d.id === id);
+      this.state.pendingMilestoneUpdate = { id, milestone };
+      document.getElementById('admin-edit-time').value = disp[`${milestone}_time`]?.slice(0,16) || '';
+      this.openModal('admin-edit-modal');
+      return;
+    }
+    if (isCurrentlyChecked) return; 
+
+    this.state.pendingMilestoneUpdate = { id, milestone };
+    if (milestone === 'pick') {
+      this.openModal('pick-modal');
+    } else if (milestone === 'checking') {
+      this.renderCheckingModalCheckboxes();
+      this.openModal('checking-modal');
+    } else if (milestone === 'loaded') {
+      this.populateLoadedTruckDropdown();
+      this.openModal('loaded-modal');
+    } else {
+      this.confirmMilestone();
+    }
+  },
+
+  async confirmMilestone(type) {
+    const p = this.state.pendingMilestoneUpdate;
+    if (!p) return;
+    let payload = { [`${p.milestone}_time`]: new Date().toISOString() };
+    
+    if (type === 'pick') {
+      payload.picker_name = document.getElementById('pick-name').value;
+    } else if (type === 'checking') {
+      const checkedBoxes = document.querySelectorAll('.checker-modal-cb:checked');
+      const names = Array.from(checkedBoxes).map(cb => cb.value);
+      if (names.length < 1 || names.length > 6) return alert('Pick between 1 and 6 checkers from the active pool.');
+      payload.checkers_list = names.join(', ');
+      payload.bay_location = document.getElementById('checking-bay').value;
+    } else if (type === 'loaded') {
+      const trVal = document.getElementById('loaded-truck').value;
+      if (!trVal) return alert('No trucks available in log register.');
+      payload.loaded_truck_plate = trVal;
+    }
+
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', p.id);
+    if (error) alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  async adminUpdateTimestamp() {
+    const p = this.state.pendingMilestoneUpdate;
+    const tVal = document.getElementById('admin-edit-time').value;
+    if (!p || !tVal) return;
+    const { error } = await supabaseClient.from('dispatches').update({ [`${p.milestone}_time`]: new Date(tVal).toISOString() }).eq('id', p.id);
+    if (error) alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  async adminUntickMilestone() {
+    const p = this.state.pendingMilestoneUpdate;
+    if (!p) return;
+    let payload = {};
+    const idx = MILESTONE_FLOW.indexOf(p.milestone);
+    for (let i = idx; i < MILESTONE_FLOW.length; i++) {
+      payload[`${MILESTONE_FLOW[i]}_time`] = null;
+      if (MILESTONE_FLOW[i] === 'pick') payload.picker_name = null;
+      if (MILESTONE_FLOW[i] === 'checking') { payload.checkers_list = null; payload.bay_location = null; }
+      if (MILESTONE_FLOW[i] === 'loaded') payload.loaded_truck_plate = null;
+    }
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', p.id);
+    if (error) alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  renderCheckingModalCheckboxes() {
+    const container = document.getElementById('checking-checkbox-list');
+    container.innerHTML = '';
+    const checkers = this.state.personnel.filter(p => p.pool_type === 'checker');
+    checkers.forEach(c => {
+      const div = document.createElement('div');
+      div.className = "flex items-center space-x-2";
+      div.innerHTML = `<input type="checkbox" value="${c.name}" class="checker-modal-cb w-4 h-4"><span>${c.name}</span>`;
+      container.appendChild(div);
+    });
+  },
+
+  populateLoadedTruckDropdown() {
+    const sel = document.getElementById('loaded-truck');
+    sel.innerHTML = '';
+    this.state.trucks.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.plate_number; opt.textContent = `${t.truck_type} - ${t.plate_number}`;
+      sel.appendChild(opt);
+    });
+  },
+
+  /* ---------------- ROW MANAGEMENT OVERRIDES ---------------- */
+  openRowEditModal(id) {
+    const d = this.state.dispatches.find(item => item.id === id);
+    if (!d) return;
+    this.state.pendingRowEdit = id;
+    document.getElementById('row-edit-type').value = d.truck_type;
+    document.getElementById('row-edit-number').value = d.dispatch_no;
+    this.openModal('row-edit-modal');
+  },
+
+  async saveDispatchRowEdit() {
+    if (!this.state.pendingRowEdit) return;
+    const truck_type = document.getElementById('row-edit-type').value;
+    const dispatch_no = document.getElementById('row-edit-number').value.trim();
+    const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_no }).eq('id', this.state.pendingRowEdit);
+    if (error) alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  async deleteDispatchRow() {
+    if (!this.state.pendingRowEdit || !confirm('Confirm deletion of dispatch row record?')) return;
+    const { error } = await supabaseClient.from('dispatches').delete().eq('id', this.state.pendingRowEdit);
+    if (error) alert(error.message);
+    this.cancelMilestone();
+    await this.loadDispatches();
+  },
+
+  /* ---------------- FLEET REGISTRY TRACKS ---------------- */
+  async loadTrucks() {
+    const { data, error } = await supabaseClient.from('truck_pools').select('*').order('created_at', { ascending: false });
+    if (error) return console.error(error);
+    this.state.trucks = data;
+    const grid = document.getElementById('trucks-grid');
+    grid.innerHTML = '';
+    data.forEach(t => {
+      const div = document.createElement('div');
+      div.className = "bg-white dark:bg-slate-800 p-4 rounded-xl shadow flex justify-between items-center border dark:border-slate-700";
+      div.innerHTML = `<div><div class="font-bold text-sm">${t.plate_number}</div><div class="text-xs text-slate-400">${t.truck_type}</div></div>
+                       <button onclick="App.deleteTruck('${t.id}')" class="text-xs text-red-500 hover:underline">Remove</button>`;
+      grid.appendChild(div);
+    });
+  },
+
   async addTruck() {
-    const truck_type = document.getElementById('truck-type-input').value;
-    const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
-    if (!plate_number) return alert('Enter a plate number.');
-    const { error } = await supabaseClient.from('available_trucks').insert({ truck_type, plate_number });
+    const type = document.getElementById('truck-type-input').value;
+    const plate = document.getElementById('truck-plate-input').value.toUpperCase().trim();
+    if (!plate) return;
+    const { error } = await supabaseClient.from('truck_pools').insert({ truck_type: type, plate_number: plate });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
     await this.loadTrucks();
   },
-  renderTrucks() {
-    const grid = document.getElementById('trucks-grid');
-    grid.innerHTML = '';
-    const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    types.forEach(type => {
-      const all = this.state.trucks.filter(t => t.truck_type === type);
-      const available = all.filter(t => t.status === 'Available');
-      let html = `<div class="bg-white rounded-xl shadow p-4">
-                    <div class="flex justify-between items-baseline mb-3">
-                      <h3 class="font-bold">${type}</h3>
-                      <span class="text-xs text-slate-400">${available.length} available / ${all.length} total</span>
-                    </div>
-                    <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
-      all.forEach((t, i) => {
-        const isAvail = t.status === 'Available';
-        html += `<li class="flex justify-between items-center">
-                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
-                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">${t.status}</span>
-                  </li>`;
-      });
-      if (!all.length) html += `<li class="text-slate-400 italic">No trucks added yet</li>`;
-      html += `</ul></div>`;
-      grid.innerHTML += html;
-    });
+
+  async deleteTruck(id) {
+    if (!confirm('Remove truck from database?')) return;
+    await supabaseClient.from('truck_pools').delete().eq('id', id);
+    await this.loadTrucks();
   },
-  /* ---------------- PERSONNEL ---------------- */
+
+  /* ---------------- PERSONNEL TRACKS ---------------- */
   async loadPersonnel() {
-    const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
-    if (error) { console.error(error); return; }
+    const { data, error } = await supabaseClient.from('personnel_pools').select('*').order('name', { ascending: true });
+    if (error) return console.error(error);
     this.state.personnel = data;
-    this.renderPersonnel();
-  },
-  renderPersonnel() {
-    const isAdmin = this.state.currentUser.role === 'admin';
-    ['picker', 'checker'].forEach(pool => {
-      const list = document.getElementById(`${pool}-list`);
-      const people = this.state.personnel.filter(p => p.pool === pool);
-      list.innerHTML = people.map(p => `
-        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50">
-          <span>${p.name}</span>
-          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
-        </li>`).join('') || `<li class="text-slate-400 italic px-2">No names added yet</li>`;
-    });
-  },
-  async addPersonnel(e, pool) {
-    e.preventDefault();
-    const inputId = pool === 'picker' ? 'new-picker-name' : 'new-checker-name';
-    const name = document.getElementById(inputId).value.trim();
-    if (!name) return;
-    const { error } = await supabaseClient.from('personnel').insert({ name, pool });
-    if (error) return alert(error.message.includes('duplicate') ? 'That name is already in this pool.' : error.message);
-    document.getElementById(inputId).value = '';
-    await this.loadPersonnel();
-  },
-  async deletePersonnel(id) {
-    if (!confirm('Remove this person from the pool?')) return;
-    const { error } = await supabaseClient.from('personnel').delete().eq('id', id);
-    if (error) return alert(error.message);
-    await this.loadPersonnel();
-  },
-  /* ---------------- DASHBOARD ---------------- */
-  renderDashboardSummary() {
-    const total = this.state.dispatches.length;
-    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    
+    const pList = document.getElementById('picker-list'); pList.innerHTML = '';
+    const cList = document.getElementById('checker-list'); cList.innerHTML = '';
+    const pModalSel = document.getElementById('pick-name'); pModalSel.innerHTML = '';
 
-    // ── Milestone table ──
-    steps.forEach(step => {
-      const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
-      const pending = total - done;
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      const doneEl = document.getElementById(`dm-${step}-done`);
-      const pendEl = document.getElementById(`dm-${step}-pending`);
-      const pctEl  = document.getElementById(`dm-${step}-pct`);
-      if (doneEl) doneEl.textContent = done;
-      if (pendEl) pendEl.textContent = pending;
-      if (pctEl)  pctEl.textContent  = pct + '%';
-    });
-
-    // ── Bay occupancy grid ──
-    // Build a map: "bay-letter" → dispatch number (from checking data)
-    // bay_location is stored as e.g. "1A", "3C", "Extended"
-    const bayMap = {};
-    this.state.dispatches.forEach(d => {
-      if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
-        bayMap[d.bay_location] = d.dispatch_number;
+    data.forEach(p => {
+      const li = document.createElement('li');
+      li.className = "flex justify-between items-center bg-slate-50 dark:bg-slate-900/40 p-2 rounded border dark:border-slate-800";
+      li.innerHTML = `<span>${p.name}</span>`;
+      if (this.state.currentUser.role === 'admin') {
+        li.innerHTML += `<button onclick="App.deletePersonnel('${p.id}')" class="text-xs text-red-500 hover:underline">Remove</button>`;
       }
-    });
-    const tbody = document.getElementById('dash-bay-tbody');
-    if (tbody) {
-      tbody.innerHTML = '';
-      ['A', 'B', 'C'].forEach(letter => {
-        const tr = document.createElement('tr');
-        let html = `<td class="border border-slate-200 px-2 py-1.5 font-bold text-slate-600 text-center">${letter}</td>`;
-        for (let bay = 1; bay <= 8; bay++) {
-          const key = `${bay}${letter}`;
-          const occupied = bayMap[key];
-          html += occupied
-            ? `<td class="border border-slate-200 px-1 py-1.5 text-center text-blue-700 font-semibold text-[11px]">${occupied}</td>`
-            : `<td class="border border-slate-200 px-1 py-1.5 text-center text-slate-300 text-[10px]">VACANT</td>`;
-        }
-        tr.innerHTML = html;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // ── Truck pool summary table ──
-    const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
-    const tpTbody = document.getElementById('dash-truckpool-tbody');
-    if (tpTbody) {
-      let totalPlanned = 0, totalAvail = 0, totalLoaded = 0;
-      let rows = '';
-      truckTypes.forEach(type => {
-        // "planned" = all trucks of this type ever added
-        const all      = this.state.trucks.filter(t => t.truck_type === type);
-        const avail    = all.filter(t => t.status === 'Available').length;
-        const loaded   = all.filter(t => t.status === 'Dispatched').length;
-        const planned  = all.length;
-        const pct      = planned > 0 ? Math.round((loaded / planned) * 100) : 0;
-        totalPlanned  += planned;
-        totalAvail    += avail;
-        totalLoaded   += loaded;
-        rows += `<tr>
-          <td class="border border-slate-200 px-2 py-1 text-center font-semibold">${type}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center">${planned}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600 font-bold">${avail}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-blue-600 font-bold">${loaded}</td>
-          <td class="border border-slate-200 px-2 py-1 text-center text-slate-600">${pct}%</td>
-        </tr>`;
-      });
-      const totPct = totalPlanned > 0 ? Math.round((totalLoaded / totalPlanned) * 100) : 0;
-      rows += `<tr class="bg-slate-50 font-bold">
-        <td class="border border-slate-200 px-2 py-1 text-center">TOTAL</td>
-        <td class="border border-slate-200 px-2 py-1 text-center">${totalPlanned}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center text-emerald-600">${totalAvail}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center text-blue-600">${totalLoaded}</td>
-        <td class="border border-slate-200 px-2 py-1 text-center">${totPct}%</td>
-      </tr>`;
-      tpTbody.innerHTML = rows;
-    }
-
-    // ── Truck pool plates list (columns per type) ──
-    const thead = document.getElementById('dash-truckpool-plates-head');
-    const pbody = document.getElementById('dash-truckpool-plates-body');
-    if (thead && pbody) {
-      // Only types that have ≥1 available truck
-      const activeCols = truckTypes.filter(type =>
-        this.state.trucks.some(t => t.truck_type === type && t.status === 'Available')
-      );
-      if (!activeCols.length) {
-        thead.innerHTML = '';
-        pbody.innerHTML = `<tr><td class="text-slate-400 italic px-2 py-1 text-center" colspan="6">No available trucks</td></tr>`;
+      
+      if (p.pool_type === 'picker') {
+        pList.appendChild(li);
+        const opt = document.createElement('option'); opt.value = p.name; opt.textContent = p.name;
+        pModalSel.appendChild(opt);
       } else {
-        thead.innerHTML = `<tr>${activeCols.map(t =>
-          `<th class="border border-slate-200 px-2 py-1 bg-slate-50 font-bold text-slate-600">${t}</th>`
-        ).join('')}</tr>`;
-        // Build columns
-        const cols = activeCols.map(type => {
-          return this.state.trucks
-            .filter(t => t.truck_type === type && t.status === 'Available')
-            .map((t, i) => `${type}${i + 1}`);
-        });
-        const maxRows = Math.max(...cols.map(c => c.length));
-        let pbHtml = '';
-        for (let r = 0; r < maxRows; r++) {
-          pbHtml += `<tr>${cols.map(col =>
-            `<td class="border border-slate-200 px-2 py-1 text-center text-slate-700">${col[r] || ''}</td>`
-          ).join('')}</tr>`;
-        }
-        pbody.innerHTML = pbHtml;
+        cList.appendChild(li);
       }
-    }
-
-    // ── Heading RDD label ──
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    if (rdd) {
-      const d = new Date(rdd.rdd_date + 'T00:00:00');
-      const formatted = d.toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
-      document.getElementById('dashboard-heading-rdd').textContent = `RDD ${formatted}`;
-    } else {
-      document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
-    }
-  },
-  startDashboardClock() {
-    const tick = () => {
-      const el = document.getElementById('dashboard-heading-time');
-      if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-      }
-    };
-    tick();
-    if (!this._clockInterval) this._clockInterval = setInterval(tick, 1000);
-  },
-  renderChart() {
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    if (this.state.chartInstance) this.state.chartInstance.destroy();
-
-    // 24 hourly buckets: bucket 0 = 5 AM, bucket 23 = 4 AM next day
-    const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
-    const bucketOf = (isoString) => {
-      if (!isoString) return null;
-      const h = new Date(isoString).getHours();
-      return (h - 5 + 24) % 24;
-    };
-
-    const nowBucket = bucketOf(new Date().toISOString());
-
-    // Per-hour event counts (raw)
-    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
-    this.state.dispatches.forEach(d => {
-      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
-        const b = bucketOf(d[`${step}_timestamp`]);
-        if (b !== null) raw[step][b]++;
-      });
-    });
-
-    // Convert to cumulative, mask future buckets with null
-    const toCumulative = (arr) => {
-      let running = 0;
-      return arr.map((v, i) => {
-        if (i > nowBucket) return null;
-        running += v;
-        return running;
-      });
-    };
-
-    // Available trucks trend
-    const availableTrend = Array(24).fill(0);
-    this.state.trucks.forEach(t => {
-      const addedB = bucketOf(t.created_at);
-      if (addedB === null) return;
-      for (let h = addedB; h < 24; h++) availableTrend[h]++;
-    });
-    this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
-      const b = bucketOf(d.loaded_timestamp);
-      if (b === null) return;
-      for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
-    });
-    const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
-
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
-    const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
-    const dispatchCount = this.state.dispatches.length;
-    const rawMax = Math.max(planCount, dispatchCount, 10);
-    const yMax = Math.ceil(rawMax / 10) * 10;
-
-    this.state.chartInstance = new Chart(ctx, {
-      data: {
-        labels,
-        datasets: [
-          { type: 'bar', label: 'Pick',             data: toCumulative(raw.pick),        backgroundColor: '#3b82f6' },
-          { type: 'bar', label: 'PGI',              data: toCumulative(raw.pgi),         backgroundColor: '#8b5cf6' },
-          { type: 'bar', label: 'Invoice',          data: toCumulative(raw.invoiced),    backgroundColor: '#ec4899' },
-          { type: 'bar', label: 'DS Printed',       data: toCumulative(raw.ds_printed),  backgroundColor: '#06b6d4' },
-          { type: 'bar', label: 'Check',            data: toCumulative(raw.checking),    backgroundColor: '#f59e0b' },
-          { type: 'bar', label: 'Loaded',           data: toCumulative(raw.loaded),      backgroundColor: '#10b981' },
-          { type: 'bar', label: 'Avail. Trucks',    data: cutFuture(availableTrend),     backgroundColor: '#ef4444' },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { title: { display: true, text: 'Hour' } },
-          y: {
-            beginAtZero: true,
-            max: yMax,
-            grace: '10%',
-            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)) },
-            title: { display: true, text: 'Cumulative Count' },
-          },
-        },
-        plugins: {
-          datalabels: {
-            anchor: 'end',
-            align: 'end',
-            clamp: true,
-            offset: 2,
-            backgroundColor: (ctx) => ctx.dataset.backgroundColor,
-            borderRadius: 8,
-            padding: { top: 2, bottom: 2, left: 5, right: 5 },
-            font: { size: 10, weight: 'bold' },
-            color: '#fff',
-            display: (ctx) => {
-              const v = ctx.dataset.data[ctx.dataIndex];
-              return v !== null && v !== 0;
-            },
-            formatter: (value) => value,
-          },
-        },
-      },
     });
   },
-  /* ---------------- REALTIME ---------------- */
+
+  async addPersonnel(e, type) {
+    e.preventDefault();
+    const inputEl = document.getElementById(`new-${type}-name`);
+    const name = inputEl.value.toUpperCase().trim();
+    if (!name) return;
+    const { error } = await supabaseClient.from('personnel_pools').insert({ pool_type: type, name });
+    if (error) return alert(error.message);
+    inputEl.value = '';
+    await this.loadPersonnel();
+  },
+
+  async deletePersonnel(id) {
+    if (!confirm('Remove crew item?')) return;
+    await supabaseClient.from('personnel_pools').delete().eq('id', id);
+    await this.loadPersonnel();
+  },
+
+  /* ---------------- LIVE ENGINE SUBSCRIPTIONS ---------------- */
   setupRealtimeSubscriptions() {
-    supabaseClient.channel('dispatch-app-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, () => this.loadTrucks())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rdd_masters' }, () => this.loadRDDs())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
-      .subscribe(status => {
-        const el = document.getElementById('connection-status');
-        el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
+    supabaseClient.channel('realtime_dispatch_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => this.loadDispatches())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'truck_pools' }, () => this.loadTrucks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel_pools' }, () => this.loadPersonnel())
+      .subscribe((status) => {
+         document.getElementById('connection-status').textContent = status === 'SUBSCRIBED' ? '● synchronized' : '● disconnected';
       });
-  },
+  }
 };
 </script>
 </body>
