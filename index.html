@@ -73,10 +73,16 @@
     <section id="tab-dispatch" class="tab-content">
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
         <h1 class="text-2xl font-bold">Dispatch Activity</h1>
-        <div class="flex space-x-3 items-center">
+        <div class="flex space-x-3 items-center flex-wrap gap-y-2">
+          <div class="relative">
+            <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+            <input type="text" id="dispatch-search-input" oninput="App.renderDispatches()" placeholder="Search dispatch #, type, status…"
+                   class="pl-8 pr-3 py-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm w-60">
+          </div>
           <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white">
             <option value="">Select RDD…</option>
           </select>
+          <button onclick="App.exportDispatchesCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
           <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
@@ -401,6 +407,7 @@ const ROLE_PERMISSIONS = {
   invoice:   ['invoiced'],
   transport: ['ds_printed', 'loaded'],
 };
+const TRUCK_CANCEL_ROLES = ['admin', 'outbound', 'transport'];
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const App = {
@@ -656,10 +663,18 @@ const App = {
     tbody.innerHTML = '';
     if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
     if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
+    const searchEl = document.getElementById('dispatch-search-input');
+    const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+    const visible = !q ? this.state.dispatches : this.state.dispatches.filter(d =>
+      String(d.dispatch_number).toLowerCase().includes(q) ||
+      String(d.truck_type).toLowerCase().includes(q) ||
+      String(d.status).toLowerCase().includes(q)
+    );
+    if (!visible.length) { emptyEl.textContent = `No dispatches match “${q}”.`; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
     const role = this.state.currentUser.role;
     const allowed = ROLE_PERMISSIONS[role] || [];
-    this.state.dispatches.forEach(d => {
+    visible.forEach(d => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
       let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>`;
@@ -693,6 +708,40 @@ const App = {
       tr.innerHTML = html;
       tbody.appendChild(tr);
     });
+  },
+  exportDispatchesCSV() {
+    if (!this.state.dispatches.length) return alert('No dispatches to export.');
+    const searchEl = document.getElementById('dispatch-search-input');
+    const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+    const rows = !q ? this.state.dispatches : this.state.dispatches.filter(d =>
+      String(d.dispatch_number).toLowerCase().includes(q) ||
+      String(d.truck_type).toLowerCase().includes(q) ||
+      String(d.status).toLowerCase().includes(q)
+    );
+    if (!rows.length) return alert('No dispatches match the current search to export.');
+    const headers = ['Type', 'Dispatch No.', 'Pick', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Loaded', 'Status', 'Progress %'];
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [headers.map(esc).join(',')];
+    rows.forEach(d => {
+      const cell = (step) => d[`${step}_checked`] ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : 'Done') : '';
+      lines.push([
+        d.truck_type, d.dispatch_number,
+        cell('pick'), cell('pgi'), cell('invoiced'), cell('ds_printed'), cell('checking'), cell('loaded'),
+        d.status, d.progress || 0,
+      ].map(esc).join(','));
+    });
+    const csv = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const rddLabel = rdd ? rdd.rdd_date : 'export';
+    a.href = url;
+    a.download = `dispatch-activity-${rddLabel}-${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   },
   handleMilestoneClick(event, dispatchId, step) {
     event.preventDefault();
@@ -878,6 +927,7 @@ const App = {
       grid.innerHTML = `<div class="col-span-3 p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD plan to see the active fleet.</div>`;
       return;
     }
+    const canCancel = TRUCK_CANCEL_ROLES.includes(this.state.currentUser.role);
     const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     types.forEach(type => {
       const all = this.state.trucks.filter(t => t.truck_type === type);
@@ -889,16 +939,41 @@ const App = {
                     </div>
                     <ul class="space-y-1.5 text-sm max-h-48 overflow-y-auto">`;
       all.forEach((t, i) => {
-        const isAvail = t.status === 'Available';
+        const status = t.status || 'Available';
+        const badgeClass = status === 'Available'
+          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+          : status === 'Cancelled'
+            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200'
+            : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+        let actionBtn = '';
+        if (canCancel && status === 'Available') {
+          actionBtn = `<button onclick="App.cancelTruck('${t.id}')" title="Cancel this truck — keeps the record but removes it from loading" class="text-red-500 hover:text-red-700 text-[11px] font-semibold ml-2">Cancel</button>`;
+        } else if (canCancel && status === 'Cancelled') {
+          actionBtn = `<button onclick="App.reinstateTruck('${t.id}')" title="Make this truck available again" class="text-emerald-600 hover:text-emerald-800 text-[11px] font-semibold ml-2">Reinstate</button>`;
+        }
         html += `<li class="flex justify-between items-center">
-                    <span>${type} ${i + 1}: <b>${t.plate_number}</b></span>
-                    <span class="text-xs px-2 py-0.5 rounded-full ${isAvail ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}">${t.status}</span>
+                    <span class="${status === 'Cancelled' ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${type} ${i + 1}: <b>${t.plate_number}</b></span>
+                    <span class="flex items-center shrink-0">
+                      <span class="text-xs px-2 py-0.5 rounded-full ${badgeClass}">${status}</span>
+                      ${actionBtn}
+                    </span>
                   </li>`;
       });
       if (!all.length) html += `<li class="text-slate-400 dark:text-slate-500 italic">No trucks added yet</li>`;
       html += `</ul></div>`;
       grid.innerHTML += html;
     });
+  },
+  async cancelTruck(id) {
+    if (!confirm('Cancel this truck? It will stay in the record but will no longer be available for loading.')) return;
+    const { error } = await supabaseClient.from('available_trucks').update({ status: 'Cancelled' }).eq('id', id);
+    if (error) return alert(error.message);
+    await this.loadTrucks();
+  },
+  async reinstateTruck(id) {
+    const { error } = await supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', id);
+    if (error) return alert(error.message);
+    await this.loadTrucks();
   },
   async loadPersonnel() {
     const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
