@@ -4,136 +4,278 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dispatch Tracker</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar matching dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e2640;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d385e;
+        }
+    </style>
 </head>
-<body class="bg-[#0b0f19] min-h-screen flex items-center justify-center font-sans antialiased text-slate-200 p-6">
+<body class="bg-[#0b0f19] min-h-screen flex items-center justify-center font-sans antialiased text-slate-200 selection:bg-blue-500/30 selection:text-blue-200">
 
-    <!-- 1. LOGIN SCREEN -->
-    <div id="login-screen" class="w-full max-w-md bg-[#151c2e] p-8 rounded-xl shadow-xl border border-slate-800/50 transition-all duration-300">
-        <h1 class="text-2xl font-bold text-white mb-1 tracking-tight">Dispatch Tracker</h1>
-        <p class="text-sm text-slate-400 mb-6">Sign in with your username.</p>
+    <div id="login-screen" class="w-full max-w-md bg-[#151c2e] p-8 rounded-xl shadow-2xl border border-slate-850 transition-all duration-300 mx-4">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-white tracking-tight">Dispatch Tracker</h1>
+            <p class="text-sm text-slate-400 mt-1">Sign in with your username.</p>
+        </div>
         
-        <!-- Added id and updated onsubmit to trigger the login simulation -->
-        <form id="login-form" class="space-y-4" onsubmit="simulateLogin(event)">
+        <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
             <div>
                 <label for="username" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Username</label>
-                <input type="text" id="username" name="username" autocomplete="off" required
-                    class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <input type="text" id="username" name="username" autocomplete="off" required placeholder="e.g., dispatcher_01"
+                    class="w-full bg-[#1e2640] border border-slate-700/40 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm">
             </div>
             
             <div>
                 <label for="password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
-                <input type="password" id="password" name="password" required
-                    class="w-full bg-[#1e2640] border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <input type="password" id="password" name="password" required placeholder="••••••••"
+                    class="w-full bg-[#1e2640] border border-slate-700/40 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm">
             </div>
             
             <button type="submit" id="login-btn"
-                class="w-full bg-[#1d5bf7] hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-all mt-2 flex justify-center items-center gap-2">
+                class="w-full bg-[#1d5bf7] hover:bg-blue-600 active:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/10 transition-all mt-2 flex justify-center items-center gap-2 text-sm">
                 <span>Log In</span>
             </button>
         </form>
     </div>
 
-    <!-- 2. DASHBOARD SCREEN (Initially Hidden via 'hidden' class) -->
-    <div id="dashboard-screen" class="hidden w-full max-w-5xl flex flex-col gap-6 animate-fade-in">
-        <!-- Dashboard Header -->
-        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-            <div>
-                <h1 class="text-2xl font-bold text-white">Dispatch Dashboard</h1>
-                <p class="text-sm text-slate-400">Welcome back, dispatcher.</p>
-            </div>
-            <button onclick="logout()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-colors">
-                Log Out
-            </button>
-        </div>
 
-        <!-- Main Dashboard Layout Mock -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Example Chart / Grid Area where your tooltip lives -->
-            <div class="md:col-span-2 bg-[#151c2e] p-6 rounded-xl border border-slate-800/50 min-h-[300px] flex flex-col justify-between">
-                <p class="text-sm text-slate-400">Daily Progress Timeline (Hover map/chart tracking points to see metrics)</p>
-                <div class="h-48 bg-[#1e2640]/50 rounded-lg border border-dashed border-slate-700/60 flex items-center justify-center text-slate-500 text-xs">
-                    [ Main Dispatch Visual Map / Graph Grid Area ]
+    <div id="dashboard-screen" class="hidden w-full min-h-screen flex flex-col bg-[#0b0f19]">
+        
+        <header class="bg-[#151c2e] border-b border-slate-800/60 px-6 py-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white font-black p-2 rounded-lg text-xs tracking-wider">DT</div>
+                <div>
+                    <h2 class="text-lg font-bold text-white tracking-tight">Dispatch Tracker</h2>
+                    <span class="text-xs text-emerald-400 flex items-center gap-1.5 font-medium">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> System Live
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-semibold text-white">Active Dispatcher</p>
+                    <p class="text-xs text-slate-400" id="display-user">admin</p>
+                </div>
+                <button onclick="handleLogout()" 
+                    class="text-xs font-medium bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-colors border border-slate-700/30">
+                    Log Out
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-6 max-w-7xl w-full mx-auto grid grid-cols-1 gap-6">
+            
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-[#151c2e] p-4 rounded-xl border border-slate-800/40">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Picks</p>
+                    <p class="text-2xl font-bold text-white mt-1">14</p>
+                </div>
+                <div class="bg-[#151c2e] p-4 rounded-xl border border-slate-800/40">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Invoiced</p>
+                    <p class="text-2xl font-bold text-white mt-1">9</p>
+                </div>
+                <div class="bg-[#151c2e] p-4 rounded-xl border border-slate-800/40">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Loaded Orders</p>
+                    <p class="text-2xl font-bold text-emerald-400 mt-1">3</p>
+                </div>
+                <div class="bg-[#151c2e] p-4 rounded-xl border border-slate-800/40">
+                    <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Available Trucks</p>
+                    <p class="text-2xl font-bold text-amber-500 mt-1">0</p>
                 </div>
             </div>
 
-            <!-- The Metrics Tooltip Panel Component -->
-            <div class="flex flex-col items-center md:items-start">
-                <p class="text-xs text-slate-500 mb-2 uppercase tracking-widest font-bold">Metrics Breakdown</p>
-                
-                <div class="bg-[#262626] w-full max-w-xs p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white">
-                    <div class="font-bold text-base mb-3 text-slate-100">16:00</div>
+            <div class="bg-[#151c2e] p-6 rounded-xl border border-slate-800/40 flex flex-col min-h-[420px]">
+                <div class="mb-4">
+                    <h3 class="text-base font-bold text-white">Daily Progress Timeline</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Hover over any interactive metric node block below to review hour-by-hour status breakdowns.</p>
+                </div>
+
+                <div class="flex-1 min-h-[280px] bg-[#1a2238]/30 rounded-xl border border-slate-800 p-6 flex flex-col justify-between relative mt-4">
                     
-                    <ul class="space-y-2">
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#3b82f6] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">Pick: <strong class="text-white font-semibold">4</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#a855f7] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">PGI: <strong class="text-white font-semibold">4</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#ec4899] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">Invoice: <strong class="text-white font-semibold">3</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#06b6d4] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">DS Printed: <strong class="text-white font-semibold">3</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#f59e0b] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">Check: <strong class="text-white font-semibold">3</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#10b981] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">Loaded: <strong class="text-white font-semibold">1</strong></span>
-                        </li>
-                        <li class="flex items-center gap-2">
-                            <span class="w-4 h-4 bg-[#ef4444] rounded-sm shrink-0 border border-white/10"></span>
-                            <span class="text-neutral-300">Avail. Trucks: <strong class="text-white font-semibold">0</strong></span>
-                        </li>
-                    </ul>
+                    <div class="absolute inset-x-0 top-0 bottom-12 flex justify-between px-12 pointer-events-none">
+                        <div class="w-[1px] bg-slate-800/60 h-full"></div>
+                        <div class="w-[1px] bg-slate-800/60 h-full"></div>
+                        <div class="w-[1px] bg-slate-800/60 h-full"></div>
+                        <div class="w-[1px] bg-slate-800/60 h-full"></div>
+                    </div>
+
+                    <div class="w-full flex-1 flex justify-between items-end px-4 relative z-10">
+                        
+                        <div class="relative group flex flex-col items-center w-16">
+                            <div class="absolute bottom-full mb-4 hidden group-hover:block bg-[#262626] w-52 p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white transition-all z-35 animate-fade-in">
+                                <div class="font-bold text-base mb-3 text-slate-100">13:00</div>
+                                <ul class="space-y-2 text-xs font-normal">
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#3b82f6] rounded-sm shrink-0"></span><span>Pick: <strong>2</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#a855f7] rounded-sm shrink-0"></span><span>PGI: <strong>1</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ec4899] rounded-sm shrink-0"></span><span>Invoice: <strong>1</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#06b6d4] rounded-sm shrink-0"></span><span>DS Printed: <strong>0</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#f59e0b] rounded-sm shrink-0"></span><span>Check: <strong>0</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#10b981] rounded-sm shrink-0"></span><span>Loaded: <strong>0</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ef4444] rounded-sm shrink-0"></span><span>Avail. Trucks: <strong>4</strong></span></li>
+                                </ul>
+                            </div>
+                            <div class="flex -space-x-1.5 items-center justify-center transform hover:scale-105 transition-transform">
+                                <div class="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">2</div>
+                                <div class="w-6 h-6 rounded-full bg-[#a855f7] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">1</div>
+                            </div>
+                        </div>
+
+                        <div class="relative group flex flex-col items-center w-16">
+                            <div class="absolute bottom-full mb-4 hidden group-hover:block bg-[#262626] w-52 p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white transition-all z-35 animate-fade-in">
+                                <div class="font-bold text-base mb-3 text-slate-100">14:00</div>
+                                <ul class="space-y-2 text-xs font-normal">
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#3b82f6] rounded-sm shrink-0"></span><span>Pick: <strong>3</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#a855f7] rounded-sm shrink-0"></span><span>PGI: <strong>3</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ec4899] rounded-sm shrink-0"></span><span>Invoice: <strong>2</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#06b6d4] rounded-sm shrink-0"></span><span>DS Printed: <strong>2</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#f59e0b] rounded-sm shrink-0"></span><span>Check: <strong>1</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#10b981] rounded-sm shrink-0"></span><span>Loaded: <strong>1</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ef4444] rounded-sm shrink-0"></span><span>Avail. Trucks: <strong>2</strong></span></li>
+                                </ul>
+                            </div>
+                            <div class="flex -space-x-1.5 items-center justify-center transform hover:scale-105 transition-transform">
+                                <div class="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">3</div>
+                                <div class="w-6 h-6 rounded-full bg-[#ec4899] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">2</div>
+                                <div class="w-6 h-6 rounded-full bg-[#10b981] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">1</div>
+                            </div>
+                        </div>
+
+                        <div class="relative group flex flex-col items-center w-16">
+                            <div class="absolute bottom-full mb-4 hidden group-hover:block bg-[#262626] w-52 p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white transition-all z-35 animate-fade-in">
+                                <div class="font-bold text-base mb-3 text-slate-100">15:00</div>
+                                <ul class="space-y-2 text-xs font-normal">
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#3b82f6] rounded-sm shrink-0"></span><span>Pick: <strong>5</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#a855f7] rounded-sm shrink-0"></span><span>PGI: <strong>4</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ec4899] rounded-sm shrink-0"></span><span>Invoice: <strong>3</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#06b6d4] rounded-sm shrink-0"></span><span>DS Printed: <strong>3</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#f59e0b] rounded-sm shrink-0"></span><span>Check: <strong>2</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#10b981] rounded-sm shrink-0"></span><span>Loaded: <strong>1</strong></span></li>
+                                    <li class="flex items-center gap-2"><span class="w-3.5 h-3.5 bg-[#ef4444] rounded-sm shrink-0"></span><span>Avail. Trucks: <strong>1</strong></span></li>
+                                </ul>
+                            </div>
+                            <div class="flex -space-x-1.5 items-center justify-center transform hover:scale-105 transition-transform">
+                                <div class="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">5</div>
+                                <div class="w-6 h-6 rounded-full bg-[#a855f7] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">4</div>
+                                <div class="w-6 h-6 rounded-full bg-[#06b6d4] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">3</div>
+                            </div>
+                        </div>
+
+                        <div class="relative group flex flex-col items-center w-16">
+                            <div class="absolute bottom-full mb-4 hidden group-hover:block bg-[#262626] w-52 p-4 rounded-xl shadow-2xl border border-neutral-700/40 font-sans text-sm tracking-wide text-white transition-all z-50">
+                                <div class="font-bold text-base mb-3 text-slate-100">16:00</div>
+                                <ul class="space-y-2 text-xs font-normal">
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#3b82f6] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">Pick: <strong class="text-white font-semibold">4</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#a855f7] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">PGI: <strong class="text-white font-semibold">4</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#ec4899] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">Invoice: <strong class="text-white font-semibold">3</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#06b6d4] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">DS Printed: <strong class="text-white font-semibold">3</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#f59e0b] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">Check: <strong class="text-white font-semibold">3</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#10b981] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">Loaded: <strong class="text-white font-semibold">1</strong></span>
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="w-3.5 h-3.5 bg-[#ef4444] rounded-sm shrink-0 border border-white/10"></span>
+                                        <span class="text-neutral-300">Avail. Trucks: <strong class="text-white font-semibold">0</strong></span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="flex -space-x-1.5 items-center justify-center transform hover:scale-105 transition-transform">
+                                <div class="w-6 h-6 rounded-full bg-[#3b82f6] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">4</div>
+                                <div class="w-6 h-6 rounded-full bg-[#a855f7] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">4</div>
+                                <div class="w-6 h-6 rounded-full bg-[#ec4899] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">3</div>
+                                <div class="w-6 h-6 rounded-full bg-[#06b6d4] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">3</div>
+                                <div class="w-6 h-6 rounded-full bg-[#f59e0b] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">3</div>
+                                <div class="w-6 h-6 rounded-full bg-[#10b981] border-2 border-[#151c2e] text-[10px] font-bold flex items-center justify-center text-white">1</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="w-full pt-4 border-t border-slate-800/80 flex justify-between px-4 text-xs font-semibold text-slate-500 mt-2">
+                        <span class="w-16 text-center block">13:00</span>
+                        <span class="w-16 text-center block">14:00</span>
+                        <span class="w-16 text-center block">15:00</span>
+                        <span class="w-16 text-center block text-blue-400">16:00</span>
+                    </div>
+
                 </div>
             </div>
-        </div>
+
+        </main>
     </div>
 
-    <!-- INTERACTIVE SCRIPT -->
     <script>
-        function simulateLogin(event) {
-            // Prevent the browser from refreshing the page
+        function handleLogin(event) {
+            // Stop page from hard-refreshing
             event.preventDefault();
             
             const btn = document.getElementById('login-btn');
+            const usernameInput = document.getElementById('username');
             const loginScreen = document.getElementById('login-screen');
             const dashboardScreen = document.getElementById('dashboard-screen');
+            const displayUser = document.getElementById('display-user');
             
-            // 1. Show a quick visual loading state on the button
+            // 1. Toggle loading animation status state inside primary execution trigger
             btn.disabled = true;
             btn.innerHTML = `
-                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span>Connecting...</span>
+                <span>Authenticating Credentials...</span>
             `;
             
-            // 2. Simulate network delay (600ms) then switch views
+            // 2. Fast smooth screen swap transition delay logic simulations
             setTimeout(() => {
+                displayUser.innerText = usernameInput.value || "admin";
+                
+                // Hide Login Layer, show dashboard application workspace template views
                 loginScreen.classList.add('hidden');
                 dashboardScreen.classList.remove('hidden');
                 
-                // Reset button state for if they log back out later
+                // Reset authentication action trigger buttons gracefully
                 btn.disabled = false;
                 btn.innerHTML = '<span>Log In</span>';
-            }, 600);
+            }, 750);
         }
 
-        function logout() {
-            document.getElementById('dashboard-screen').classList.add('hidden');
-            document.getElementById('login-screen').classList.remove('hidden');
+        function handleLogout() {
+            const loginScreen = document.getElementById('login-screen');
+            const dashboardScreen = document.getElementById('dashboard-screen');
+            
+            dashboardScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            
+            // Reset form completely
             document.getElementById('login-form').reset();
         }
     </script>
