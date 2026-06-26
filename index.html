@@ -217,19 +217,22 @@
           </table>
         </div>
       </div>
-      <div class="flex gap-3 flex-1 min-h-0" style="min-height:380px">
+      
+      <div class="flex flex-col gap-4 flex-1 min-h-0">
         <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow flex-1 relative min-h-[340px] border dark:border-slate-800">
           <canvas id="activityChart"></canvas>
         </div>
-        <div class="flex flex-col gap-0 shrink-0 w-72">
-          <div class="bg-white dark:bg-slate-900 rounded-t-xl shadow border-b border-slate-100 dark:border-slate-800 px-4 py-2">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
-            <textarea id="dash-remarks-now" rows="3"
-              class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Type current remarks…"></textarea>
-          </div>
-          <div class="bg-white dark:bg-slate-900 shadow px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1 text-center">TRUCK POOL</div>
+        
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2 shrink-0">
+          <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
+          <textarea id="dash-remarks-now" rows="2"
+            class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            placeholder="Type current remarks…"></textarea>
+        </div>
+
+        <div class="flex flex-row gap-4 shrink-0 w-full items-stretch">
+          <div class="bg-white dark:bg-slate-900 shadow rounded-xl px-4 py-3 border dark:border-slate-800 flex-1">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-2 text-center">TRUCK POOL</div>
             <table class="text-xs border-collapse w-full">
               <thead>
                 <tr class="bg-slate-50 dark:bg-slate-800">
@@ -243,19 +246,23 @@
               <tbody id="dash-truckpool-tbody"></tbody>
             </table>
           </div>
-          <div class="bg-white dark:bg-slate-900 shadow px-4 py-2 border-b border-slate-100 dark:border-slate-800">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
-            <textarea id="dash-remarks-prev" rows="2"
-              class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Previous hour notes…"></textarea>
+
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow px-4 py-3 border dark:border-slate-800 flex-1 flex flex-col overflow-hidden">
+            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-2 text-center">TRUCK POOL — PLATES</div>
+            <div class="flex-1 overflow-y-auto">
+              <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
+                <thead id="dash-truckpool-plates-head"></thead>
+                <tbody id="dash-truckpool-plates-body"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="bg-white dark:bg-slate-900 rounded-b-xl shadow px-4 py-2 flex-1 overflow-y-auto">
-            <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1 text-center">TRUCK POOL — PLATES</div>
-            <table class="text-xs border-collapse w-full" id="dash-truckpool-plates-table">
-              <thead id="dash-truckpool-plates-head"></thead>
-              <tbody id="dash-truckpool-plates-body"></tbody>
-            </table>
-          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 shadow rounded-xl px-4 py-2 border dark:border-slate-800 shrink-0">
+          <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">POST TIME REMARKS — PREVIOUS HOURS</div>
+          <textarea id="dash-remarks-prev" rows="2"
+            class="w-full text-xs border border-slate-200 dark:border-slate-700 rounded p-1.5 resize-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            placeholder="Previous hour notes…"></textarea>
         </div>
       </div>
     </section>
@@ -300,8 +307,6 @@
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
     <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
     <select id="pick-name" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-      <option value="R. ISUGA">R. ISUGA</option>
-      <option value="E. ISIGE">E. ISIGE</option>
     </select>
     <div class="flex justify-end space-x-2">
       <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
@@ -318,7 +323,7 @@
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Bay Location</label>
     <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></select>
     <div class="flex justify-end space-x-2">
-      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-202 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
     </div>
   </div>
@@ -367,16 +372,10 @@
   </div>
 </div>
 <script>
-/* ======================================================================
-   CONFIG
-   ====================================================================== */
 const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 Chart.register(ChartDataLabels);
-/* ======================================================================
-   USERS & ROLE PERMISSIONS
-   ====================================================================== */
 const USERS = {
   admin:     { pass: 'superadmin', role: 'admin' },
   outbound:  { pass: 'outbound',   role: 'outbound' },
@@ -405,7 +404,6 @@ const App = {
     pendingRowEdit: null,
     chartInstance: null,
   },
-  /* ---------------- THEME ---------------- */
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
@@ -427,7 +425,6 @@ const App = {
     }
     this.refreshDashboardIfVisible();
   },
-  /* ---------------- SIDEBAR ---------------- */
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (sidebar.classList.contains('w-60')) {
@@ -438,7 +435,6 @@ const App = {
       sidebar.classList.add('w-60');
     }
   },
-  /* ---------------- AUTH ---------------- */
   login(e) {
     e.preventDefault();
     const u = document.getElementById('login-username').value.toLowerCase().trim();
@@ -457,7 +453,6 @@ const App = {
     }
   },
   logout() { location.reload(); },
-  /* ---------------- INIT ---------------- */
   async init() {
     this.initTheme();
     this.populateBaySelect();
@@ -489,7 +484,6 @@ const App = {
     ext.textContent = 'Extended';
     sel.appendChild(ext);
   },
-  /* ---------------- TABS / MODALS ---------------- */
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
@@ -511,7 +505,6 @@ const App = {
     this.state.pendingRowEdit = null;
     document.querySelectorAll('[id$="-modal"]').forEach(m => m.classList.add('hidden'));
   },
-  /* ---------------- RDD ---------------- */
   async loadRDDs() {
     const { data, error } = await supabaseClient.from('rdd_masters').select('*').order('rdd_date', { ascending: false });
     if (error) { console.error(error); return; }
@@ -571,7 +564,6 @@ const App = {
         <div class="text-2xl font-bold">${c.value}</div>
       </div>`).join('');
   },
-  /* ---------------- DISPATCHES ---------------- */
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
       .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
@@ -760,7 +752,6 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- ADMIN OVERRIDE ---------------- */
   openAdminEditModal(dispatch, step) {
     this.state.pendingMilestoneUpdate = { dispatch, step };
     const current = dispatch[`${step}_timestamp`];
@@ -803,7 +794,6 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- ADMIN: EDIT / DELETE DISPATCH ROW ---------------- */
   openRowEditModal(dispatchId) {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     this.state.pendingRowEdit = dispatch;
@@ -841,7 +831,6 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
   },
-  /* ---------------- TRUCKS ---------------- */
   async loadTrucks() {
     if (!this.state.currentRddId) {
       this.state.trucks = [];
@@ -900,7 +889,6 @@ const App = {
       grid.innerHTML += html;
     });
   },
-  /* ---------------- PERSONNEL ---------------- */
   async loadPersonnel() {
     const { data, error } = await supabaseClient.from('personnel').select('*').order('name', { ascending: true });
     if (error) { console.error(error); return; }
@@ -935,12 +923,10 @@ const App = {
     if (error) return alert(error.message);
     await this.loadPersonnel();
   },
-  /* ---------------- DASHBOARD ---------------- */
   renderDashboardSummary() {
     const total = this.state.dispatches.length;
     const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 
-    // Milestone progress table
     steps.forEach(step => {
       const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
       const pending = total - done;
@@ -953,10 +939,9 @@ const App = {
       if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    // Bay occupancy grid
     const bayMap = {};
     this.state.dispatches.forEach(d => {
-      if (d.checking_checked && d.bay_location && d.bay_location !== 'Extended') {
+      if (d.checking_checked && !d.loaded_checked && d.bay_location && d.bay_location !== 'Extended') {
         bayMap[d.bay_location] = d.dispatch_number;
       }
     });
@@ -978,7 +963,6 @@ const App = {
       });
     }
 
-    // Truck pool summary table
     const truckTypes = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     const tpTbody = document.getElementById('dash-truckpool-tbody');
     if (tpTbody) {
@@ -1012,7 +996,6 @@ const App = {
       tpTbody.innerHTML = rows;
     }
 
-    // Truck pool plates list
     const thead = document.getElementById('dash-truckpool-plates-head');
     const pbody = document.getElementById('dash-truckpool-plates-body');
     if (thead && pbody) {
@@ -1042,7 +1025,6 @@ const App = {
       }
     }
 
-    // Heading RDD label
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     if (rdd) {
       const d = new Date(rdd.rdd_date + 'T00:00:00');
@@ -1066,18 +1048,15 @@ const App = {
   renderChart() {
     const ctx = document.getElementById('activityChart').getContext('2d');
     if (this.state.chartInstance) this.state.chartInstance.destroy();
-
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#f1f5f9' : '#334155';
     const gridColor = isDark ? '#334155' : '#e2e8f0';
-
     const labels = Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
     const bucketOf = (isoString) => {
       if (!isoString) return null;
       const h = new Date(isoString).getHours();
       return (h - 5 + 24) % 24;
     };
-
     const nowBucket = bucketOf(new Date().toISOString());
     const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
@@ -1086,7 +1065,6 @@ const App = {
         if (b !== null) raw[step][b]++;
       });
     });
-
     const toCumulative = (arr) => {
       let running = 0;
       return arr.map((v, i) => {
@@ -1095,7 +1073,6 @@ const App = {
         return running;
       });
     };
-
     const availableTrend = Array(24).fill(0);
     this.state.trucks.forEach(t => {
       const addedB = bucketOf(t.created_at);
@@ -1108,13 +1085,11 @@ const App = {
       for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
     const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
-
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
     const dispatchCount = this.state.dispatches.length;
     const rawMax = Math.max(planCount, dispatchCount, 10);
     const yMax = Math.ceil(rawMax / 10) * 10;
-
     this.state.chartInstance = new Chart(ctx, {
       data: {
         labels,
@@ -1134,38 +1109,15 @@ const App = {
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { title: { display: true, text: 'Hour', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
-          y: {
-            beginAtZero: true,
-            max: yMax,
-            grace: '10%',
-            ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor },
-            title: { display: true, text: 'Cumulative Count', color: textColor },
-            grid: { color: gridColor }
-          },
+          y: { beginAtZero: true, max: yMax, grace: '10%', ticks: { stepSize: Math.max(1, Math.round(yMax / 10)), color: textColor }, title: { display: true, text: 'Cumulative Count', color: textColor }, grid: { color: gridColor } },
         },
         plugins: {
           legend: { labels: { color: textColor } },
-          datalabels: {
-            anchor: 'end',
-            align: 'end',
-            clamp: true,
-            offset: 2,
-            backgroundColor: (ctx) => ctx.dataset.backgroundColor,
-            borderRadius: 8,
-            padding: { top: 2, bottom: 2, left: 5, right: 5 },
-            font: { size: 10, weight: 'bold' },
-            color: '#fff',
-            display: (ctx) => {
-              const v = ctx.dataset.data[ctx.dataIndex];
-              return v !== null && v !== 0;
-            },
-            formatter: (value) => value,
-          },
+          datalabels: { anchor: 'end', align: 'end', clamp: true, offset: 2, backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8, padding: { top: 2, bottom: 2, left: 5, right: 5 }, font: { size: 10, weight: 'bold' }, color: '#fff', display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; }, formatter: (value) => value, },
         },
       },
     });
   },
-  /* ---------------- REALTIME ---------------- */
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
