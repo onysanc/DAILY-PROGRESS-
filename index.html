@@ -963,7 +963,7 @@ const App = {
     const truck_type = document.getElementById('truck-type-input').value;
     const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
     if (!plate_number) return alert('Enter a plate number.');
-    const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number });
+    const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number, created_at: new Date().toISOString() });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
     await this.loadTrucks();
@@ -1232,19 +1232,24 @@ const App = {
       });
     };
     const availableTrend = Array(24).fill(0);
+    // Debug: log truck data for chart diagnosis
+    console.log('[AvailTrend] nowBucket=', nowBucket, 'trucks=', this.state.trucks.map(t => ({ id: t.id, status: t.status, created_at: t.created_at, bucket: t.created_at ? bucketOf(t.created_at) : 'NULL' })));
     // Only count trucks that were not cancelled (cancelled ones never become available)
+    // If created_at is missing, fall back to bucket 0 (start of shift, 5:00)
     this.state.trucks.filter(t => t.status !== 'Cancelled').forEach(t => {
-      const addedB = bucketOf(t.created_at);
-      if (addedB === null) return;
-      for (let h = addedB; h < 24; h++) availableTrend[h]++;
+      const addedB = t.created_at ? bucketOf(t.created_at) : 0;
+      const safeB = (addedB === null || addedB === undefined) ? 0 : addedB;
+      // Clamp: if truck was added after nowBucket, show it starting at nowBucket
+      const startB = Math.min(safeB, nowBucket);
+      for (let h = startB; h < 24; h++) availableTrend[h]++;
     });
     // Subtract each truck when it got dispatched (loaded), using loaded_timestamp from dispatches
     this.state.trucks.filter(t => t.status === 'Dispatched').forEach(t => {
       const dispatch = this.state.dispatches.find(d => d.assigned_truck_id === t.id && d.loaded_checked);
       const ts = dispatch ? dispatch.loaded_timestamp : t.updated_at;
-      const b = bucketOf(ts);
-      if (b === null) return;
-      for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
+      const b = ts ? bucketOf(ts) : nowBucket;
+      const safeB = (b === null || b === undefined) ? nowBucket : b;
+      for (let h = safeB; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
     const cutFuture = (arr) => arr.map((v, i) => (i > nowBucket ? null : v));
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
