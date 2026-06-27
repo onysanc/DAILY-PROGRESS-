@@ -1584,6 +1584,7 @@ const App = {
             labels: { color: textColor, font: { size: 13, weight: 'bold' }, boxWidth: 16, boxHeight: 16, padding: 14 },
           },
           tooltip: { titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 }, padding: 10 },
+          enabled: false, // <-- Add this to disable the tooltip box
           datalabels: {
             anchor: 'end', align: 'end', clamp: true, offset: 5,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
