@@ -86,37 +86,37 @@
         <span>Dashboard</span>
       </button>
       <!-- 3. Available Trucks — admin, outbound, transport -->
-      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn trucks-tab-allowed hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-trucks',['admin','outbound','transport'])" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 18H5a2 2 0 01-2-2V8a2 2 0 012-2h3m0 12h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zm1-12h2l3 5v5h-5V6z"/></svg>
         <span>Available Trucks</span>
       </button>
       <!-- 4. Personnel — admin & outbound only -->
-      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn admin-outbound-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-personnel',['admin','outbound'])" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6 5.87a4 4 0 10-8 0m10-10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         <span>Personnel</span>
       </button>
       <!-- 5. Reports — admin & outbound only -->
-      <button onclick="App.switchTab('tab-reports')" id="btn-tab-reports" class="nav-btn admin-outbound-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-reports',['admin','outbound'])" id="btn-tab-reports" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span>Reports</span>
       </button>
       <!-- 6. Shift Compare — admin & outbound only -->
-      <button onclick="App.switchTab('tab-shift-compare')" id="btn-tab-shift-compare" class="nav-btn admin-outbound-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-shift-compare',['admin','outbound'])" id="btn-tab-shift-compare" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span>Shift Compare</span>
       </button>
-      <!-- 7. RDD Comparison (was RDD Summary) — admin & outbound only -->
-      <button onclick="App.switchTab('tab-rdd-summary')" id="btn-tab-rdd-summary" class="nav-btn admin-outbound-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 7. RDD Comparison — admin & outbound only -->
+      <button onclick="App.tryTab('tab-rdd-summary',['admin','outbound'])" id="btn-tab-rdd-summary" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span>RDD Comparison</span>
       </button>
       <!-- 8. Assignment History — admin & outbound only -->
-      <button onclick="App.switchTab('tab-assignment-history')" id="btn-tab-assignment-history" class="nav-btn admin-outbound-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-assignment-history',['admin','outbound'])" id="btn-tab-assignment-history" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Assignment History</span>
       </button>
       <!-- User Management — admin only -->
-      <button onclick="App.switchTab('tab-users')" id="btn-tab-users" class="nav-btn admin-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <button onclick="App.tryTab('tab-users',['admin'])" id="btn-tab-users" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/></svg>
         <span>User Management</span>
       </button>
@@ -849,22 +849,13 @@ const App = {
   async init() {
     this.initTheme();
     this.state.chartRemarks = {};
-    const role = this.state.currentUser.role;
-    const isAdmin = role === 'admin';
-    const isAdminOrOutbound = ['admin', 'outbound'].includes(role);
+    const isAdmin = this.state.currentUser.role === 'admin';
     if (isAdmin) {
       document.getElementById('actions-col-header').classList.remove('hidden');
       document.getElementById('add-picker-form').classList.remove('hidden');
       document.getElementById('add-checker-form').classList.remove('hidden');
-      document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
     } else {
       document.getElementById('personnel-admin-note').classList.remove('hidden');
-    }
-    if (isAdminOrOutbound) {
-      document.querySelectorAll('.admin-outbound-only').forEach(el => el.classList.remove('hidden'));
-    }
-    if (['admin', 'outbound', 'transport'].includes(role)) {
-      document.querySelectorAll('.trucks-tab-allowed').forEach(el => el.classList.remove('hidden'));
     }
     await this.loadRDDs();
     await this.loadTrucks();
@@ -933,6 +924,14 @@ const App = {
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
+  },
+  tryTab(tabId, allowedRoles) {
+    const role = this.state.currentUser?.role;
+    if (!allowedRoles.includes(role)) {
+      this.showToast(`🔒 Access restricted — ${allowedRoles.join(' / ')} only`, 'alert');
+      return;
+    }
+    this.switchTab(tabId);
   },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
