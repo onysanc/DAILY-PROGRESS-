@@ -21,6 +21,8 @@
   ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
   .dark ::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
   #live-summary-box{min-width:170px}
+  .sort-arrow{font-size:10px;opacity:0.7}
+  .filter-pill{transition:all 0.15s}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
@@ -64,6 +66,7 @@
       <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
       <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
       <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
+      <button onclick="App.switchTab('tab-rdd-summary')" id="btn-tab-rdd-summary" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">RDD Summary</button>
       <button onclick="App.switchTab('tab-users')" id="btn-tab-users" class="nav-btn admin-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">User Management</button>
     </nav>
     <div class="px-3 pb-2 min-w-[15rem]">
@@ -94,7 +97,21 @@
           <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
-      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-4 gap-3"></div>
+      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
+      <!-- Smart Alert Banner -->
+      <div id="dispatch-alert-banner" class="hidden mb-4 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
+        <span class="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
+        <div id="dispatch-alert-content" class="text-sm text-amber-800 dark:text-amber-200 flex-1"></div>
+      </div>
+      <!-- Quick Filter Pills -->
+      <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Filter:</span>
+        <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white">All</button>
+        <button onclick="App.setDispatchFilter('pending')" id="filter-pending" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Pending</button>
+        <button onclick="App.setDispatchFilter('stuck')" id="filter-stuck" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Stuck (&gt;30 min)</button>
+        <button onclick="App.setDispatchFilter('done')" id="filter-done" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Done</button>
+        <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
+      </div>
       <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-5 border dark:border-slate-800">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold">Add Dispatches</h2>
@@ -126,16 +143,16 @@
         <table class="w-full text-sm text-left whitespace-nowrap">
           <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
             <tr>
-              <th class="p-3">Type</th>
-              <th class="p-3">Dispatch No.</th>
-              <th class="p-3 text-center">Pick</th>
-              <th class="p-3 text-center">PGI</th>
-              <th class="p-3 text-center">Invoiced</th>
-              <th class="p-3 text-center">DS Printed</th>
-              <th class="p-3 text-center">Checking</th>
-              <th class="p-3 text-center">Loaded</th>
-              <th class="p-3">Status</th>
-              <th class="p-3 w-40">Progress</th>
+              <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('truck_type')">Type <span id="sort-truck_type" class="sort-arrow"></span></th>
+              <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('dispatch_number')">Dispatch No. <span id="sort-dispatch_number" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick')">Pick <span id="sort-pick" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pgi')">PGI <span id="sort-pgi" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('invoiced')">Invoiced <span id="sort-invoiced" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('ds_printed')">DS Printed <span id="sort-ds_printed" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('checking')">Checking <span id="sort-checking" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('loaded')">Loaded <span id="sort-loaded" class="sort-arrow"></span></th>
+              <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('status')">Status <span id="sort-status" class="sort-arrow"></span></th>
+              <th class="p-3 w-40 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('progress')">Progress <span id="sort-progress" class="sort-arrow"></span></th>
               <th id="actions-col-header" class="p-3 hidden">Actions</th>
             </tr>
           </thead>
@@ -302,6 +319,95 @@
         </div>
       </div>
     </section>
+    <!-- All-RDD Summary Tab -->
+    <section id="tab-rdd-summary" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 class="text-2xl font-bold">RDD Summary</h1>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-slate-500 dark:text-slate-400">All RDDs — click a row to switch to that RDD</span>
+        </div>
+      </div>
+      <!-- Overall stats strip -->
+      <div id="rdd-summary-overview" class="grid grid-cols-4 gap-3 mb-5"></div>
+      <!-- Milestone Funnel -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
+        <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-4">MILESTONE FUNNEL — CURRENT RDD</div>
+        <div id="rdd-funnel" class="flex items-end gap-2 h-28"></div>
+        <div class="flex gap-2 mt-2" id="rdd-funnel-labels"></div>
+      </div>
+      <!-- Step duration breakdown -->
+      <div class="grid grid-cols-2 gap-5 mb-5">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
+          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">STEP DURATION BREAKDOWN — CURRENT RDD</div>
+          <table class="w-full text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800">
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Step</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Avg Time</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Fastest</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Slowest</th>
+              </tr>
+            </thead>
+            <tbody id="step-duration-tbody"></tbody>
+          </table>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
+          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">PICKER LEADERBOARD — CURRENT RDD</div>
+          <table class="w-full text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800">
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">#</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Picker</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Picked</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Share</th>
+              </tr>
+            </thead>
+            <tbody id="picker-leaderboard-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Stuck dispatches + checker throughput -->
+      <div class="grid grid-cols-2 gap-5 mb-5">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
+          <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest mb-3">⚠ STUCK DISPATCHES — CURRENT RDD</div>
+          <div id="stuck-dispatches-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
+          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">CHECKER THROUGHPUT — CURRENT RDD</div>
+          <table class="w-full text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800">
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Checker</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Assigned</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Avg Duration</th>
+              </tr>
+            </thead>
+            <tbody id="checker-throughput-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- All-RDD table -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
+        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">ALL RDDs</div>
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 border-b dark:border-slate-700">
+            <tr>
+              <th class="p-3">RDD Date</th>
+              <th class="p-3 text-center">Plan</th>
+              <th class="p-3 text-center">Added</th>
+              <th class="p-3 text-center">Loaded</th>
+              <th class="p-3 text-center">Pending</th>
+              <th class="p-3 text-center">% Done</th>
+              <th class="p-3 text-center">Gap vs Plan</th>
+              <th class="p-3">Action</th>
+            </tr>
+          </thead>
+          <tbody id="all-rdd-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+        <div id="all-rdd-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No RDDs found.</div>
+      </div>
+    </section>
+
     <section id="tab-personnel" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-1">Personnel</h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span></p>
@@ -475,6 +581,9 @@ const App = {
     chartInstance: null,
     chartRemarks: {},
     chartYStep: 1,
+    dispatchFilter: 'all',
+    sortCol: null,
+    sortDir: 1,
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -615,6 +724,7 @@ const App = {
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
     if (tabId === 'tab-users') this.loadAppUsers();
+    if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
   },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
@@ -657,13 +767,20 @@ const App = {
   },
   async selectRDD(id) {
     this.state.currentRddId = id || null;
+    this.state.dispatchFilter = 'all';
+    this.state.sortCol = null;
+    this.state.sortDir = 1;
     document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
     document.getElementById('rdd-summary').classList.toggle('hidden', !id);
+    const filterBar = document.getElementById('dispatch-filter-bar');
+    if (filterBar) filterBar.classList.toggle('hidden', !id);
     if (!id) {
       this.state.dispatches = [];
       this.state.trucks = [];
       this.renderDispatches();
       this.renderTrucks();
+      const banner = document.getElementById('dispatch-alert-banner');
+      if (banner) banner.classList.add('hidden');
       return;
     }
     await this.loadDispatches();
@@ -677,17 +794,70 @@ const App = {
     const total = this.state.dispatches.length;
     const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
     const pending = total - loaded;
+    // ETA calculation: based on loaded per hour in last 2 hours
+    let etaStr = '—';
+    const now = Date.now();
+    const recentWindow = 2 * 60 * 60 * 1000;
+    const recentLoaded = this.state.dispatches.filter(d => d.loaded_checked && d.loaded_timestamp && (now - new Date(d.loaded_timestamp).getTime()) < recentWindow).length;
+    if (recentLoaded > 0 && pending > 0) {
+      const rate = recentLoaded / recentWindow; // per ms
+      const msLeft = pending / rate;
+      const eta = new Date(now + msLeft);
+      etaStr = eta.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } else if (pending === 0 && total > 0) {
+      etaStr = 'Complete ✓';
+    }
     const cards = [
-      { label: 'Initial Plan', value: rdd.initial_planning_count },
-      { label: 'Dispatches Added', value: total },
-      { label: 'Loaded / Done', value: loaded },
-      { label: 'Pending', value: pending },
+      { label: 'Initial Plan', value: rdd.initial_planning_count, color: '' },
+      { label: 'Dispatches Added', value: total, color: '' },
+      { label: 'Loaded / Done', value: loaded, color: 'text-emerald-600 dark:text-emerald-400' },
+      { label: 'Pending', value: pending, color: pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
+      { label: 'Est. Completion', value: etaStr, color: 'text-blue-600 dark:text-blue-400', small: typeof etaStr === 'string' && etaStr.length > 5 },
     ];
     box.innerHTML = cards.map(c => `
       <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
         <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
-        <div class="text-2xl font-bold">${c.value}</div>
+        <div class="${c.small ? 'text-lg' : 'text-2xl'} font-bold ${c.color || ''}">${c.value}</div>
       </div>`).join('');
+    // Smart alert banner
+    this.renderAlertBanner();
+  },
+  renderAlertBanner() {
+    const banner = document.getElementById('dispatch-alert-banner');
+    const content = document.getElementById('dispatch-alert-content');
+    if (!banner || !content || !this.state.currentRddId) { if (banner) banner.classList.add('hidden'); return; }
+    const now = Date.now();
+    const stuckMs = 30 * 60 * 1000;
+    const alerts = [];
+    // Alert 1: dispatches stuck at a step > 30 min
+    const STEPS_FLOW = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEP_NAMES = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    const stepStuckCounts = {};
+    this.state.dispatches.forEach(d => {
+      if (d.loaded_checked) return;
+      for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
+        const step = STEPS_FLOW[i];
+        if (d[`${step}_checked`]) {
+          const ts = d[`${step}_timestamp`];
+          if (ts && (now - new Date(ts).getTime()) > stuckMs) {
+            stepStuckCounts[step] = (stepStuckCounts[step] || 0) + 1;
+          }
+          break;
+        }
+      }
+    });
+    Object.entries(stepStuckCounts).forEach(([step, count]) => {
+      if (count >= 3) alerts.push(`<b>${count} dispatches</b> stuck at <b>${STEP_NAMES[step]}</b> for 30+ min`);
+    });
+    // Alert 2: checking dispatches need trucks but none available
+    const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
+    checkingTypes.forEach(type => {
+      const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
+      if (avail === 0) alerts.push(`No available <b>${type}</b> trucks — dispatches at Checking need one`);
+    });
+    if (alerts.length === 0) { banner.classList.add('hidden'); return; }
+    content.innerHTML = alerts.join('<br>');
+    banner.classList.remove('hidden');
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
@@ -1661,6 +1831,203 @@ const App = {
     (data || []).forEach(row => {
       this.state.chartRemarks[rddId][row.bucket] = row.remark;
     });
+  },
+  setDispatchFilter(filter) {
+    this.state.dispatchFilter = filter;
+    this.renderDispatches();
+  },
+  sortDispatches(col) {
+    if (this.state.sortCol === col) {
+      this.state.sortDir = (this.state.sortDir || 1) * -1;
+    } else {
+      this.state.sortCol = col;
+      this.state.sortDir = 1;
+    }
+    this.renderDispatches();
+  },
+  fmtDuration(ms) {
+    if (!ms || ms < 0) return '—';
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  },
+  async renderRDDSummaryTab() {
+    const allRdds = this.state.rdds;
+    // For each RDD we need dispatches count. Fetch from DB grouped.
+    const { data: allDisp } = await supabaseClient.from('dispatches').select('rdd_id, loaded_checked');
+    const dispMap = {};
+    (allDisp || []).forEach(d => {
+      if (!dispMap[d.rdd_id]) dispMap[d.rdd_id] = { total: 0, loaded: 0 };
+      dispMap[d.rdd_id].total++;
+      if (d.loaded_checked) dispMap[d.rdd_id].loaded++;
+    });
+    // All-RDD table
+    const tbody = document.getElementById('all-rdd-tbody');
+    const emptyEl = document.getElementById('all-rdd-empty');
+    if (!allRdds.length) { emptyEl.classList.remove('hidden'); tbody.innerHTML = ''; return; }
+    emptyEl.classList.add('hidden');
+    tbody.innerHTML = allRdds.map(rdd => {
+      const dm = dispMap[rdd.id] || { total: 0, loaded: 0 };
+      const pending = dm.total - dm.loaded;
+      const pct = dm.total > 0 ? Math.round((dm.loaded / dm.total) * 100) : 0;
+      const gap = dm.total - rdd.initial_planning_count;
+      const gapStr = gap > 0 ? `<span class="text-emerald-600 font-bold">+${gap}</span>` : gap < 0 ? `<span class="text-red-600 font-bold">${gap}</span>` : '<span class="text-slate-400">0</span>';
+      const isCurrent = rdd.id === this.state.currentRddId;
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isCurrent ? 'bg-blue-50 dark:bg-blue-900/20' : ''}">
+        <td class="p-3 font-semibold">${rdd.rdd_date}${isCurrent ? ' <span class="text-xs text-blue-500 font-normal">(current)</span>' : ''}</td>
+        <td class="p-3 text-center">${rdd.initial_planning_count}</td>
+        <td class="p-3 text-center">${dm.total}</td>
+        <td class="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">${dm.loaded}</td>
+        <td class="p-3 text-center font-bold text-amber-600 dark:text-amber-400">${pending}</td>
+        <td class="p-3 text-center">
+          <div class="flex items-center gap-2">
+            <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2"><div class="bg-blue-600 h-2 rounded-full" style="width:${pct}%"></div></div>
+            <span class="text-xs font-semibold w-9 text-right">${pct}%</span>
+          </div>
+        </td>
+        <td class="p-3 text-center">${gapStr}</td>
+        <td class="p-3"><button onclick="App.jumpToRDD('${rdd.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs font-semibold">Switch →</button></td>
+      </tr>`;
+    }).join('');
+    // Overview cards
+    const overview = document.getElementById('rdd-summary-overview');
+    if (overview) {
+      const totalRdds = allRdds.length;
+      const totalAdded = Object.values(dispMap).reduce((s, d) => s + d.total, 0);
+      const totalLoaded = Object.values(dispMap).reduce((s, d) => s + d.loaded, 0);
+      const totalPending = totalAdded - totalLoaded;
+      overview.innerHTML = [
+        { label: 'Total RDDs', value: totalRdds },
+        { label: 'Total Dispatches', value: totalAdded },
+        { label: 'Total Loaded', value: totalLoaded, color: 'text-emerald-600 dark:text-emerald-400' },
+        { label: 'Total Pending', value: totalPending, color: totalPending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
+      ].map(c => `<div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
+        <div class="text-2xl font-bold ${c.color || ''}">${c.value}</div>
+      </div>`).join('');
+    }
+    // Milestone funnel for current RDD
+    const funnelEl = document.getElementById('rdd-funnel');
+    const funnelLabels = document.getElementById('rdd-funnel-labels');
+    if (funnelEl && funnelLabels) {
+      const steps = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const names = ['Pick','PGI','Invoice','DS Print','Check','Loaded'];
+      const colors = ['#16a34a','#2563eb','#dc2626','#1e293b','#7c3aed','#0f766e'];
+      const total = this.state.dispatches.length;
+      const counts = steps.map(s => this.state.dispatches.filter(d => d[`${s}_checked`]).length);
+      const maxCount = Math.max(...counts, 1);
+      funnelEl.innerHTML = counts.map((c, i) => {
+        const h = total > 0 ? Math.round((c / maxCount) * 100) : 0;
+        return `<div class="flex-1 flex flex-col items-center justify-end gap-1">
+          <span class="text-xs font-bold" style="color:${colors[i]}">${c}</span>
+          <div class="w-full rounded-t" style="height:${h}px;background:${colors[i]};min-height:4px;opacity:0.85"></div>
+        </div>`;
+      }).join('');
+      funnelLabels.innerHTML = names.map((n, i) => `<div class="flex-1 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-400" style="color:${colors[i]}">${n}</div>`).join('');
+    }
+    // Step duration breakdown for current RDD
+    const durTbody = document.getElementById('step-duration-tbody');
+    if (durTbody) {
+      const steps2 = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const prevSteps = [null,'pick','pgi','invoiced','ds_printed','checking'];
+      const names2 = ['Pick','PGI','Invoiced','DS Printed','Checking','Loaded'];
+      durTbody.innerHTML = steps2.map((step, i) => {
+        const prev = prevSteps[i];
+        const durations = this.state.dispatches.filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
+          const endT = new Date(d[`${step}_timestamp`]).getTime();
+          const startT = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
+          return startT ? endT - startT : null;
+        }).filter(v => v !== null && v > 0);
+        if (!durations.length) return `<tr><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${names2[i]}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-slate-400" colspan="3">—</td></tr>`;
+        const avg = durations.reduce((s, v) => s + v, 0) / durations.length;
+        const min = Math.min(...durations);
+        const max = Math.max(...durations);
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${names2[i]}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center">${this.fmtDuration(avg)}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-emerald-600 dark:text-emerald-400">${this.fmtDuration(min)}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-amber-600 dark:text-amber-400">${this.fmtDuration(max)}</td>
+        </tr>`;
+      }).join('');
+    }
+    // Picker leaderboard
+    const pickerTbody = document.getElementById('picker-leaderboard-tbody');
+    if (pickerTbody) {
+      const pickerMap = {};
+      this.state.dispatches.filter(d => d.pick_checked && d.pick_assigned_name).forEach(d => {
+        pickerMap[d.pick_assigned_name] = (pickerMap[d.pick_assigned_name] || 0) + 1;
+      });
+      const sorted = Object.entries(pickerMap).sort((a, b) => b[1] - a[1]);
+      const totalPicked = sorted.reduce((s, [, c]) => s + c, 0);
+      pickerTbody.innerHTML = sorted.length ? sorted.map(([name, count], i) => {
+        const share = totalPicked > 0 ? Math.round((count / totalPicked) * 100) : 0;
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-400">${i + 1}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${name}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-blue-600 dark:text-blue-400">${count}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center"><div class="flex items-center gap-1"><div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5"><div class="bg-blue-500 h-1.5 rounded-full" style="width:${share}%"></div></div><span class="text-[10px] text-slate-400 w-7">${share}%</span></div></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="4" class="px-2 py-3 text-center text-slate-400 italic">No pick data yet</td></tr>';
+    }
+    // Checker throughput
+    const checkerTbody = document.getElementById('checker-throughput-tbody');
+    if (checkerTbody) {
+      const checkerMap = {};
+      this.state.dispatches.filter(d => d.checking_checked && d.checking_assigned_names).forEach(d => {
+        const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
+        const dur = (d.checking_timestamp && d.ds_printed_timestamp) ? new Date(d.checking_timestamp).getTime() - new Date(d.ds_printed_timestamp).getTime() : null;
+        names.forEach(n => {
+          if (!checkerMap[n]) checkerMap[n] = { count: 0, durs: [] };
+          checkerMap[n].count++;
+          if (dur && dur > 0) checkerMap[n].durs.push(dur);
+        });
+      });
+      const sorted = Object.entries(checkerMap).sort((a, b) => b[1].count - a[1].count);
+      checkerTbody.innerHTML = sorted.length ? sorted.map(([name, data]) => {
+        const avg = data.durs.length ? data.durs.reduce((s, v) => s + v, 0) / data.durs.length : null;
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${name}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-blue-600 dark:text-blue-400">${data.count}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center">${this.fmtDuration(avg)}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="3" class="px-2 py-3 text-center text-slate-400 italic">No checker data yet</td></tr>';
+    }
+    // Stuck dispatches list
+    const stuckList = document.getElementById('stuck-dispatches-list');
+    if (stuckList) {
+      const now2 = Date.now();
+      const stuckMs = 30 * 60 * 1000;
+      const STEPS_FLOW = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const STEP_NAMES2 = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+      const stuck = [];
+      this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
+        for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
+          const step = STEPS_FLOW[i];
+          if (d[`${step}_checked`]) {
+            const ts = d[`${step}_timestamp`];
+            if (ts) {
+              const elapsed = now2 - new Date(ts).getTime();
+              if (elapsed > stuckMs) stuck.push({ d, step, elapsed });
+            }
+            break;
+          }
+        }
+      });
+      stuck.sort((a, b) => b.elapsed - a.elapsed);
+      stuckList.innerHTML = stuck.length ? stuck.map(({ d, step, elapsed }) =>
+        `<div class="flex justify-between items-center px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+          <span class="font-semibold text-slate-800 dark:text-slate-200">${d.truck_type} ${d.dispatch_number}</span>
+          <span class="text-amber-700 dark:text-amber-300">@ ${STEP_NAMES2[step]} — <b>${this.fmtDuration(elapsed)}</b></span>
+        </div>`
+      ).join('') : '<div class="text-slate-400 italic text-center py-4">No stuck dispatches 🎉</div>';
+    }
+  },
+  async jumpToRDD(id) {
+    document.getElementById('rdd-selector').value = id;
+    await this.selectRDD(id);
+    this.switchTab('tab-dispatch');
   },
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
