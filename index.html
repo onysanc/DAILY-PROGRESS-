@@ -504,7 +504,7 @@ const App = {
   async init() {
     this.initTheme();
     this.populateBaySelect();
-    try { this.state.chartRemarks = JSON.parse(localStorage.getItem('dispatchChartRemarks') || '{}'); } catch (e) { this.state.chartRemarks = {}; }
+    this.state.chartRemarks = {};
     if (this.state.currentUser.role === 'admin') {
       document.getElementById('actions-col-header').classList.remove('hidden');
       document.getElementById('add-picker-form').classList.remove('hidden');
@@ -593,6 +593,7 @@ const App = {
     }
     await this.loadDispatches();
     await this.loadTrucks();
+    await this.loadChartRemarks(id);
   },
   renderRddSummary() {
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
@@ -1372,16 +1373,24 @@ const App = {
     const remarksForRdd = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || {};
     document.getElementById('chart-remark-input').value = remarksForRdd[bucket] || '';
   },
-  saveChartRemark() {
+  async saveChartRemark() {
     const rddId = this.state.currentRddId;
     if (!rddId) { this.closeModal('chart-remark-modal'); return; }
-    const bucket = document.getElementById('chart-remark-hour').value;
+    const bucket = parseInt(document.getElementById('chart-remark-hour').value, 10);
     const text = document.getElementById('chart-remark-input').value.trim().toUpperCase();
-    if (!this.state.chartRemarks) this.state.chartRemarks = {};
-    if (!this.state.chartRemarks[rddId]) this.state.chartRemarks[rddId] = {};
-    if (text) this.state.chartRemarks[rddId][bucket] = text;
-    else delete this.state.chartRemarks[rddId][bucket];
-    localStorage.setItem('dispatchChartRemarks', JSON.stringify(this.state.chartRemarks));
+    if (text) {
+      const { error } = await supabaseClient.from('chart_remarks')
+        .upsert({ rdd_id: rddId, bucket, remark: text }, { onConflict: 'rdd_id,bucket' })
+        .select();
+      if (error) { alert('Failed to save remark: ' + error.message); return; }
+      if (!this.state.chartRemarks[rddId]) this.state.chartRemarks[rddId] = {};
+      this.state.chartRemarks[rddId][bucket] = text;
+    } else {
+      const { error } = await supabaseClient.from('chart_remarks')
+        .delete().eq('rdd_id', rddId).eq('bucket', bucket);
+      if (error) { alert('Failed to clear remark: ' + error.message); return; }
+      if (this.state.chartRemarks[rddId]) delete this.state.chartRemarks[rddId][bucket];
+    }
     this.closeModal('chart-remark-modal');
     this.positionChartRemark();
   },
@@ -1419,11 +1428,28 @@ const App = {
       container.appendChild(tag);
     });
   },
+  async loadChartRemarks(rddId) {
+    const { data, error } = await supabaseClient.from('chart_remarks')
+      .select('bucket, remark').eq('rdd_id', rddId);
+    if (error) { console.error('loadChartRemarks error:', error); return; }
+    if (!this.state.chartRemarks) this.state.chartRemarks = {};
+    this.state.chartRemarks[rddId] = {};
+    (data || []).forEach(row => {
+      this.state.chartRemarks[rddId][row.bucket] = row.remark;
+    });
+  },
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches' }, () => { if (this.state.currentRddId) this.loadDispatches(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'available_trucks' }, () => this.loadTrucks())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rdd_masters' }, () => this.loadRDDs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chart_remarks' }, async (payload) => {
+        const rddId = payload.new?.rdd_id || payload.old?.rdd_id;
+        if (rddId && this.state.currentRddId) {
+          await this.loadChartRemarks(this.state.currentRddId);
+          this.positionChartRemark();
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .subscribe(status => {
         const el = document.getElementById('connection-status');
