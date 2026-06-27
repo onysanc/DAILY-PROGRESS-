@@ -63,11 +63,11 @@
     </div>
     <nav class="flex-1 p-3 space-y-1 min-w-[15rem]">
       <button onclick="App.switchTab('tab-dispatch')" id="btn-tab-dispatch" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg bg-blue-600">Dispatch Activity</button>
-      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
       <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
-      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
       <button onclick="App.switchTab('tab-rdd-summary')" id="btn-tab-rdd-summary" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">RDD Summary</button>
       <button onclick="App.switchTab('tab-users')" id="btn-tab-users" class="nav-btn admin-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">User Management</button>
+      <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn trucks-tab-allowed hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
+      <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
     </nav>
     <div class="px-3 pb-2 min-w-[15rem]">
       <button onclick="App.openModal('change-password-modal')" class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">🔑 Change Password</button>
@@ -98,11 +98,6 @@
         </div>
       </div>
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
-      <!-- Smart Alert Banner -->
-      <div id="dispatch-alert-banner" class="hidden mb-4 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
-        <span class="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
-        <div id="dispatch-alert-content" class="text-sm text-amber-800 dark:text-amber-200 flex-1"></div>
-      </div>
       <!-- Quick Filter Pills -->
       <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
         <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Filter:</span>
@@ -185,6 +180,11 @@
           &nbsp;<span class="text-slate-500 font-semibold dark:text-slate-400">AS OF</span>
           <span id="dashboard-heading-time" class="text-blue-700 dark:text-blue-400"></span>
         </h1>
+      </div>
+      <!-- Smart Alert Banner -->
+      <div id="dispatch-alert-banner" class="hidden mb-1 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
+        <span class="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
+        <div id="dispatch-alert-content" class="text-sm text-amber-800 dark:text-amber-200 flex-1"></div>
       </div>
       <div class="flex gap-3 flex-wrap">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden shrink-0 border dark:border-slate-800">
@@ -338,8 +338,11 @@
       <!-- Step duration breakdown -->
       <div class="grid grid-cols-2 gap-5 mb-5">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">STEP DURATION BREAKDOWN — CURRENT RDD</div>
-          <table class="w-full text-xs border-collapse">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">STEP DURATION BREAKDOWN — CURRENT RDD</div>
+            <button onclick="App.exportTableToCSV('step-duration-table','step-duration-breakdown.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
+          </div>
+          <table class="w-full text-xs border-collapse" id="step-duration-table">
             <thead>
               <tr class="bg-slate-50 dark:bg-slate-800">
                 <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Step</th>
@@ -352,8 +355,11 @@
           </table>
         </div>
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">PICKER LEADERBOARD — CURRENT RDD</div>
-          <table class="w-full text-xs border-collapse">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">PICKER LEADERBOARD — CURRENT RDD</div>
+            <button onclick="App.exportTableToCSV('picker-leaderboard-table','picker-leaderboard.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
+          </div>
+          <table class="w-full text-xs border-collapse" id="picker-leaderboard-table">
             <thead>
               <tr class="bg-slate-50 dark:bg-slate-800">
                 <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">#</th>
@@ -369,12 +375,18 @@
       <!-- Stuck dispatches + checker throughput -->
       <div class="grid grid-cols-2 gap-5 mb-5">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest mb-3">⚠ STUCK DISPATCHES — CURRENT RDD</div>
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest">⚠ STUCK DISPATCHES — CURRENT RDD</div>
+            <button onclick="App.exportStuckDispatchesCSV()" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
+          </div>
           <div id="stuck-dispatches-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
         </div>
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-3">CHECKER THROUGHPUT — CURRENT RDD</div>
-          <table class="w-full text-xs border-collapse">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">CHECKER THROUGHPUT — CURRENT RDD</div>
+            <button onclick="App.exportTableToCSV('checker-throughput-table','checker-throughput.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
+          </div>
+          <table class="w-full text-xs border-collapse" id="checker-throughput-table">
             <thead>
               <tr class="bg-slate-50 dark:bg-slate-800">
                 <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Checker</th>
@@ -500,13 +512,18 @@
   </div>
 </div>
 <div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[420px] border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
     <h2 class="text-lg font-bold mb-4">Checking Details</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Checkers (pick 1–6 from the pool)</label>
     <div id="checking-checkbox-list" class="border dark:border-slate-700 rounded-lg p-2 mb-1 max-h-40 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800"></div>
     <div id="checking-count-note" class="text-xs text-slate-400 mb-3"></div>
-    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Bay Location</label>
-    <select id="checking-bay" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></select>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Bay Location(s) — pick any number, or add a new bay</label>
+    <div id="checking-bay-checkbox-list" class="border dark:border-slate-700 rounded-lg p-2 mb-1 max-h-40 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800"></div>
+    <div id="checking-bay-count-note" class="text-xs text-slate-400 mb-2"></div>
+    <div class="flex space-x-2 mb-5">
+      <input type="text" id="checking-new-bay-input" placeholder="e.g. 9A or EXTENDED-2" class="flex-1 p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white uppercase">
+      <button type="button" onclick="App.addCustomBay()" class="bg-slate-700 text-white px-3 rounded-lg hover:bg-slate-800 text-sm font-semibold">+ Add Bay</button>
+    </div>
     <div class="flex justify-end space-x-2">
       <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.confirmMilestone('checking')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
@@ -683,7 +700,6 @@ const App = {
   },
   async init() {
     this.initTheme();
-    this.populateBaySelect();
     this.state.chartRemarks = {};
     const isAdmin = this.state.currentUser.role === 'admin';
     if (isAdmin) {
@@ -694,27 +710,59 @@ const App = {
     } else {
       document.getElementById('personnel-admin-note').classList.remove('hidden');
     }
+    if (['admin', 'outbound', 'transport'].includes(this.state.currentUser.role)) {
+      document.querySelectorAll('.trucks-tab-allowed').forEach(el => el.classList.remove('hidden'));
+    }
     await this.loadRDDs();
     await this.loadTrucks();
     await this.loadPersonnel();
     if (isAdmin) await this.loadAppUsers();
     this.setupRealtimeSubscriptions();
   },
-  populateBaySelect() {
-    const sel = document.getElementById('checking-bay');
-    sel.innerHTML = '';
+  getCustomBays() {
+    try { return JSON.parse(localStorage.getItem('dispatchTracker_customBays') || '[]'); } catch { return []; }
+  },
+  saveCustomBays(list) {
+    try { localStorage.setItem('dispatchTracker_customBays', JSON.stringify(list)); } catch {}
+  },
+  getAllBayOptions() {
+    const standard = [];
     for (let i = 1; i <= 8; i++) {
-      ['A', 'B', 'C'].forEach(letter => {
-        const opt = document.createElement('option');
-        opt.value = `${i}${letter}`;
-        opt.textContent = `${i}${letter}`;
-        sel.appendChild(opt);
-      });
+      ['A', 'B', 'C'].forEach(letter => standard.push(`${i}${letter}`));
     }
-    const ext = document.createElement('option');
-    ext.value = 'Extended';
-    ext.textContent = 'Extended';
-    sel.appendChild(ext);
+    standard.push('Extended');
+    const custom = this.getCustomBays();
+    return [...standard, ...custom.filter(b => !standard.includes(b))];
+  },
+  addCustomBay() {
+    const input = document.getElementById('checking-new-bay-input');
+    const val = input.value.trim().toUpperCase();
+    if (!val) return;
+    const all = this.getAllBayOptions();
+    if (all.includes(val)) { input.value = ''; return alert('That bay already exists in the list.'); }
+    const custom = this.getCustomBays();
+    custom.push(val);
+    this.saveCustomBays(custom);
+    input.value = '';
+    const checkedNow = [...document.querySelectorAll('#checking-bay-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
+    this.renderCheckingBayList([...checkedNow, val]);
+  },
+  renderCheckingBayList(selected = []) {
+    const list = document.getElementById('checking-bay-checkbox-list');
+    if (!list) return;
+    const options = this.getAllBayOptions();
+    list.innerHTML = options.map(b => `
+      <label class="flex items-center space-x-2 px-1 py-0.5">
+        <input type="checkbox" value="${b}" ${selected.includes(b) ? 'checked' : ''} onchange="App.updateBayCountNote()">
+        <span>${b}</span>
+      </label>`).join('');
+    this.updateBayCountNote();
+  },
+  updateBayCountNote() {
+    const boxes = document.querySelectorAll('#checking-bay-checkbox-list input[type=checkbox]');
+    const checked = [...boxes].filter(b => b.checked).length;
+    const note = document.getElementById('checking-bay-count-note');
+    if (note) note.textContent = `${checked} bay(s) selected — no limit, pick at least 1`;
   },
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -722,7 +770,7 @@ const App = {
     document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
-    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
+    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
     if (tabId === 'tab-users') this.loadAppUsers();
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
   },
@@ -768,6 +816,7 @@ const App = {
   async selectRDD(id) {
     this.state.currentRddId = id || null;
     this.state.dispatchFilter = 'all';
+    this.updateFilterPillStyles('all');
     this.state.sortCol = null;
     this.state.sortDir = 1;
     document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
@@ -946,20 +995,39 @@ const App = {
     }
     return ts;
   },
+  isDispatchStuck(d) {
+    if (d.loaded_checked) return false;
+    const STEPS_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
+      const step = STEPS_FLOW[i];
+      if (d[`${step}_checked`]) {
+        const ts = d[`${step}_timestamp`];
+        return !!(ts && (Date.now() - new Date(ts).getTime()) > 30 * 60 * 1000);
+      }
+    }
+    return false;
+  },
   renderDispatches() {
     const tbody = document.getElementById('dispatch-tbody');
     const emptyEl = document.getElementById('dispatch-empty');
+    const countEl = document.getElementById('dispatch-filter-count');
     tbody.innerHTML = '';
-    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); return; }
-    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); return; }
+    if (!this.state.currentRddId) { emptyEl.textContent = 'Select or create an RDD to see dispatches.'; emptyEl.classList.remove('hidden'); if (countEl) countEl.textContent = ''; return; }
+    if (!this.state.dispatches.length) { emptyEl.textContent = 'No dispatches yet for this RDD. Add one above.'; emptyEl.classList.remove('hidden'); if (countEl) countEl.textContent = ''; return; }
     const searchEl = document.getElementById('dispatch-search-input');
     const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
-    const visible = !q ? this.state.dispatches : this.state.dispatches.filter(d =>
+    const searched = !q ? this.state.dispatches : this.state.dispatches.filter(d =>
       String(d.dispatch_number).toLowerCase().includes(q) ||
       String(d.truck_type).toLowerCase().includes(q) ||
       String(d.status).toLowerCase().includes(q)
     );
-    if (!visible.length) { emptyEl.textContent = `No dispatches match “${q}”.`; emptyEl.classList.remove('hidden'); return; }
+    const filter = this.state.dispatchFilter || 'all';
+    let visible = searched;
+    if (filter === 'pending') visible = searched.filter(d => !d.loaded_checked && !this.isDispatchStuck(d));
+    else if (filter === 'stuck') visible = searched.filter(d => this.isDispatchStuck(d));
+    else if (filter === 'done') visible = searched.filter(d => d.loaded_checked);
+    if (countEl) countEl.textContent = `${visible.length} of ${this.state.dispatches.length} shown`;
+    if (!visible.length) { emptyEl.textContent = q ? `No dispatches match “${q}”.` : 'No dispatches match this filter.'; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
     const allowed = this.state.currentUser.permissions || [];
     visible.forEach(d => {
@@ -1035,6 +1103,59 @@ const App = {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   },
+  downloadCSV(csvBody, filename) {
+    const csv = '\uFEFF' + csvBody;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+  exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = [...table.querySelectorAll('tr')].filter(tr => tr.children.length);
+    if (!rows.length) return alert('Nothing to export yet.');
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csvRows = rows.map(tr => [...tr.children].map(cell => esc(cell.textContent.trim().replace(/\s+/g, ' '))).join(','));
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const rddLabel = rdd ? rdd.rdd_date : 'export';
+    this.downloadCSV(csvRows.join('\r\n'), `${rddLabel}-${filename}`);
+  },
+  exportStuckDispatchesCSV() {
+    const now = Date.now();
+    const stuckMs = 30 * 60 * 1000;
+    const STEPS_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const STEP_NAMES = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+    const stuck = [];
+    this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
+      for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
+        const step = STEPS_FLOW[i];
+        if (d[`${step}_checked`]) {
+          const ts = d[`${step}_timestamp`];
+          if (ts) {
+            const elapsed = now - new Date(ts).getTime();
+            if (elapsed > stuckMs) stuck.push({ d, step, elapsed });
+          }
+          break;
+        }
+      }
+    });
+    if (!stuck.length) return alert('No stuck dispatches to export.');
+    stuck.sort((a, b) => b.elapsed - a.elapsed);
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [['Type', 'Dispatch No.', 'Stuck At Step', 'Stuck Duration'].map(esc).join(',')];
+    stuck.forEach(({ d, step, elapsed }) => {
+      lines.push([d.truck_type, d.dispatch_number, STEP_NAMES[step], this.fmtDuration(elapsed)].map(esc).join(','));
+    });
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const rddLabel = rdd ? rdd.rdd_date : 'export';
+    this.downloadCSV(lines.join('\r\n'), `${rddLabel}-stuck-dispatches.csv`);
+  },
   handleMilestoneClick(event, dispatchId, step) {
     event.preventDefault();
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
@@ -1061,6 +1182,7 @@ const App = {
           <span>${p.name}</span>
         </label>`).join('');
       document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
+      this.renderCheckingBayList();
       this.openModal('checking-modal');
     } else if (step === 'loaded') {
       this.openLoadedModal(dispatch);
@@ -1090,7 +1212,9 @@ const App = {
       const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
       if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
       payload.checking_assigned_names = names;
-      payload.bay_location = document.getElementById('checking-bay').value;
+      const bays = [...document.querySelectorAll('#checking-bay-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
+      if (bays.length < 1) return alert('Select at least 1 bay.');
+      payload.bay_location = bays.join(', ');
     } else if (step === 'loaded') {
       const truckId = document.getElementById('loaded-truck').value;
       if (!truckId) return alert('Select a truck.');
@@ -1319,8 +1443,10 @@ const App = {
 
     const bayMap = {};
     this.state.dispatches.forEach(d => {
-      if (d.checking_checked && !d.loaded_checked && d.bay_location && d.bay_location !== 'Extended') {
-        bayMap[d.bay_location] = d.dispatch_number;
+      if (d.checking_checked && !d.loaded_checked && d.bay_location) {
+        String(d.bay_location).split(',').map(b => b.trim()).forEach(bay => {
+          if (bay && bay !== 'Extended') bayMap[bay] = d.dispatch_number;
+        });
       }
     });
     const tbody = document.getElementById('dash-bay-tbody');
@@ -1583,9 +1709,7 @@ const App = {
             align: 'start',
             labels: { color: textColor, font: { size: 13, weight: 'bold' }, boxWidth: 16, boxHeight: 16, padding: 14 },
           },
-          tooltip: { titleFont: { size: 14, weight: 'bold' }, bodyFont: { size: 13 }, padding: 10 },
-          enabled: false, // <-- Add this to disable the tooltip box
-          hover: { mode: null },
+          tooltip: { enabled: false },
           datalabels: {
             anchor: 'end', align: 'end', clamp: true, offset: 5,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
@@ -1834,8 +1958,22 @@ const App = {
       this.state.chartRemarks[rddId][row.bucket] = row.remark;
     });
   },
+  updateFilterPillStyles(filter) {
+    ['all', 'pending', 'stuck', 'done'].forEach(f => {
+      const btn = document.getElementById(`filter-${f}`);
+      if (!btn) return;
+      if (f === filter) {
+        btn.classList.add('bg-blue-600', 'text-white');
+        btn.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-300');
+      } else {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-300');
+      }
+    });
+  },
   setDispatchFilter(filter) {
     this.state.dispatchFilter = filter;
+    this.updateFilterPillStyles(filter);
     this.renderDispatches();
   },
   sortDispatches(col) {
