@@ -615,7 +615,7 @@ const App = {
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
-      .eq('rdd_id', this.state.currentRddId).order('created_at', { ascending: true });
+      .eq('rdd_id', this.state.currentRddId).order('seq', { ascending: true });
     if (error) { console.error(error); return; }
     this.state.dispatches = data;
     this.renderDispatches();
@@ -688,6 +688,18 @@ const App = {
       alert(report);
     }
   },
+  milestoneTooltip(d, step) {
+    const ts = d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '';
+    if (step === 'pick' && d.pick_assigned_name) return `${ts} — Picker: ${d.pick_assigned_name}`;
+    if (step === 'checking') {
+      const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join(', ') : (d.checking_assigned_names || '');
+      const bits = [ts];
+      if (names) bits.push(`Checkers: ${names}`);
+      if (d.bay_location) bits.push(`Bay: ${d.bay_location}`);
+      return bits.join(' — ');
+    }
+    return ts;
+  },
   renderDispatches() {
     const tbody = document.getElementById('dispatch-tbody');
     const emptyEl = document.getElementById('dispatch-empty');
@@ -716,7 +728,7 @@ const App = {
         const hasPermission = allowed.includes(step);
         const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
         const tip = isChecked
-          ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '')
+          ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
         html += `<td class="p-3 text-center" title="${tip}">
                     <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
@@ -750,14 +762,18 @@ const App = {
       String(d.status).toLowerCase().includes(q)
     );
     if (!rows.length) return alert('No dispatches match the current search to export.');
-    const headers = ['Type', 'Dispatch No.', 'Pick', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Loaded', 'Status', 'Progress %'];
+    const headers = ['Type', 'Dispatch No.', 'Pick', 'Picker', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Checker(s)', 'Bay', 'Loaded', 'Status', 'Progress %'];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [headers.map(esc).join(',')];
     rows.forEach(d => {
       const cell = (step) => d[`${step}_checked`] ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : 'Done') : '';
+      const checkerNames = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join('; ') : (d.checking_assigned_names || '');
       lines.push([
         d.truck_type, d.dispatch_number,
-        cell('pick'), cell('pgi'), cell('invoiced'), cell('ds_printed'), cell('checking'), cell('loaded'),
+        cell('pick'), d.pick_assigned_name || '',
+        cell('pgi'), cell('invoiced'), cell('ds_printed'),
+        cell('checking'), checkerNames, d.bay_location || '',
+        cell('loaded'),
         d.status, d.progress || 0,
       ].map(esc).join(','));
     });
