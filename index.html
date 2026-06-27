@@ -230,13 +230,23 @@
         <div id="chart-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col flex-1 min-h-[550px] relative transition-all duration-300">
           <div class="flex justify-between items-center mb-2 shrink-0">
             <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Activity Timeline</h2>
-            <button onclick="App.toggleChartExpand()" id="chart-resize-btn" title="Resize chart" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
-              <svg id="chart-resize-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-            </button>
+            <div class="flex items-center gap-3">
+              <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Click chart to add a remark</span>
+              <button onclick="App.openChartRemarkModal()" title="Add remark" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button onclick="App.toggleChartExpand()" id="chart-resize-btn" title="Resize chart" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+                <svg id="chart-resize-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+              </button>
+            </div>
           </div>
           <div id="live-summary-box" class="absolute top-12 right-5 z-10 bg-slate-900/95 text-white rounded-xl shadow-xl px-4 py-3 text-[13px] leading-tight hidden pointer-events-none"></div>
           <div class="relative flex-1 min-h-0">
-            <canvas id="activityChart"></canvas>
+            <canvas id="activityChart" class="cursor-pointer"></canvas>
+            <div id="chart-remark-tag" class="hidden absolute z-20 -translate-x-1/2 -translate-y-full px-3 py-1.5 bg-amber-500 text-white text-[11px] font-extrabold uppercase tracking-wide rounded-lg shadow-lg whitespace-nowrap cursor-pointer ring-2 ring-white dark:ring-slate-900" onclick="App.openChartRemarkModal(event)">
+              <span id="chart-remark-tag-text"></span>
+              <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-amber-500 rotate-45"></div>
+            </div>
           </div>
         </div>
         
@@ -306,6 +316,21 @@
       </div>
     </section>
   </main>
+</div>
+<div id="chart-remark-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
+    <h2 class="text-lg font-bold mb-4">Chart Remark</h2>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Shown above the highest bar on the timeline</label>
+    <input type="text" id="chart-remark-input" maxlength="60" placeholder="e.g. LOADING DELAYED CONGESTION"
+           class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white uppercase">
+    <div class="flex justify-between items-center">
+      <button onclick="App.clearChartRemark()" class="px-3 py-2 text-red-600 dark:text-red-400 text-sm font-semibold hover:underline">Clear Remark</button>
+      <div class="flex space-x-2">
+        <button onclick="App.closeModal('chart-remark-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+        <button onclick="App.saveChartRemark()" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold">Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="rdd-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
@@ -421,6 +446,7 @@ const App = {
     pendingMilestoneUpdate: null,
     pendingRowEdit: null,
     chartInstance: null,
+    chartRemarks: {},
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -452,6 +478,7 @@ const App = {
       sidebar.classList.remove('w-0');
       sidebar.classList.add('w-60');
     }
+    setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
   },
   login(e) {
     e.preventDefault();
@@ -474,6 +501,7 @@ const App = {
   async init() {
     this.initTheme();
     this.populateBaySelect();
+    try { this.state.chartRemarks = JSON.parse(localStorage.getItem('dispatchChartRemarks') || '{}'); } catch (e) { this.state.chartRemarks = {}; }
     if (this.state.currentUser.role === 'admin') {
       document.getElementById('actions-col-header').classList.remove('hidden');
       document.getElementById('add-picker-form').classList.remove('hidden');
@@ -1145,7 +1173,7 @@ const App = {
     icon.innerHTML = expanded
       ? '<path stroke-linecap="round" stroke-linejoin="round" d="M9 9V5m0 4H5m4 0L4 4m6 11v4m0-4H5m5 0l-5 5m11-15v4m0-4h4m-4 0l5-5m-5 15v4m0-4h4m-4 0l5 5"/>'
       : '<path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>';
-    setTimeout(() => { if (this.state.chartInstance) this.state.chartInstance.resize(); }, 310);
+    setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
   },
   startDashboardClock() {
     const tick = () => {
@@ -1208,7 +1236,6 @@ const App = {
     const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
     const dispatchCount = this.state.dispatches.length;
     const rawMax = Math.max(planCount, dispatchCount, 10);
-    const yMax = Math.ceil(rawMax / 10) * 10;
     const series = [
       { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
       { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
@@ -1222,6 +1249,9 @@ const App = {
 
     // Target line = whichever is higher: initial plan or actual dispatches entered
     const targetCount = Math.max(planCount, dispatchCount);
+    // Fix the Y-axis height to the target so the chart doesn't keep rescaling;
+    // only grow past it if actual data genuinely exceeds the target.
+    const axisMax = Math.max(targetCount, rawMax, 1);
     const targetLineDataset = {
       type: 'line',
       label: `Target (${targetCount})`,
@@ -1263,6 +1293,7 @@ const App = {
         layout: { padding: { top: 18 } },
         categoryPercentage: 0.65,
         barPercentage: 0.85,
+        onClick: () => this.openChartRemarkModal(),
         scales: {
           x: {
             title: { display: true, text: 'Hour', color: textColor, font: { size: 14, weight: 'bold' } },
@@ -1270,7 +1301,9 @@ const App = {
             grid: { color: gridColor },
           },
           y: {
-            beginAtZero: true, grace: 1,	
+            beginAtZero: true,
+            min: 0,
+            max: axisMax,
             autoSkip: false,
             ticks: { stepSize: 1, color: textColor, font: { size: 13 } },
             title: { display: true, text: 'Cumulative Count', color: textColor, font: { size: 14, weight: 'bold' } },
@@ -1294,6 +1327,51 @@ const App = {
         },
       },
     });
+    this.positionChartRemark();
+  },
+  openChartRemarkModal() {
+    const rddId = this.state.currentRddId;
+    const current = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || '';
+    document.getElementById('chart-remark-input').value = current;
+    this.openModal('chart-remark-modal');
+  },
+  saveChartRemark() {
+    const rddId = this.state.currentRddId;
+    if (!rddId) { this.closeModal('chart-remark-modal'); return; }
+    const text = document.getElementById('chart-remark-input').value.trim().toUpperCase();
+    if (!this.state.chartRemarks) this.state.chartRemarks = {};
+    if (text) this.state.chartRemarks[rddId] = text;
+    else delete this.state.chartRemarks[rddId];
+    localStorage.setItem('dispatchChartRemarks', JSON.stringify(this.state.chartRemarks));
+    this.closeModal('chart-remark-modal');
+    this.positionChartRemark();
+  },
+  clearChartRemark() {
+    document.getElementById('chart-remark-input').value = '';
+    this.saveChartRemark();
+  },
+  positionChartRemark() {
+    const tag = document.getElementById('chart-remark-tag');
+    const chart = this.state.chartInstance;
+    if (!tag || !chart) return;
+    const rddId = this.state.currentRddId;
+    const text = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || '';
+    if (!text) { tag.classList.add('hidden'); return; }
+    let best = null;
+    chart.data.datasets.forEach((ds, di) => {
+      if (ds.type !== 'bar') return;
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((el, i) => {
+        const v = ds.data[i];
+        if (v === null || v === undefined) return;
+        if (!best || v > best.v) best = { v, el };
+      });
+    });
+    if (!best) { tag.classList.add('hidden'); return; }
+    document.getElementById('chart-remark-tag-text').textContent = text;
+    tag.style.left = best.el.x + 'px';
+    tag.style.top = (best.el.y - 8) + 'px';
+    tag.classList.remove('hidden');
   },
   setupRealtimeSubscriptions() {
     supabaseClient.channel('dispatch-app-realtime')
@@ -1307,6 +1385,10 @@ const App = {
       });
   },
 };
+window.addEventListener('resize', () => {
+  clearTimeout(window._chartRemarkResizeT);
+  window._chartRemarkResizeT = setTimeout(() => App.positionChartRemark(), 200);
+});
 </script>
 </body>
 </html>
