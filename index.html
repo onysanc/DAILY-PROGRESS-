@@ -801,7 +801,7 @@ const App = {
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
         const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
         const hasPermission = allowed.includes(step);
-        const clickable = isChecked ? (role === 'admin') : (chronologyMet && hasPermission);
+        const clickable = isChecked ? (this.state.currentUser.role === 'admin') : (chronologyMet && hasPermission);
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
@@ -817,7 +817,7 @@ const App = {
                     <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
                   </div>
                 </td>`;
-      if (role === 'admin') {
+      if (this.state.currentUser.role === 'admin') {
         html += `<td class="p-3">
                     <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>
                     <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>
