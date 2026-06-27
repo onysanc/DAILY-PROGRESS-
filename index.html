@@ -27,7 +27,7 @@
 <div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
   <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-2xl w-96 border dark:border-slate-800">
     <h1 class="text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">Dispatch Tracker</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in with your username.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in with your credentials.</p>
     <form onsubmit="App.login(event)" class="space-y-4">
       <div>
         <label class="block text-sm font-semibold mb-1">Username</label>
@@ -37,7 +37,12 @@
         <label class="block text-sm font-semibold mb-1">Password</label>
         <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
       </div>
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="login-remember" class="w-4 h-4 rounded accent-blue-600">
+        <label for="login-remember" class="text-sm text-slate-600 dark:text-slate-400 select-none">Remember me for 7 days</label>
+      </div>
       <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
+      <div id="login-loading" class="hidden text-blue-600 text-sm font-semibold text-center">Signing in…</div>
       <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
     </form>
   </div>
@@ -59,7 +64,11 @@
       <button onclick="App.switchTab('tab-trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Available Trucks</button>
       <button onclick="App.switchTab('tab-analytics')" id="btn-tab-analytics" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Dashboard</button>
       <button onclick="App.switchTab('tab-personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">Personnel</button>
+      <button onclick="App.switchTab('tab-users')" id="btn-tab-users" class="nav-btn admin-only hidden w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800">User Management</button>
     </nav>
+    <div class="px-3 pb-2 min-w-[15rem]">
+      <button onclick="App.openModal('change-password-modal')" class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition">🔑 Change Password</button>
+    </div>
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]" id="connection-status">●  connecting…</div>
   </aside>
   <main class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
@@ -315,6 +324,32 @@
         </div>
       </div>
     </section>
+
+    <section id="tab-users" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-5">
+        <h1 class="text-2xl font-bold">User Management</h1>
+        <button onclick="App.openAddUserModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 text-sm font-semibold">+ Add User</button>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
+            <tr>
+              <th class="p-3">Username</th>
+              <th class="p-3">Role</th>
+              <th class="p-3 text-center">Pick</th>
+              <th class="p-3 text-center">PGI</th>
+              <th class="p-3 text-center">Invoiced</th>
+              <th class="p-3 text-center">DS Printed</th>
+              <th class="p-3 text-center">Checking</th>
+              <th class="p-3 text-center">Loaded</th>
+              <th class="p-3 text-center">Cancel Truck</th>
+              <th class="p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 </div>
 <div id="chart-remark-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -420,33 +455,23 @@ const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 Chart.register(ChartDataLabels);
-const USERS = {
-  admin:     { pass: 'superadmin', role: 'admin' },
-  outbound:  { pass: 'outbound',   role: 'outbound' },
-  pgi:       { pass: 'pgi',        role: 'pgi' },
-  invoice:   { pass: 'invoice',    role: 'invoice' },
-  transport: { pass: 'transport',  role: 'transport' },
-};
-const ROLE_PERMISSIONS = {
-  admin:     ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'],
-  outbound:  ['pick', 'pgi', 'ds_printed', 'checking', 'loaded'],
-  pgi:       ['pgi'],
-  invoice:   ['invoiced'],
-  transport: ['ds_printed', 'loaded'],
-};
-const TRUCK_CANCEL_ROLES = ['admin', 'outbound', 'transport'];
+// ROLE_PERMISSIONS and TRUCK_CANCEL_ROLES are now dynamic per user from DB
+// Kept as runtime state on App.state.currentUser
+const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const App = {
   state: {
-    currentUser: null,
+    currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
     currentRddId: null,
     rdds: [],
     dispatches: [],
     trucks: [],
     personnel: [],
+    appUsers: [],        // for User Management tab
     pendingMilestoneUpdate: null,
     pendingRowEdit: null,
+    pendingUserId: null,
     chartInstance: null,
     chartRemarks: {},
     chartYStep: 1,
@@ -483,38 +508,87 @@ const App = {
     }
     setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
   },
-  login(e) {
+  async login(e) {
     e.preventDefault();
     const u = document.getElementById('login-username').value.toLowerCase().trim();
     const p = document.getElementById('login-password').value;
+    const remember = document.getElementById('login-remember').checked;
     const errEl = document.getElementById('login-error');
-    if (USERS[u] && USERS[u].pass === p) {
-      this.state.currentUser = { username: u, role: USERS[u].role };
-      errEl.classList.add('hidden');
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('app-wrapper').classList.remove('hidden');
-      document.getElementById('display-username').textContent = u.toUpperCase();
-      document.getElementById('display-role').textContent = USERS[u].role.toUpperCase();
-      this.init();
-    } else {
+    const loadEl = document.getElementById('login-loading');
+    errEl.classList.add('hidden');
+    loadEl.classList.remove('hidden');
+    try {
+      const { data, error } = await supabaseClient
+        .from('app_users')
+        .select('id, username, role, password_plain, permissions, can_cancel_truck')
+        .eq('username', u)
+        .single();
+      loadEl.classList.add('hidden');
+      if (error || !data || data.password_plain !== p) {
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const user = {
+        id: data.id,
+        username: data.username,
+        role: data.role,
+        permissions: Array.isArray(data.permissions) ? data.permissions : [],
+        canCancelTruck: !!data.can_cancel_truck,
+      };
+      this.state.currentUser = user;
+      if (remember) {
+        const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        localStorage.setItem('dispatch_session', JSON.stringify({ user, expires }));
+      } else {
+        localStorage.removeItem('dispatch_session');
+      }
+      this.showApp();
+    } catch(ex) {
+      loadEl.classList.add('hidden');
+      errEl.textContent = 'Login error. Try again.';
       errEl.classList.remove('hidden');
     }
   },
-  logout() { location.reload(); },
+  showApp() {
+    const user = this.state.currentUser;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-wrapper').classList.remove('hidden');
+    document.getElementById('display-username').textContent = user.username.toUpperCase();
+    document.getElementById('display-role').textContent = user.role.toUpperCase();
+    this.init();
+  },
+  logout() {
+    localStorage.removeItem('dispatch_session');
+    location.reload();
+  },
+  checkRememberedSession() {
+    try {
+      const raw = localStorage.getItem('dispatch_session');
+      if (!raw) return false;
+      const { user, expires } = JSON.parse(raw);
+      if (!user || Date.now() > expires) { localStorage.removeItem('dispatch_session'); return false; }
+      this.state.currentUser = user;
+      this.showApp();
+      return true;
+    } catch { return false; }
+  },
   async init() {
     this.initTheme();
     this.populateBaySelect();
     this.state.chartRemarks = {};
-    if (this.state.currentUser.role === 'admin') {
+    const isAdmin = this.state.currentUser.role === 'admin';
+    if (isAdmin) {
       document.getElementById('actions-col-header').classList.remove('hidden');
       document.getElementById('add-picker-form').classList.remove('hidden');
       document.getElementById('add-checker-form').classList.remove('hidden');
+      document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
     } else {
       document.getElementById('personnel-admin-note').classList.remove('hidden');
     }
     await this.loadRDDs();
     await this.loadTrucks();
     await this.loadPersonnel();
+    if (isAdmin) await this.loadAppUsers();
     this.setupRealtimeSubscriptions();
   },
   populateBaySelect() {
@@ -540,6 +614,7 @@ const App = {
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); }
+    if (tabId === 'tab-users') this.loadAppUsers();
   },
   openModal(id) { document.getElementById(id).classList.remove('hidden'); },
   closeModal(id) { document.getElementById(id).classList.add('hidden'); },
@@ -716,8 +791,7 @@ const App = {
     );
     if (!visible.length) { emptyEl.textContent = `No dispatches match “${q}”.`; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
-    const role = this.state.currentUser.role;
-    const allowed = ROLE_PERMISSIONS[role] || [];
+    const allowed = this.state.currentUser.permissions || [];
     visible.forEach(d => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
@@ -975,7 +1049,7 @@ const App = {
       grid.innerHTML = `<div class="col-span-3 p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD plan to see the active fleet.</div>`;
       return;
     }
-    const canCancel = TRUCK_CANCEL_ROLES.includes(this.state.currentUser.role);
+    const canCancel = this.state.currentUser.canCancelTruck || this.state.currentUser.role === 'admin';
     const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     types.forEach(type => {
       const all = this.state.trucks.filter(t => t.truck_type === type);
@@ -1437,6 +1511,147 @@ const App = {
       container.appendChild(tag);
     });
   },
+  // ═══════════════════════════════════════════════════════
+  // USER MANAGEMENT
+  // ═══════════════════════════════════════════════════════
+  async loadAppUsers() {
+    const { data, error } = await supabaseClient.from('app_users')
+      .select('id, username, role, permissions, can_cancel_truck')
+      .order('username', { ascending: true });
+    if (error) { console.error(error); return; }
+    this.state.appUsers = data || [];
+    this.renderUsers();
+  },
+  renderUsers() {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
+    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    tbody.innerHTML = this.state.appUsers.map(u => {
+      const perms = Array.isArray(u.permissions) ? u.permissions : [];
+      const checkCells = steps.map(s =>
+        `<td class="p-3 text-center">${perms.includes(s)
+          ? '<span class="text-emerald-500 font-bold">✓</span>'
+          : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>`
+      ).join('');
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+        <td class="p-3 font-semibold">${u.username}</td>
+        <td class="p-3"><span class="px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${u.role}</span></td>
+        ${checkCells}
+        <td class="p-3 text-center">${u.can_cancel_truck
+          ? '<span class="text-emerald-500 font-bold">✓</span>'
+          : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>
+        <td class="p-3">
+          <button onclick="App.openEditUserModal('${u.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs font-semibold mr-2">Edit</button>
+          <button onclick="App.openAdminResetPassword('${u.id}')" class="text-amber-600 dark:text-amber-400 hover:text-amber-800 text-xs font-semibold">Reset PW</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="10" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
+  },
+  openAddUserModal() {
+    this.state.pendingUserId = null;
+    document.getElementById('user-modal-title').textContent = 'Add User';
+    document.getElementById('um-username').value = '';
+    document.getElementById('um-username').disabled = false;
+    document.getElementById('um-role').value = 'outbound';
+    document.getElementById('um-password').value = '';
+    document.getElementById('um-pass-hint').textContent = '(required for new user)';
+    document.getElementById('um-delete-btn').classList.add('hidden');
+    ['pick','pgi','invoiced','ds_printed','checking','loaded','cancel_truck'].forEach(p =>
+      document.getElementById('um-perm-' + p).checked = false
+    );
+    this.openModal('user-modal');
+  },
+  openEditUserModal(userId) {
+    const u = this.state.appUsers.find(x => x.id === userId);
+    if (!u) return;
+    this.state.pendingUserId = userId;
+    document.getElementById('user-modal-title').textContent = 'Edit User';
+    document.getElementById('um-username').value = u.username;
+    document.getElementById('um-username').disabled = true;
+    document.getElementById('um-role').value = u.role;
+    document.getElementById('um-password').value = '';
+    document.getElementById('um-pass-hint').textContent = '(leave blank to keep current)';
+    document.getElementById('um-delete-btn').classList.remove('hidden');
+    const perms = Array.isArray(u.permissions) ? u.permissions : [];
+    ['pick','pgi','invoiced','ds_printed','checking','loaded'].forEach(p =>
+      document.getElementById('um-perm-' + p).checked = perms.includes(p)
+    );
+    document.getElementById('um-perm-cancel_truck').checked = !!u.can_cancel_truck;
+    this.openModal('user-modal');
+  },
+  openAdminResetPassword(userId) {
+    const newPw = prompt('Enter new password for this user:');
+    if (!newPw || !newPw.trim()) return;
+    this.adminResetPassword(userId, newPw.trim());
+  },
+  async adminResetPassword(userId, newPw) {
+    const { error } = await supabaseClient.from('app_users')
+      .update({ password_plain: newPw }).eq('id', userId);
+    if (error) return alert('Error: ' + error.message);
+    alert('Password reset successfully.');
+  },
+  async saveUser() {
+    const isNew = !this.state.pendingUserId;
+    const username = document.getElementById('um-username').value.trim().toLowerCase();
+    const role = document.getElementById('um-role').value;
+    const pw = document.getElementById('um-password').value.trim();
+    const permissions = ['pick','pgi','invoiced','ds_printed','checking','loaded']
+      .filter(p => document.getElementById('um-perm-' + p).checked);
+    const can_cancel_truck = document.getElementById('um-perm-cancel_truck').checked;
+    if (isNew) {
+      if (!username) return alert('Username is required.');
+      if (!pw) return alert('Password is required for new users.');
+      const { error } = await supabaseClient.from('app_users')
+        .insert({ username, role, password_plain: pw, permissions, can_cancel_truck });
+      if (error) return alert(error.message.includes('duplicate') ? 'Username already exists.' : error.message);
+    } else {
+      const payload = { role, permissions, can_cancel_truck };
+      if (pw) payload.password_plain = pw;
+      const { error } = await supabaseClient.from('app_users')
+        .update(payload).eq('id', this.state.pendingUserId);
+      if (error) return alert(error.message);
+    }
+    this.closeModal('user-modal');
+    await this.loadAppUsers();
+  },
+  async deleteUser() {
+    if (!this.state.pendingUserId) return;
+    const u = this.state.appUsers.find(x => x.id === this.state.pendingUserId);
+    if (!confirm(`Delete user "${u?.username}"? This cannot be undone.`)) return;
+    const { error } = await supabaseClient.from('app_users').delete().eq('id', this.state.pendingUserId);
+    if (error) return alert(error.message);
+    this.closeModal('user-modal');
+    this.state.pendingUserId = null;
+    await this.loadAppUsers();
+  },
+  // ═══════════════════════════════════════════════════════
+  // CHANGE PASSWORD (self-service)
+  // ═══════════════════════════════════════════════════════
+  async changePassword() {
+    const current = document.getElementById('cp-current').value;
+    const newPw   = document.getElementById('cp-new').value;
+    const confirm = document.getElementById('cp-confirm').value;
+    const errEl   = document.getElementById('cp-error');
+    const okEl    = document.getElementById('cp-success');
+    errEl.classList.add('hidden'); okEl.classList.add('hidden');
+    if (!current || !newPw || !confirm) { errEl.textContent = 'All fields are required.'; errEl.classList.remove('hidden'); return; }
+    if (newPw !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.classList.remove('hidden'); return; }
+    if (newPw.length < 4) { errEl.textContent = 'Password must be at least 4 characters.'; errEl.classList.remove('hidden'); return; }
+    // Verify current password
+    const { data, error } = await supabaseClient.from('app_users')
+      .select('id').eq('id', this.state.currentUser.id).eq('password_plain', current).single();
+    if (error || !data) { errEl.textContent = 'Current password is incorrect.'; errEl.classList.remove('hidden'); return; }
+    const { error: upErr } = await supabaseClient.from('app_users')
+      .update({ password_plain: newPw }).eq('id', this.state.currentUser.id);
+    if (upErr) { errEl.textContent = upErr.message; errEl.classList.remove('hidden'); return; }
+    // Update remembered session if exists
+    const raw = localStorage.getItem('dispatch_session');
+    if (raw) { try { const s = JSON.parse(raw); localStorage.setItem('dispatch_session', JSON.stringify(s)); } catch {} }
+    okEl.classList.remove('hidden');
+    document.getElementById('cp-current').value = '';
+    document.getElementById('cp-new').value = '';
+    document.getElementById('cp-confirm').value = '';
+  },
   async loadChartRemarks(rddId) {
     const { data, error } = await supabaseClient.from('chart_remarks')
       .select('bucket, remark').eq('rdd_id', rddId);
@@ -1460,16 +1675,89 @@ const App = {
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.state.currentUser?.role === 'admin') this.loadAppUsers(); })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
       });
   },
 };
+// Auto-login from remembered session on page load
+if (!App.checkRememberedSession()) {
+  // show login screen normally (already visible by default)
+}
+
 window.addEventListener('resize', () => {
   clearTimeout(window._chartRemarkResizeT);
   window._chartRemarkResizeT = setTimeout(() => App.positionChartRemark(), 200);
 });
 </script>
+
+<!-- Add/Edit User Modal -->
+<div id="user-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[480px] border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+    <h2 id="user-modal-title" class="text-lg font-bold mb-4">Add User</h2>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Username</label>
+        <input type="text" id="um-username" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" placeholder="e.g. juan">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Role Label</label>
+        <select id="um-role" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          <option value="admin">Admin</option>
+          <option value="outbound">Outbound</option>
+          <option value="pgi">PGI</option>
+          <option value="invoice">Invoice</option>
+          <option value="transport">Transport</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+    </div>
+    <div id="um-password-row" class="mb-3">
+      <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Password <span id="um-pass-hint" class="text-slate-400 font-normal">(leave blank to keep current)</span></label>
+      <input type="text" id="um-password" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white font-mono" placeholder="new password">
+    </div>
+    <div class="mb-4">
+      <div class="text-xs font-semibold mb-2 text-slate-500 dark:text-slate-400 uppercase tracking-wide">Milestone Permissions</div>
+      <div class="grid grid-cols-3 gap-2">
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pick" class="accent-blue-600"> Pick</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pgi" class="accent-blue-600"> PGI</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-invoiced" class="accent-blue-600"> Invoiced</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-ds_printed" class="accent-blue-600"> DS Printed</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-checking" class="accent-blue-600"> Checking</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-loaded" class="accent-blue-600"> Loaded</label>
+      </div>
+      <label class="flex items-center gap-2 text-sm mt-2 px-2 py-1.5 border dark:border-slate-700 rounded-lg w-fit"><input type="checkbox" id="um-perm-cancel_truck" class="accent-blue-600"> Can Cancel/Reinstate Trucks</label>
+    </div>
+    <div class="flex justify-between items-center">
+      <button id="um-delete-btn" onclick="App.deleteUser()" class="hidden px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete User</button>
+      <div class="flex space-x-2 ml-auto">
+        <button onclick="App.closeModal('user-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+        <button onclick="App.saveUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="change-password-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
+    <h2 class="text-lg font-bold mb-4">Change Password</h2>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Current Password</label>
+    <input type="password" id="cp-current" class="w-full p-2 border rounded-lg mb-3 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">New Password</label>
+    <input type="password" id="cp-new" class="w-full p-2 border rounded-lg mb-3 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Confirm New Password</label>
+    <input type="password" id="cp-confirm" class="w-full p-2 border rounded-lg mb-4 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <div id="cp-error" class="hidden text-red-600 text-xs mb-3 font-semibold"></div>
+    <div id="cp-success" class="hidden text-emerald-600 text-xs mb-3 font-semibold">Password changed successfully!</div>
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.closeModal('change-password-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
+      <button onclick="App.changePassword()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Update Password</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
