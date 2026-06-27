@@ -75,7 +75,7 @@
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]" id="connection-status">●  connecting…</div>
   </aside>
   <main class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
-    <div class="flex items-center mb-4">
+    <div id="global-toggle-bar" class="flex items-center mb-3">
       <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
       </button>
@@ -174,12 +174,15 @@
       <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
     </section>
     <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3">
-      <div>
-        <h1 class="text-xl font-extrabold tracking-tight">
+      <div class="flex items-center justify-between gap-3">
+        <h1 class="text-xl font-extrabold tracking-tight ml-2">
           PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-700 dark:text-blue-400">RDD —</span>
           &nbsp;<span class="text-slate-500 font-semibold dark:text-slate-400">AS OF</span>
           <span id="dashboard-heading-time" class="text-blue-700 dark:text-blue-400"></span>
         </h1>
+        <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800 shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
       </div>
       <!-- Smart Alert Banner -->
       <div id="dispatch-alert-banner" class="hidden mb-1 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
@@ -601,6 +604,7 @@ const App = {
     dispatchFilter: 'all',
     sortCol: null,
     sortDir: 1,
+    customBays: [],
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -716,14 +720,14 @@ const App = {
     await this.loadRDDs();
     await this.loadTrucks();
     await this.loadPersonnel();
+    await this.loadCustomBays();
     if (isAdmin) await this.loadAppUsers();
     this.setupRealtimeSubscriptions();
   },
-  getCustomBays() {
-    try { return JSON.parse(localStorage.getItem('dispatchTracker_customBays') || '[]'); } catch { return []; }
-  },
-  saveCustomBays(list) {
-    try { localStorage.setItem('dispatchTracker_customBays', JSON.stringify(list)); } catch {}
+  async loadCustomBays() {
+    const { data, error } = await supabaseClient.from('custom_bays').select('*').order('name', { ascending: true });
+    if (error) { console.error('loadCustomBays error:', error); return; }
+    this.state.customBays = (data || []).map(r => r.name);
   },
   getAllBayOptions() {
     const standard = [];
@@ -731,19 +735,19 @@ const App = {
       ['A', 'B', 'C'].forEach(letter => standard.push(`${i}${letter}`));
     }
     standard.push('Extended');
-    const custom = this.getCustomBays();
+    const custom = this.state.customBays || [];
     return [...standard, ...custom.filter(b => !standard.includes(b))];
   },
-  addCustomBay() {
+  async addCustomBay() {
     const input = document.getElementById('checking-new-bay-input');
     const val = input.value.trim().toUpperCase();
     if (!val) return;
     const all = this.getAllBayOptions();
     if (all.includes(val)) { input.value = ''; return alert('That bay already exists in the list.'); }
-    const custom = this.getCustomBays();
-    custom.push(val);
-    this.saveCustomBays(custom);
+    const { error } = await supabaseClient.from('custom_bays').insert({ name: val });
+    if (error) return alert(error.message.includes('duplicate') ? 'That bay already exists in the list.' : error.message);
     input.value = '';
+    await this.loadCustomBays();
     const checkedNow = [...document.querySelectorAll('#checking-bay-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
     this.renderCheckingBayList([...checkedNow, val]);
   },
@@ -770,6 +774,8 @@ const App = {
     document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
     document.getElementById(`btn-${tabId}`).classList.add('bg-blue-600');
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
+    const globalToggleBar = document.getElementById('global-toggle-bar');
+    if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
     if (tabId === 'tab-users') this.loadAppUsers();
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
@@ -2182,6 +2188,7 @@ const App = {
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.state.currentUser?.role === 'admin') this.loadAppUsers(); })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
