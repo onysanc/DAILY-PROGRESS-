@@ -1232,13 +1232,17 @@ const App = {
       });
     };
     const availableTrend = Array(24).fill(0);
-    this.state.trucks.forEach(t => {
+    // Only count trucks that were not cancelled (cancelled ones never become available)
+    this.state.trucks.filter(t => t.status !== 'Cancelled').forEach(t => {
       const addedB = bucketOf(t.created_at);
       if (addedB === null) return;
       for (let h = addedB; h < 24; h++) availableTrend[h]++;
     });
-    this.state.dispatches.filter(d => d.loaded_checked).forEach(d => {
-      const b = bucketOf(d.loaded_timestamp);
+    // Subtract each truck when it got dispatched (loaded), using loaded_timestamp from dispatches
+    this.state.trucks.filter(t => t.status === 'Dispatched').forEach(t => {
+      const dispatch = this.state.dispatches.find(d => d.assigned_truck_id === t.id && d.loaded_checked);
+      const ts = dispatch ? dispatch.loaded_timestamp : t.updated_at;
+      const b = bucketOf(ts);
       if (b === null) return;
       for (let h = b; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
     });
