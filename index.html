@@ -201,6 +201,8 @@
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('ds_printed')">DS Printed <span id="sort-ds_printed" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('checking')">Checking <span id="sort-checking" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('loaded')">Loaded <span id="sort-loaded" class="sort-arrow"></span></th>
+              <th class="p-3">Loaded Truck</th>
+              <th class="p-3">Remarks</th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('status')">Status <span id="sort-status" class="sort-arrow"></span></th>
               <th class="p-3 w-40 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('progress')">Progress <span id="sort-progress" class="sort-arrow"></span></th>
               <th id="actions-col-header" class="p-3 hidden">Actions</th>
@@ -660,13 +662,27 @@
   </div>
 </div>
 <div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
-    <h2 class="text-lg font-bold mb-4">Assign Picker</h2>
-    <select id="pick-name" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-    </select>
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+    <h2 class="text-lg font-bold mb-4">Assign Picker(s)</h2>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Pickers (select 1 or more from the pool)</label>
+    <div id="pick-checkbox-list" class="border dark:border-slate-700 rounded-lg p-2 mb-1 max-h-52 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800"></div>
+    <div id="pick-count-note" class="text-xs text-slate-400 mb-5"></div>
     <div class="flex justify-end space-x-2">
       <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.confirmMilestone('pick')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="remarks-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800 max-h-[85vh] flex flex-col">
+    <h2 class="text-lg font-bold mb-1">Dispatch Remarks</h2>
+    <div id="remarks-dispatch-label" class="text-xs text-slate-500 dark:text-slate-400 mb-3"></div>
+    <div id="remarks-list" class="flex-1 overflow-y-auto space-y-2 mb-3 border dark:border-slate-700 rounded-lg p-2 bg-slate-50 dark:bg-slate-800 min-h-[80px] max-h-64"></div>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Add a remark</label>
+    <textarea id="remarks-new-input" rows="3" placeholder="Type a remark…" class="w-full p-2 border rounded-lg mb-3 text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></textarea>
+    <div class="flex justify-end space-x-2">
+      <button onclick="App.closeModal('remarks-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Close</button>
+      <button onclick="App.addRemark()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Save Remark</button>
     </div>
   </div>
 </div>
@@ -724,7 +740,7 @@
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Dispatch Number</label>
     <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-6 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
     <div class="flex justify-between items-center">
-      <button onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
+      <button id="row-edit-delete-btn" onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
       <div class="space-x-2">
         <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
         <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
@@ -863,8 +879,11 @@ const App = {
     this.initTheme();
     this.state.chartRemarks = {};
     const isAdmin = this.state.currentUser.role === 'admin';
-    if (isAdmin) {
+    const canEditDispatch = ['admin','outbound','transport'].includes(this.state.currentUser.role);
+    if (canEditDispatch) {
       document.getElementById('actions-col-header').classList.remove('hidden');
+    }
+    if (isAdmin) {
       document.getElementById('add-picker-form').classList.remove('hidden');
       document.getElementById('add-checker-form').classList.remove('hidden');
     } else {
@@ -1161,13 +1180,17 @@ const App = {
   },
   milestoneTooltip(d, step) {
     const ts = d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '';
-    if (step === 'pick' && d.pick_assigned_name) return `${ts} — Picker: ${d.pick_assigned_name}`;
+    if (step === 'pick' && d.pick_assigned_names && d.pick_assigned_names.length) return `${ts} — Picker(s): ${Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names}`;
     if (step === 'checking') {
       const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join(', ') : (d.checking_assigned_names || '');
       const bits = [ts];
       if (names) bits.push(`Checkers: ${names}`);
       if (d.bay_location) bits.push(`Bay: ${d.bay_location}`);
       return bits.join(' — ');
+    }
+    if (step === 'loaded') {
+      const truck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
+      return truck ? `${ts} — Truck: ${truck.plate_number} (${truck.truck_type})` : ts;
     }
     return ts;
   },
@@ -1232,16 +1255,36 @@ const App = {
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
                   </td>`;
       });
+      const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
+      html += `<td class="p-3">
+                  ${d.loaded_checked
+                    ? `<div class="font-semibold">${loadedTruck ? `${loadedTruck.plate_number} <span class="text-slate-400 dark:text-slate-500 font-normal">(${loadedTruck.truck_type})</span>` : '<span class="text-slate-400 dark:text-slate-500 italic">No truck on record</span>'}</div>
+                       <div class="text-[10px] text-slate-400 dark:text-slate-500">${d.loaded_timestamp ? new Date(d.loaded_timestamp).toLocaleString() : ''}</div>`
+                    : `<span class="text-slate-300 dark:text-slate-600">—</span>`}
+                </td>`;
+      const remarkCount = d.remarks_count || 0;
+      const remarkPreviewRaw = d.last_remark_text || '';
+      const remarkPreview = this.escapeHtml(remarkPreviewRaw.length > 26 ? remarkPreviewRaw.slice(0, 26) + '…' : remarkPreviewRaw);
+      html += `<td class="p-3 max-w-[170px]">
+                  <button type="button" onclick="App.openRemarksModal('${d.id}')" class="text-left w-full" title="${remarkCount} remark(s) — click to view or add">
+                    ${remarkCount
+                      ? `<span class="text-xs text-slate-700 dark:text-slate-300 hover:underline">${remarkPreview}</span>
+                         <div class="text-[10px] text-slate-400 dark:text-slate-500">— ${this.escapeHtml(d.last_remark_by || '')}${remarkCount > 1 ? ` (+${remarkCount - 1} more)` : ''}</div>`
+                      : `<span class="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add remark</span>`}
+                  </button>
+                </td>`;
       html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
                 <td class="p-3">
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
                   </div>
                 </td>`;
-      if (this.state.currentUser.role === 'admin') {
+      const canEditDispatch = ['admin','outbound','transport'].includes(this.state.currentUser.role);
+      const canDeleteDispatch = this.state.currentUser.role === 'admin';
+      if (canEditDispatch || canDeleteDispatch) {
         html += `<td class="p-3">
-                    <button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>
-                    <button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>
+                    ${canEditDispatch ? `<button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>` : ''}
+                    ${canDeleteDispatch ? `<button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>` : ''}
                   </td>`;
       }
       tr.innerHTML = html;
@@ -1258,18 +1301,23 @@ const App = {
       String(d.status).toLowerCase().includes(q)
     );
     if (!rows.length) return alert('No dispatches match the current search to export.');
-    const headers = ['Type', 'Dispatch No.', 'Pick', 'Picker', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Checker(s)', 'Bay', 'Loaded', 'Status', 'Progress %'];
+    const headers = ['Type', 'Dispatch No.', 'Pick', 'Picker(s)', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Checker(s)', 'Bay', 'Loaded', 'Loaded Truck', 'Loaded Truck Timestamp', 'Remarks', 'Last Remark By', 'Status', 'Progress %'];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [headers.map(esc).join(',')];
     rows.forEach(d => {
       const cell = (step) => d[`${step}_checked`] ? (d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : 'Done') : '';
       const checkerNames = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join('; ') : (d.checking_assigned_names || '');
+      const pickerNames = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join('; ') : (d.pick_assigned_names || '');
+      const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
       lines.push([
         d.truck_type, d.dispatch_number,
-        cell('pick'), d.pick_assigned_name || '',
+        cell('pick'), pickerNames,
         cell('pgi'), cell('invoiced'), cell('ds_printed'),
         cell('checking'), checkerNames, d.bay_location || '',
         cell('loaded'),
+        d.loaded_checked && loadedTruck ? `${loadedTruck.plate_number} (${loadedTruck.truck_type})` : '',
+        d.loaded_checked && d.loaded_timestamp ? new Date(d.loaded_timestamp).toLocaleString() : '',
+        d.last_remark_text || '', d.last_remark_by || '',
         d.status, d.progress || 0,
       ].map(esc).join(','));
     });
@@ -1350,10 +1398,15 @@ const App = {
     }
     this.state.pendingMilestoneUpdate = { dispatch, step };
     if (step === 'pick') {
-      const sel = document.getElementById('pick-name');
       const pickers = this.state.personnel.filter(p => p.pool === 'picker');
+      const list = document.getElementById('pick-checkbox-list');
       if (!pickers.length) { alert('No pickers in the pool yet. Add one in the Personnel tab.'); this.state.pendingMilestoneUpdate = null; return; }
-      sel.innerHTML = pickers.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+      list.innerHTML = pickers.map(p => `
+        <label class="flex items-center space-x-2 px-1 py-0.5">
+          <input type="checkbox" value="${p.name}">
+          <span>${p.name}</span>
+        </label>`).join('');
+      document.getElementById('pick-count-note').textContent = '0 selected (pick at least 1)';
       this.openModal('pick-modal');
     } else if (step === 'checking') {
       const checkers = this.state.personnel.filter(p => p.pool === 'checker');
@@ -1390,7 +1443,9 @@ const App = {
     const { dispatch } = this.state.pendingMilestoneUpdate;
     const payload = { [`${step}_checked`]: true, [`${step}_timestamp`]: new Date().toISOString() };
     if (step === 'pick') {
-      payload.pick_assigned_name = document.getElementById('pick-name').value;
+      const pickNames = [...document.querySelectorAll('#pick-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
+      if (!pickNames.length) return alert('Select at least 1 picker.');
+      payload.pick_assigned_names = pickNames;
     } else if (step === 'checking') {
       const names = [...document.querySelectorAll('#checking-checkbox-list input[type=checkbox]:checked')].map(b => b.value);
       if (names.length < 1 || names.length > 6) return alert('Select between 1 and 6 checkers.');
@@ -1440,7 +1495,7 @@ const App = {
     toUncheck.forEach(s => {
       payload[`${s}_checked`] = false;
       payload[`${s}_timestamp`] = null;
-      if (s === 'pick') payload.pick_assigned_name = null;
+      if (s === 'pick') payload.pick_assigned_names = null;
       if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
       if (s === 'loaded' && dispatch.assigned_truck_id) {
         supabaseClient.from('available_trucks').update({ status: 'Available' }).eq('id', dispatch.assigned_truck_id).then();
@@ -1454,13 +1509,16 @@ const App = {
     await this.loadTrucks();
   },
   openRowEditModal(dispatchId) {
+    if (!['admin','outbound','transport'].includes(this.state.currentUser.role)) return;
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     this.state.pendingRowEdit = dispatch;
     document.getElementById('row-edit-type').value = dispatch.truck_type;
     document.getElementById('row-edit-number').value = dispatch.dispatch_number;
+    document.getElementById('row-edit-delete-btn').classList.toggle('hidden', this.state.currentUser.role !== 'admin');
     this.openModal('row-edit-modal');
   },
   async saveDispatchRowEdit() {
+    if (!['admin','outbound','transport'].includes(this.state.currentUser.role)) return;
     const dispatch = this.state.pendingRowEdit;
     const truck_type = document.getElementById('row-edit-type').value;
     const dispatch_number = document.getElementById('row-edit-number').value.trim();
@@ -1472,6 +1530,7 @@ const App = {
     await this.loadDispatches();
   },
   async deleteDispatchRow() {
+    if (this.state.currentUser.role !== 'admin') return alert('Only Admin can delete a dispatch row.');
     const dispatch = this.state.pendingRowEdit;
     await this.performDispatchDelete(dispatch);
     this.closeModal('row-edit-modal');
@@ -1514,6 +1573,20 @@ const App = {
     const truck_type = document.getElementById('truck-type-input').value;
     const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
     if (!plate_number) return alert('Enter a plate number.');
+
+    // Same truck (same type + plate) already logged today? Only Transport, Outbound, and Admin
+    // may re-add it — and only after confirming it's an additional (2nd, 3rd, ...) trip.
+    const existing = this.state.trucks.filter(t => t.truck_type === truck_type && t.plate_number === plate_number);
+    if (existing.length > 0) {
+      const reAddRoles = ['admin', 'outbound', 'transport'];
+      if (!reAddRoles.includes(this.state.currentUser.role)) {
+        return alert(`${plate_number} (${truck_type}) was already added today. Only Transport, Outbound, or Admin can re-add a truck for another trip.`);
+      }
+      const tripNumber = existing.length + 1;
+      const confirmed = confirm(`${plate_number} (${truck_type}) was already added today.\n\nAdd it again as Trip #${tripNumber} for this truck?`);
+      if (!confirmed) return;
+    }
+
     const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number, created_at: new Date().toISOString() });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
@@ -1550,8 +1623,13 @@ const App = {
         } else if (canCancel && status === 'Cancelled') {
           actionBtn = `<button onclick="App.reinstateTruck('${t.id}')" title="Make this truck available again" class="text-emerald-600 hover:text-emerald-800 text-[11px] font-semibold ml-2">Reinstate</button>`;
         }
+        const samePlateBefore = all.slice(0, i).filter(x => x.plate_number === t.plate_number).length;
+        const samePlateTotal = all.filter(x => x.plate_number === t.plate_number).length;
+        const tripBadge = samePlateTotal > 1
+          ? `<span class="text-[10px] font-bold text-blue-500 dark:text-blue-400 ml-1" title="Same truck re-added today">(Trip ${samePlateBefore + 1})</span>`
+          : '';
         html += `<li class="flex justify-between items-center">
-                    <span class="${status === 'Cancelled' ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${type} ${i + 1}: <b>${t.plate_number}</b></span>
+                    <span class="${status === 'Cancelled' ? 'line-through text-slate-400 dark:text-slate-500' : ''}">${type} ${i + 1}: <b>${t.plate_number}</b>${tripBadge}</span>
                     <span class="flex items-center shrink-0">
                       <span class="text-xs px-2 py-0.5 rounded-full ${badgeClass}">${status}</span>
                       ${actionBtn}
@@ -1759,7 +1837,7 @@ const App = {
             label: STEP_META[step].label,
             color: STEP_META[step].color,
             dispatch: `${d.truck_type} ${d.dispatch_number}`,
-            picker: step === 'pick' ? d.pick_assigned_name : null,
+            picker: step === 'pick' ? (Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names) : null,
           });
         }
       });
@@ -2367,8 +2445,8 @@ const App = {
     const pickerTbody = document.getElementById('picker-leaderboard-tbody');
     if (pickerTbody) {
       const pickerMap = {};
-      this.state.dispatches.filter(d => d.pick_checked && d.pick_assigned_name).forEach(d => {
-        pickerMap[d.pick_assigned_name] = (pickerMap[d.pick_assigned_name] || 0) + 1;
+      this.state.dispatches.filter(d => d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length).forEach(d => {
+        d.pick_assigned_names.forEach(n => { pickerMap[n] = (pickerMap[n] || 0) + 1; });
       });
       const sorted = Object.entries(pickerMap).sort((a, b) => b[1] - a[1]);
       const totalPicked = sorted.reduce((s, [, c]) => s + c, 0);
@@ -2486,6 +2564,54 @@ const App = {
     if (p === 'urgent') return `<span class="priority-flag urgent"></span><span class="text-[10px] font-bold text-red-600 dark:text-red-400">URGENT</span>`;
     if (p === 'high')   return `<span class="priority-flag high"></span><span class="text-[10px] font-bold text-orange-500 dark:text-orange-400">HIGH</span>`;
     return `<span class="text-[10px] text-slate-300 dark:text-slate-600">—</span>`;
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // REMARKS (per-dispatch, multi-entry, attributed by user)
+  // ═══════════════════════════════════════════════════════
+  escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  },
+  async openRemarksModal(dispatchId) {
+    const d = this.state.dispatches.find(x => x.id === dispatchId);
+    if (!d) return;
+    this.state.pendingRemarksDispatchId = dispatchId;
+    document.getElementById('remarks-dispatch-label').textContent = `${d.truck_type} — ${d.dispatch_number}`;
+    document.getElementById('remarks-new-input').value = '';
+    document.getElementById('remarks-list').innerHTML = '<div class="text-xs text-slate-400 italic p-2">Loading…</div>';
+    this.openModal('remarks-modal');
+    await this.loadRemarksList(dispatchId);
+  },
+  async loadRemarksList(dispatchId) {
+    const listEl = document.getElementById('remarks-list');
+    const { data, error } = await supabaseClient
+      .from('dispatch_remarks')
+      .select('*')
+      .eq('dispatch_id', dispatchId)
+      .order('created_at', { ascending: false });
+    if (error) { listEl.innerHTML = `<div class="text-xs text-red-500 p-2">${this.escapeHtml(error.message)}</div>`; return; }
+    if (!data || !data.length) { listEl.innerHTML = '<div class="text-xs text-slate-400 italic p-2">No remarks yet.</div>'; return; }
+    listEl.innerHTML = data.map(r => `
+      <div class="bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg p-2">
+        <div class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap">${this.escapeHtml(r.remark_text)}</div>
+        <div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">${this.escapeHtml(r.created_by)} — ${new Date(r.created_at).toLocaleString()}</div>
+      </div>`).join('');
+  },
+  async addRemark() {
+    const dispatchId = this.state.pendingRemarksDispatchId;
+    if (!dispatchId) return;
+    const input = document.getElementById('remarks-new-input');
+    const text = input.value.trim();
+    if (!text) return alert('Type a remark first.');
+    const { error } = await supabaseClient.from('dispatch_remarks').insert({
+      dispatch_id: dispatchId,
+      remark_text: text,
+      created_by: this.state.currentUser.username,
+    });
+    if (error) return alert(error.message);
+    input.value = '';
+    await this.loadRemarksList(dispatchId);
+    await this.loadDispatches();
   },
 
   // ═══════════════════════════════════════════════════════
@@ -2669,8 +2795,8 @@ const App = {
 
     // Picker summary
     const pickerMap = {};
-    disps.filter(d => d.pick_checked && d.pick_assigned_name).forEach(d => {
-      pickerMap[d.pick_assigned_name] = (pickerMap[d.pick_assigned_name] || 0) + 1;
+    disps.filter(d => d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length).forEach(d => {
+      d.pick_assigned_names.forEach(n => { pickerMap[n] = (pickerMap[n] || 0) + 1; });
     });
     const pickerRows = Object.entries(pickerMap).sort((a,b) => b[1]-a[1]).map(([name, cnt]) =>
       `<tr><td class="border border-slate-200 dark:border-slate-700 px-3 py-2">${name}</td><td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold">${cnt}</td></tr>`
@@ -2910,7 +3036,7 @@ const App = {
   // ═══════════════════════════════════════════════════════
   async renderAssignmentHistory() {
     const filter = document.getElementById('history-pool-filter')?.value || 'all';
-    const { data: allDisps } = await supabaseClient.from('dispatches').select('rdd_id, pick_checked, pick_assigned_name, checking_checked, checking_assigned_names, dispatch_number, truck_type');
+    const { data: allDisps } = await supabaseClient.from('dispatches').select('rdd_id, pick_checked, pick_assigned_names, checking_checked, checking_assigned_names, dispatch_number, truck_type');
     const { data: allRdds } = await supabaseClient.from('rdd_masters').select('id, rdd_date').order('rdd_date', { ascending: false });
     const tbody = document.getElementById('assignment-history-tbody');
     const emptyEl = document.getElementById('assignment-history-empty');
@@ -2920,11 +3046,12 @@ const App = {
     // Build per-person map
     const personMap = {}; // name -> { pool, rdds: { rddId: [dispatchNos] } }
     allDisps.forEach(d => {
-      if (d.pick_checked && d.pick_assigned_name) {
-        const n = d.pick_assigned_name;
-        if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {} };
-        if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
-        personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
+      if (d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length) {
+        d.pick_assigned_names.forEach(n => {
+          if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {} };
+          if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
+          personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
+        });
       }
       if (d.checking_checked && d.checking_assigned_names) {
         const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
