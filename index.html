@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   .hidden{display:none!important}
+  .scrollbar-none::-webkit-scrollbar{display:none}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
   input[type=checkbox]{accent-color:#2563eb}
   ::-webkit-scrollbar{height:8px;width:8px}
@@ -332,7 +333,19 @@
             <div id="chart-remark-tags" class="absolute inset-0 z-20 pointer-events-none"></div>
           </div>
         </div>
-        
+
+        <!-- ══ RECENT ACTIVITY TICKER ══ -->
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-xl shadow border border-slate-700 dark:border-slate-800 px-4 py-2.5 shrink-0 overflow-hidden">
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] font-extrabold text-slate-400 tracking-widest shrink-0 uppercase">Recent</span>
+            <div class="flex-1 overflow-hidden relative">
+              <div id="activity-ticker" class="flex gap-5 items-center text-[11px] font-semibold whitespace-nowrap overflow-x-auto scrollbar-none" style="scrollbar-width:none;-ms-overflow-style:none;">
+                <span class="text-slate-500 italic">Loading activity…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2 shrink-0">
           <div class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest mb-1">REMARKS — NOTES OF TIME NOW</div>
           <textarea id="dash-remarks-now" rows="2"
@@ -1707,6 +1720,94 @@ const App = {
     } else {
       document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
     }
+    this.buildActivityFeed();
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // RECENT ACTIVITY FEED (ticker below chart)
+  // ═══════════════════════════════════════════════════════
+  buildActivityFeed() {
+    const ticker = document.getElementById('activity-ticker');
+    if (!ticker) return;
+
+    const fmtTime = (iso) => {
+      if (!iso) return '?';
+      return new Date(iso).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+    };
+
+    const STEP_META = {
+      pick:       { label: 'Picked',     color: '#16a34a', icon: '✔' },
+      pgi:        { label: 'PGI',        color: '#2563eb', icon: '✔' },
+      invoiced:   { label: 'Invoiced',   color: '#dc2626', icon: '✔' },
+      ds_printed: { label: 'DS Printed', color: '#c46262', icon: '✔' },
+      checking:   { label: 'Checked',    color: '#7c3aed', icon: '✔' },
+      loaded:     { label: 'Loaded',     color: '#0f766e', icon: '✔' },
+    };
+
+    // 1. Collect dispatch milestone events
+    const events = [];
+    const STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    this.state.dispatches.forEach(d => {
+      STEPS.forEach(step => {
+        const ts = d[`${step}_timestamp`];
+        if (ts) {
+          events.push({
+            ts: new Date(ts).getTime(),
+            iso: ts,
+            type: 'milestone',
+            step,
+            label: STEP_META[step].label,
+            color: STEP_META[step].color,
+            dispatch: `${d.truck_type} ${d.dispatch_number}`,
+            picker: step === 'pick' ? d.pick_assigned_name : null,
+          });
+        }
+      });
+    });
+
+    // 2. Collect truck-added events
+    this.state.trucks.forEach(t => {
+      if (t.created_at) {
+        events.push({
+          ts: new Date(t.created_at).getTime(),
+          iso: t.created_at,
+          type: 'truck',
+          label: 'Truck Added',
+          color: '#eab308',
+          dispatch: `${t.truck_type} — ${t.plate_number}`,
+          status: t.status,
+        });
+      }
+    });
+
+    // Sort newest first, keep last 30
+    events.sort((a, b) => b.ts - a.ts);
+    const recent = events.slice(0, 30);
+
+    if (!recent.length) {
+      ticker.innerHTML = '<span style="color:#64748b;font-style:italic;">No activity yet for this RDD</span>';
+      return;
+    }
+
+    ticker.innerHTML = recent.map(ev => {
+      const time = fmtTime(ev.iso);
+      if (ev.type === 'milestone') {
+        const pickerPart = ev.picker ? ` by <span style="color:#93c5fd">${ev.picker}</span>` : '';
+        return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 shrink-0">
+          <span style="color:${ev.color};font-size:10px">●</span>
+          <span style="color:${ev.color};font-weight:800">${ev.label}</span>
+          <span style="color:#e2e8f0">${ev.dispatch}</span>${pickerPart}
+          <span style="color:#64748b">@ ${time}</span>
+        </span>`;
+      } else {
+        return `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 shrink-0">
+          <span style="color:#eab308;font-size:10px">🚛</span>
+          <span style="color:#eab308;font-weight:800">Truck Added</span>
+          <span style="color:#e2e8f0">${ev.dispatch}</span>
+          <span style="color:#64748b">@ ${time}</span>
+        </span>`;
+      }
+    }).join('<span style="color:#334155;margin:0 2px">·</span>');
   },
   updateLiveSummaryBox(series, labels, nowBucket) {
     const box = document.getElementById('live-summary-box');
