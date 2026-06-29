@@ -864,6 +864,7 @@ const App = {
     if (isAdmin) await this.loadAppUsers();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
+    this.startAutoRefresh();
     this.populateCompareSelects();
   },
   async loadCustomBays() {
@@ -2486,6 +2487,50 @@ const App = {
   startStuckAlertTimer() {
     if (this._stuckAlertTimer) clearInterval(this._stuckAlertTimer);
     this._stuckAlertTimer = setInterval(() => this.checkStuckAlerts(), 5 * 60 * 1000); // every 5 min
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // AUTO-REFRESH (every 1 minute for all users)
+  // ═══════════════════════════════════════════════════════
+  startAutoRefresh() {
+    const REFRESH_MS = 60 * 1000; // 1 minute
+    let countdown = REFRESH_MS / 1000;
+
+    // Countdown ticker — updates every second
+    if (this._autoRefreshCountdownTimer) clearInterval(this._autoRefreshCountdownTimer);
+    this._autoRefreshCountdownTimer = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) countdown = REFRESH_MS / 1000;
+      const el = document.getElementById('connection-status');
+      if (el) {
+        const isLive = el.textContent.includes('live');
+        const prefix = isLive ? '●  live' : el.textContent.split('·')[0].trim();
+        el.textContent = `${prefix}  ·  refresh in ${countdown}s`;
+      }
+    }, 1000);
+
+    // Main refresh interval — reloads all data every 1 minute
+    if (this._autoRefreshTimer) clearInterval(this._autoRefreshTimer);
+    this._autoRefreshTimer = setInterval(async () => {
+      countdown = REFRESH_MS / 1000;
+      const el = document.getElementById('connection-status');
+      if (el) el.textContent = '●  refreshing…';
+      try {
+        await this.loadRDDs();
+        await this.loadTrucks();
+        await this.loadPersonnel();
+        await this.loadCustomBays();
+        if (this.state.currentRddId) {
+          await this.loadDispatches();
+          await this.loadChartRemarks(this.state.currentRddId);
+        }
+        if (this.state.currentUser?.role === 'admin') await this.loadAppUsers();
+        if (el) el.textContent = '●  live  ·  refresh in 60s';
+      } catch (err) {
+        console.error('Auto-refresh error:', err);
+        if (el) el.textContent = '●  refresh failed';
+      }
+    }, REFRESH_MS);
   },
 
   // ═══════════════════════════════════════════════════════
