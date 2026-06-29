@@ -147,7 +147,7 @@
             <option value="">Select RDD…</option>
           </select>
           <button onclick="App.exportDispatchesCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
-          <button onclick="App.openModal('rdd-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
+          <button onclick="App.openCreateRddModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
@@ -215,6 +215,13 @@
     </section>
     <section id="tab-trucks" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-5">Available Trucks</h1>
+      <div class="mb-5 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
+        <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+        <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
+          <span class="font-bold">Sending the same truck out for a 2nd (or 3rd+) trip today?</span>
+          Just enter its <span class="font-semibold">Truck Type</span> and <span class="font-semibold">Plate Number</span> below and click <span class="font-semibold">Add Truck</span> again — the system will detect it's already logged today and ask you to confirm it as another trip (e.g. "Trip #2"). Each trip is tracked as its own entry and tagged with a <span class="font-semibold">(Trip 2)</span>, <span class="font-semibold">(Trip 3)</span>, etc. badge in the list below. Only <span class="font-semibold">Transport, Outbound, and Admin</span> users can confirm and add repeat trips.
+        </div>
+      </div>
       <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3 border dark:border-slate-800">
         <div>
           <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
@@ -652,7 +659,8 @@
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
     <h2 class="text-lg font-bold mb-4">Create New RDD</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">RDD Date</label>
-    <input type="date" id="new-rdd-date" class="w-full p-2 border rounded-lg mb-3 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <input type="date" id="new-rdd-date" class="w-full p-2 border rounded-lg mb-1 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-3">Auto-suggested based on today (PH time): Mon–Fri → next day, Saturday → +2 days. Adjust if needed.</p>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Initial Planning Count</label>
     <input type="number" min="0" id="new-rdd-count" placeholder="e.g. 45" class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
     <div class="flex justify-end space-x-2">
@@ -995,6 +1003,30 @@ const App = {
     });
     if (prev) sel.value = prev;
     this.populateCompareSelects();
+  },
+  getDefaultRddDateString() {
+    // Compute "today" in Philippine time (Asia/Manila, UTC+8) regardless of the device's local timezone.
+    const now = new Date();
+    const phDateParts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    const phWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', weekday: 'short' }).format(now); // 'Mon'..'Sun'
+    const [y, m, d] = phDateParts.split('-').map(Number);
+    const phToday = new Date(Date.UTC(y, m - 1, d)); // midnight, representing the PH calendar date
+
+    // Mon–Fri -> next day (+1). Saturday -> +2 days (skips Sunday, lands on Monday).
+    // Sunday -> +1 day (lands on Monday) to keep the "next business day" pattern.
+    let addDays = 1;
+    if (phWeekday === 'Sat') addDays = 2;
+
+    phToday.setUTCDate(phToday.getUTCDate() + addDays);
+    const yyyy = phToday.getUTCFullYear();
+    const mm = String(phToday.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(phToday.getUTCDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  },
+  openCreateRddModal() {
+    document.getElementById('new-rdd-date').value = this.getDefaultRddDateString();
+    document.getElementById('new-rdd-count').value = '';
+    this.openModal('rdd-modal');
   },
   async createRDD() {
     const rdd_date = document.getElementById('new-rdd-date').value;
