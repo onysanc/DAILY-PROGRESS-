@@ -171,6 +171,15 @@
         <button onclick="App.setDispatchFilter('stuck')" id="filter-stuck" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Stuck (&gt;30 min)</button>
         <button onclick="App.setDispatchFilter('done')" id="filter-done" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Done</button>
         <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
+        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
+        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Start Pick</button>
+        <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">End Pick</button>
+        <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">PGI</button>
+        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Invoice</button>
+        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">DS Print</button>
+        <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Check</button>
+        <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Loaded</button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
       </div>
       <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-5 border dark:border-slate-800">
@@ -1393,6 +1402,12 @@ const App = {
     else if (filter === 'stuck') visible = searched.filter(d => this.isDispatchStuck(d));
     else if (filter === 'done') visible = searched.filter(d => d.loaded_checked);
     else if (filter === 'priority') visible = searched.filter(d => d.priority === 'urgent' || d.priority === 'high');
+    else if (filter.startsWith('at_')) {
+      const step = filter.slice(3);
+      const idx = MILESTONE_FLOW.indexOf(step);
+      const nextStep = idx >= 0 && idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
+      visible = searched.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
+    }
     if (countEl) countEl.textContent = `${visible.length} of ${this.state.dispatches.length} shown`;
     if (!visible.length) { emptyEl.textContent = q ? `No dispatches match “${q}”.` : 'No dispatches match this filter.'; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
@@ -2652,7 +2667,7 @@ const App = {
     });
   },
   updateFilterPillStyles(filter) {
-    ['all', 'pending', 'stuck', 'done', 'priority'].forEach(f => {
+    ['all', 'pending', 'stuck', 'done', 'priority', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
       const btn = document.getElementById(`filter-${f}`);
       if (!btn) return;
       if (f === filter) {
