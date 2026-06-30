@@ -749,17 +749,61 @@
   </div>
 </div>
 <div id="row-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
-    <h2 class="text-lg font-bold mb-4">Edit Dispatch Row</h2>
-    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
-    <select id="row-edit-type" class="w-full p-2 border rounded-lg mb-3 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-      <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
-    </select>
-    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Dispatch Number</label>
-    <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg mb-6 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-    <div class="flex justify-between items-center">
-      <button id="row-edit-delete-btn" onclick="App.deleteDispatchRow()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
-      <div class="space-x-2">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[500px] border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+    <h2 class="text-lg font-bold mb-1">Edit Dispatch Row</h2>
+    <p id="row-edit-admin-note" class="hidden text-xs text-amber-600 dark:text-amber-400 mb-3 font-semibold">⚠ Admin mode — all columns editable including timestamps.</p>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
+        <select id="row-edit-type" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Dispatch Number</label>
+        <input type="text" id="row-edit-number" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+      </div>
+    </div>
+    <!-- Admin-only: milestone timestamp overrides -->
+    <div id="row-edit-admin-fields" class="hidden">
+      <div class="border-t dark:border-slate-700 pt-3 mb-3">
+        <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest uppercase mb-2">Milestone Timestamps (Admin Override)</div>
+        <div class="space-y-2">
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#0284c7"></span>Start Pick</label>
+            <input type="datetime-local" id="re-ts-pick_start" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#16a34a"></span>End Pick</label>
+            <input type="datetime-local" id="re-ts-pick" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#ec4899"></span>PGI</label>
+            <input type="datetime-local" id="re-ts-pgi" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#dc2626"></span>Invoiced</label>
+            <input type="datetime-local" id="re-ts-invoiced" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#c46262"></span>DS Printed</label>
+            <input type="datetime-local" id="re-ts-ds_printed" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#2563eb"></span>Checking</label>
+            <input type="datetime-local" id="re-ts-checking" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <label class="text-xs font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:#7c3aed"></span>Loaded</label>
+            <input type="datetime-local" id="re-ts-loaded" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-2">Leave blank to keep current timestamp. Clearing a timestamp will not automatically untick the step — use Admin Override on the checkbox for that.</p>
+      </div>
+    </div>
+    <div class="flex justify-between items-center mt-1">
+      <button id="row-edit-delete-btn" onclick="App.deleteDispatchRow()" class="hidden px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete Row</button>
+      <div class="space-x-2 ml-auto">
         <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
         <button onclick="App.saveDispatchRowEdit()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save</button>
       </div>
@@ -1588,6 +1632,27 @@ const App = {
     document.getElementById('row-edit-type').value = dispatch.truck_type;
     document.getElementById('row-edit-number').value = dispatch.dispatch_number;
     document.getElementById('row-edit-delete-btn').classList.toggle('hidden', this.state.currentUser.role !== 'admin');
+    const isAdmin = this.state.currentUser.role === 'admin';
+    const adminNote = document.getElementById('row-edit-admin-note');
+    const adminFields = document.getElementById('row-edit-admin-fields');
+    if (adminNote) adminNote.classList.toggle('hidden', !isAdmin);
+    if (adminFields) adminFields.classList.toggle('hidden', !isAdmin);
+    if (isAdmin) {
+      // Populate timestamp fields
+      const tsFields = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      tsFields.forEach(step => {
+        const el = document.getElementById(`re-ts-${step}`);
+        if (!el) return;
+        const ts = dispatch[`${step}_timestamp`];
+        if (ts) {
+          const dt = new Date(ts);
+          dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+          el.value = dt.toISOString().slice(0, 16);
+        } else {
+          el.value = '';
+        }
+      });
+    }
     this.openModal('row-edit-modal');
   },
   async saveDispatchRowEdit() {
@@ -1596,7 +1661,19 @@ const App = {
     const truck_type = document.getElementById('row-edit-type').value;
     const dispatch_number = document.getElementById('row-edit-number').value.trim();
     if (!dispatch_number) return alert('Dispatch number cannot be empty.');
-    const { error } = await supabaseClient.from('dispatches').update({ truck_type, dispatch_number }).eq('id', dispatch.id);
+    const payload = { truck_type, dispatch_number };
+    // Admin-only: apply timestamp overrides if any field was changed
+    if (this.state.currentUser.role === 'admin') {
+      const tsFields = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      tsFields.forEach(step => {
+        const el = document.getElementById(`re-ts-${step}`);
+        if (!el) return;
+        if (el.value) {
+          payload[`${step}_timestamp`] = new Date(el.value).toISOString();
+        }
+      });
+    }
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
     if (error) return alert(error.message.includes('duplicate') ? 'That dispatch number already exists in this RDD.' : error.message);
     this.state.pendingRowEdit = null;
     this.closeModal('row-edit-modal');
@@ -2247,6 +2324,7 @@ const App = {
     const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
     tbody.innerHTML = this.state.appUsers.map(u => {
       const perms = Array.isArray(u.permissions) ? u.permissions : [];
+      const hasAll = steps.every(s => perms.includes(s)) && !!u.can_cancel_truck;
       const checkCells = steps.map(s =>
         `<td class="p-3 text-center">${perms.includes(s)
           ? '<span class="text-emerald-500 font-bold">✓</span>'
@@ -2261,7 +2339,8 @@ const App = {
           : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>
         <td class="p-3">
           <button onclick="App.openEditUserModal('${u.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs font-semibold mr-2">Edit</button>
-          <button onclick="App.openAdminResetPassword('${u.id}')" class="text-amber-600 dark:text-amber-400 hover:text-amber-800 text-xs font-semibold">Reset PW</button>
+          <button onclick="App.openAdminResetPassword('${u.id}')" class="text-amber-600 dark:text-amber-400 hover:text-amber-800 text-xs font-semibold mr-2">Reset PW</button>
+          ${!hasAll ? `<button onclick="App.grantAllAccessToUser('${u.id}')" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 text-xs font-semibold" title="Grant all milestone permissions + cancel truck">Allow All</button>` : '<span class="text-xs text-slate-300 dark:text-slate-600 italic">Full access</span>'}
         </td>
       </tr>`;
     }).join('') || '<tr><td colspan="10" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
@@ -2331,6 +2410,22 @@ const App = {
       if (error) return alert(error.message);
     }
     this.closeModal('user-modal');
+    await this.loadAppUsers();
+  },
+  grantAllPermissions() {
+    ['pick','pgi','invoiced','ds_printed','checking','loaded','cancel_truck'].forEach(p =>
+      document.getElementById('um-perm-' + p).checked = true
+    );
+  },
+  async grantAllAccessToUser(userId) {
+    const u = this.state.appUsers.find(x => x.id === userId);
+    if (!u) return;
+    if (!confirm(`Grant full milestone access to "${u.username}"? This will enable all permissions including Cancel/Reinstate Trucks.`)) return;
+    const allPerms = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const { error } = await supabaseClient.from('app_users')
+      .update({ permissions: allPerms, can_cancel_truck: true })
+      .eq('id', userId);
+    if (error) return alert('Error: ' + error.message);
     await this.loadAppUsers();
   },
   async deleteUser() {
@@ -2471,13 +2566,13 @@ const App = {
         <div class="text-2xl font-bold ${c.color || ''}">${c.value}</div>
       </div>`).join('');
     }
-    // Milestone funnel for current RDD
+    // Milestone funnel for current RDD (pick_start excluded — not a computed milestone)
     const funnelEl = document.getElementById('rdd-funnel');
     const funnelLabels = document.getElementById('rdd-funnel-labels');
     if (funnelEl && funnelLabels) {
-      const steps = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const names = ['Start Pick','End Pick','PGI','Invoice','DS Print','Check','Loaded'];
-      const colors = ['#0284c7','#16a34a','#ec4899','#dc2626','#c46262','#2563eb','#7c3aed'];
+      const steps = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const names = ['End Pick','PGI','Invoice','DS Print','Check','Loaded'];
+      const colors = ['#16a34a','#ec4899','#dc2626','#c46262','#2563eb','#7c3aed'];
       const total = this.state.dispatches.length;
       const counts = steps.map(s => this.state.dispatches.filter(d => d[`${s}_checked`]).length);
       const maxCount = Math.max(...counts, 1);
@@ -2490,12 +2585,12 @@ const App = {
       }).join('');
       funnelLabels.innerHTML = names.map((n, i) => `<div class="flex-1 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-400" style="color:${colors[i]}">${n}</div>`).join('');
     }
-    // Step duration breakdown for current RDD
+    // Step duration breakdown for current RDD (pick_start excluded — not a computed milestone)
     const durTbody = document.getElementById('step-duration-tbody');
     if (durTbody) {
-      const steps2 = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const prevSteps = [null,'pick_start','pick','pgi','invoiced','ds_printed','checking'];
-      const names2 = ['Start Pick','End Pick (from Start)','PGI','Invoiced','DS Printed','Checking','Loaded'];
+      const steps2 = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const prevSteps = ['pick_start','pick','pgi','invoiced','ds_printed','checking'];
+      const names2 = ['End Pick (from Start Pick)','PGI','Invoiced','DS Printed','Checking','Loaded'];
       durTbody.innerHTML = steps2.map((step, i) => {
         const prev = prevSteps[i];
         const col = MILESTONE_COLORS[step] || '#64748b';
@@ -2858,7 +2953,7 @@ const App = {
     const STEPS = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
     const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
 
-    // Pick duration stats
+    // Pick duration stats (Start Pick → End Pick)
     const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
       .filter(v => v > 0);
@@ -2866,8 +2961,8 @@ const App = {
     const minPickDur = pickDurs.length ? Math.min(...pickDurs) : null;
     const maxPickDur = pickDurs.length ? Math.max(...pickDurs) : null;
 
-    // Step completion table
-    const stepRows = STEPS.map(step => {
+    // Step completion table (pick_start excluded — it is not a computed milestone)
+    const stepRows = STEPS.filter(step => step !== 'pick_start').map(step => {
       const done = disps.filter(d => d[`${step}_checked`]).length;
       const pctS = total > 0 ? Math.round((done / total) * 100) : 0;
       const col = MILESTONE_COLORS[step] || '#64748b';
@@ -3069,8 +3164,9 @@ const App = {
       supabaseClient.from('dispatches').select('*').eq('rdd_id', idA),
       supabaseClient.from('dispatches').select('*').eq('rdd_id', idB),
     ]);
-    const STEPS = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    // pick_start excluded from comparison — it is not a computed milestone
+    const STEPS = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEP_NAMES = { pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
     const stat = (disps, step) => {
       const done = (disps||[]).filter(d => d[`${step}_checked`]).length;
       const total = (disps||[]).length;
@@ -3087,7 +3183,7 @@ const App = {
     };
     const mmA = rddA?.rdd_date?.slice(5);
     const mmB = rddB?.rdd_date?.slice(5);
-    const prevSteps = [null,'pick_start','pick','pgi','invoiced','ds_printed','checking'];
+    const prevSteps = ['pick_start','pick','pgi','invoiced','ds_printed','checking'];
     const rows = STEPS.map((step, i) => {
       const sA = stat(da, step), sB = stat(db, step);
       const dA = avgDur(da, step, prevSteps[i]), dB = avgDur(db, step, prevSteps[i]);
@@ -3306,7 +3402,10 @@ window.addEventListener('resize', () => {
       <input type="text" id="um-password" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white font-mono" placeholder="new password">
     </div>
     <div class="mb-4">
-      <div class="text-xs font-semibold mb-2 text-slate-500 dark:text-slate-400 uppercase tracking-wide">Milestone Permissions</div>
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Milestone Permissions</div>
+        <button type="button" onclick="App.grantAllPermissions()" class="text-[11px] font-bold px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-800 transition">✓ Allow All</button>
+      </div>
       <div class="grid grid-cols-3 gap-2">
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pick" class="accent-blue-600"> Pick</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pgi" class="accent-blue-600"> PGI</label>
