@@ -608,6 +608,7 @@
               <th class="p-3 text-center">Total Assigned</th>
               <th class="p-3 text-center">RDDs Active</th>
               <th class="p-3 text-center">Avg per RDD</th>
+              <th class="p-3 text-center">Avg Pick Duration</th>
               <th class="p-3">Last Active RDD</th>
             </tr>
           </thead>
@@ -2464,9 +2465,9 @@ const App = {
     const funnelEl = document.getElementById('rdd-funnel');
     const funnelLabels = document.getElementById('rdd-funnel-labels');
     if (funnelEl && funnelLabels) {
-      const steps = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const names = ['Pick','PGI','Invoice','DS Print','Check','Loaded'];
-      const colors = ['#16a34a','#2563eb','#dc2626','#1e293b','#7c3aed','#0f766e'];
+      const steps = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const names = ['Start Pick','End Pick','PGI','Invoice','DS Print','Check','Loaded'];
+      const colors = ['#0284c7','#16a34a','#2563eb','#dc2626','#1e293b','#7c3aed','#0f766e'];
       const total = this.state.dispatches.length;
       const counts = steps.map(s => this.state.dispatches.filter(d => d[`${s}_checked`]).length);
       const maxCount = Math.max(...counts, 1);
@@ -2482,9 +2483,9 @@ const App = {
     // Step duration breakdown for current RDD
     const durTbody = document.getElementById('step-duration-tbody');
     if (durTbody) {
-      const steps2 = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const prevSteps = [null,'pick','pgi','invoiced','ds_printed','checking'];
-      const names2 = ['Pick','PGI','Invoiced','DS Printed','Checking','Loaded'];
+      const steps2 = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const prevSteps = [null,'pick_start','pick','pgi','invoiced','ds_printed','checking'];
+      const names2 = ['Start Pick','End Pick (from Start)','PGI','Invoiced','DS Printed','Checking','Loaded'];
       durTbody.innerHTML = steps2.map((step, i) => {
         const prev = prevSteps[i];
         const durations = this.state.dispatches.filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
@@ -2841,8 +2842,16 @@ const App = {
     const plan = rdd?.initial_planning_count || 0;
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
-    const STEPS = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
     const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+
+    // Pick duration stats
+    const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+      .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
+      .filter(v => v > 0);
+    const avgPickDur = pickDurs.length ? pickDurs.reduce((a,b)=>a+b,0)/pickDurs.length : null;
+    const minPickDur = pickDurs.length ? Math.min(...pickDurs) : null;
+    const maxPickDur = pickDurs.length ? Math.max(...pickDurs) : null;
 
     // Step completion table
     const stepRows = STEPS.map(step => {
@@ -2911,6 +2920,15 @@ const App = {
             <div class="text-2xl font-bold ${c.c||''}">${c.v}</div>
           </div>`).join('')}
         </div>
+        ${avgPickDur !== null ? `<div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="text-xs font-extrabold text-slate-500 tracking-widest mb-3">PICK DURATION (Start → End Pick)</div>
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div><div class="text-xs text-slate-400 mb-1">Avg Duration</div><div class="text-xl font-bold text-blue-600 dark:text-blue-400">${this.fmtDuration(avgPickDur)}</div></div>
+            <div><div class="text-xs text-slate-400 mb-1">Fastest</div><div class="text-xl font-bold text-emerald-600 dark:text-emerald-400">${this.fmtDuration(minPickDur)}</div></div>
+            <div><div class="text-xs text-slate-400 mb-1">Slowest</div><div class="text-xl font-bold text-amber-600 dark:text-amber-400">${this.fmtDuration(maxPickDur)}</div></div>
+          </div>
+          <div class="mt-3 text-xs text-slate-400 text-center">${pickDurs.length} dispatch${pickDurs.length !== 1 ? 'es' : ''} with complete pick timing</div>
+        </div>` : ''}
         <div class="grid grid-cols-3 gap-5">
           <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4 col-span-1">
             <div class="text-xs font-extrabold text-slate-500 tracking-widest mb-3">MILESTONE COMPLETION</div>
@@ -3029,7 +3047,7 @@ const App = {
       supabaseClient.from('dispatches').select('*').eq('rdd_id', idA),
       supabaseClient.from('dispatches').select('*').eq('rdd_id', idB),
     ]);
-    const STEPS = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
     const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stat = (disps, step) => {
       const done = (disps||[]).filter(d => d[`${step}_checked`]).length;
@@ -3047,7 +3065,7 @@ const App = {
     };
     const mmA = rddA?.rdd_date?.slice(5);
     const mmB = rddB?.rdd_date?.slice(5);
-    const prevSteps = [null,'pick','pgi','invoiced','ds_printed','checking'];
+    const prevSteps = [null,'pick_start','pick','pgi','invoiced','ds_printed','checking'];
     const rows = STEPS.map((step, i) => {
       const sA = stat(da, step), sB = stat(db, step);
       const dA = avgDur(da, step, prevSteps[i]), dB = avgDur(db, step, prevSteps[i]);
@@ -3061,6 +3079,9 @@ const App = {
         <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${fasterWinner==='B'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${dB !== null ? this.fmtDuration(dB) : '—'}</td>
       </tr>`;
     }).join('');
+    const pickDurA = avgDur(da, 'pick', 'pick_start');
+    const pickDurB = avgDur(db, 'pick', 'pick_start');
+    const pickFasterWinner = pickDurA !== null && pickDurB !== null ? (pickDurA < pickDurB ? 'A' : pickDurB < pickDurA ? 'B' : null) : null;
     const totA = da?.length || 0, totB = db?.length || 0;
     const ldA = da?.filter(d=>d.loaded_checked).length || 0;
     const ldB = db?.filter(d=>d.loaded_checked).length || 0;
@@ -3091,7 +3112,36 @@ const App = {
           </thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>`;
+      </div>
+      ${(pickDurA !== null || pickDurB !== null) ? `<div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mt-4">
+        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">PICK DURATION COMPARISON (Start Pick → End Pick)</div>
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+            <tr>
+              <th class="border border-slate-200 dark:border-slate-700 px-3 py-2">Metric</th>
+              <th class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">RDD ${mmA}</th>
+              <th class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">RDD ${mmB}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Avg Pick Duration</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${pickFasterWinner==='A'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${pickDurA !== null ? this.fmtDuration(pickDurA) : '—'}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${pickFasterWinner==='B'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${pickDurB !== null ? this.fmtDuration(pickDurB) : '—'}</td>
+            </tr>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Fastest Pick</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-emerald-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-emerald-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+            </tr>
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Slowest Pick</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>` : ''}`;
   },
 
   // ═══════════════════════════════════════════════════════
@@ -3099,7 +3149,7 @@ const App = {
   // ═══════════════════════════════════════════════════════
   async renderAssignmentHistory() {
     const filter = document.getElementById('history-pool-filter')?.value || 'all';
-    const { data: allDisps } = await supabaseClient.from('dispatches').select('rdd_id, pick_checked, pick_assigned_names, checking_checked, checking_assigned_names, dispatch_number, truck_type');
+    const { data: allDisps } = await supabaseClient.from('dispatches').select('rdd_id, pick_checked, pick_assigned_names, pick_start_checked, pick_start_timestamp, pick_timestamp, checking_checked, checking_assigned_names, dispatch_number, truck_type');
     const { data: allRdds } = await supabaseClient.from('rdd_masters').select('id, rdd_date').order('rdd_date', { ascending: false });
     const tbody = document.getElementById('assignment-history-tbody');
     const emptyEl = document.getElementById('assignment-history-empty');
@@ -3110,16 +3160,19 @@ const App = {
     const personMap = {}; // name -> { pool, rdds: { rddId: [dispatchNos] } }
     allDisps.forEach(d => {
       if (d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length) {
+        const dur = (d.pick_start_checked && d.pick_start_timestamp && d.pick_timestamp)
+          ? new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime() : null;
         d.pick_assigned_names.forEach(n => {
-          if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {} };
+          if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {}, pickDurs: [] };
           if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
           personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
+          if (dur && dur > 0) personMap[n].pickDurs.push(dur);
         });
       }
       if (d.checking_checked && d.checking_assigned_names) {
         const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
         names.forEach(n => {
-          if (!personMap[n]) personMap[n] = { pool: 'checker', rdds: {} };
+          if (!personMap[n]) personMap[n] = { pool: 'checker', rdds: {}, pickDurs: [] };
           if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
           personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
         });
@@ -3144,12 +3197,16 @@ const App = {
       const poolBadge = data.pool === 'picker'
         ? '<span class="px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 rounded-full">Picker</span>'
         : '<span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full">Checker</span>';
+      const avgPick = (data.pool === 'picker' && data.pickDurs && data.pickDurs.length)
+        ? this.fmtDuration(data.pickDurs.reduce((s,v)=>s+v,0)/data.pickDurs.length)
+        : '—';
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer" onclick="App.showAssignmentDetail('${name.replace(/'/g,"\\'")}')">
         <td class="p-3 font-semibold">${name}</td>
         <td class="p-3">${poolBadge}</td>
         <td class="p-3 text-center font-bold text-blue-600 dark:text-blue-400">${total}</td>
         <td class="p-3 text-center">${rddCount}</td>
         <td class="p-3 text-center">${avg}</td>
+        <td class="p-3 text-center ${data.pool==='picker' ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-slate-400'}">${avgPick}</td>
         <td class="p-3 text-slate-500 dark:text-slate-400">RDD ${lastDate}</td>
       </tr>`;
     }).join('');
