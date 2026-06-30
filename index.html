@@ -98,38 +98,38 @@
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
         <span>Dashboard</span>
       </button>
-      <!-- 3. Available Trucks — admin, outbound, transport -->
-      <button onclick="App.tryTab('tab-trucks',['admin','outbound','transport'])" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 3. Available Trucks -->
+      <button onclick="App.tryTab('tab-trucks','tab_trucks')" id="btn-tab-trucks" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 18H5a2 2 0 01-2-2V8a2 2 0 012-2h3m0 12h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zm1-12h2l3 5v5h-5V6z"/></svg>
         <span>Available Trucks</span>
       </button>
-      <!-- 4. Personnel — admin & outbound only -->
-      <button onclick="App.tryTab('tab-personnel',['admin','outbound'])" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 4. Personnel -->
+      <button onclick="App.tryTab('tab-personnel','tab_personnel')" id="btn-tab-personnel" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6 5.87a4 4 0 10-8 0m10-10a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         <span>Personnel</span>
       </button>
-      <!-- 5. Reports — admin & outbound only -->
-      <button onclick="App.tryTab('tab-reports',['admin','outbound'])" id="btn-tab-reports" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 5. Reports -->
+      <button onclick="App.tryTab('tab-reports','tab_reports')" id="btn-tab-reports" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span>Reports</span>
       </button>
-      <!-- 6. RDD Comparison (was Shift Compare) — admin & outbound only -->
-      <button onclick="App.tryTab('tab-shift-compare',['admin','outbound'])" id="btn-tab-shift-compare" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 6. RDD Comparison (was Shift Compare) -->
+      <button onclick="App.tryTab('tab-shift-compare','tab_shift_compare')" id="btn-tab-shift-compare" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         <span>RDD Comparison</span>
       </button>
-      <!-- 7. RDD Summary (was RDD Summary) — admin & outbound only -->
-      <button onclick="App.tryTab('tab-rdd-summary',['admin','outbound'])" id="btn-tab-rdd-summary" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 7. RDD Summary -->
+      <button onclick="App.tryTab('tab-rdd-summary','tab_rdd_summary')" id="btn-tab-rdd-summary" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span>RDD Summary</span>
       </button>
-      <!-- 8. Assignment History — admin & outbound only -->
-      <button onclick="App.tryTab('tab-assignment-history',['admin','outbound'])" id="btn-tab-assignment-history" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- 8. Assignment History -->
+      <button onclick="App.tryTab('tab-assignment-history','tab_assignment_history')" id="btn-tab-assignment-history" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Assignment History</span>
       </button>
-      <!-- User Management — admin only -->
-      <button onclick="App.tryTab('tab-users',['admin'])" id="btn-tab-users" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+      <!-- User Management -->
+      <button onclick="App.tryTab('tab-users','tab_users')" id="btn-tab-users" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/></svg>
         <span>User Management</span>
       </button>
@@ -555,6 +555,7 @@
               <th class="p-3 text-center">Checking</th>
               <th class="p-3 text-center">Loaded</th>
               <th class="p-3 text-center">Cancel Truck</th>
+              <th class="p-3">Access Permissions</th>
               <th class="p-3">Actions</th>
             </tr>
           </thead>
@@ -958,11 +959,50 @@ const App = {
       return true;
     } catch { return false; }
   },
+  // ═══════════════════════════════════════════════════════
+  // PERMISSION HELPERS
+  // True admins (role === 'admin') always have full access.
+  // Everyone else gets access via role defaults OR an explicit
+  // permission flag granted individually in User Management.
+  // ═══════════════════════════════════════════════════════
+  TAB_ROLE_DEFAULTS: {
+    tab_trucks: ['admin','outbound','transport'],
+    tab_personnel: ['admin','outbound'],
+    tab_reports: ['admin','outbound'],
+    tab_shift_compare: ['admin','outbound'],
+    tab_rdd_summary: ['admin','outbound'],
+    tab_assignment_history: ['admin','outbound'],
+    tab_users: ['admin'],
+  },
+  ACTION_ROLE_DEFAULTS: {
+    edit_dispatch: ['admin','outbound','transport'],
+    delete_dispatch: ['admin'],
+    admin_override: ['admin'],
+  },
+  isTrueAdmin() {
+    return this.state.currentUser?.role === 'admin';
+  },
+  hasPerm(key) {
+    const user = this.state.currentUser;
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const flags = Array.isArray(user.permissions) ? user.permissions : [];
+    if (flags.includes(key)) return true;
+    const roleDefaults = this.TAB_ROLE_DEFAULTS[key] || this.ACTION_ROLE_DEFAULTS[key];
+    return roleDefaults ? roleDefaults.includes(user.role) : false;
+  },
+  applyNavVisibility() {
+    Object.keys(this.TAB_ROLE_DEFAULTS).forEach(key => {
+      const btn = document.getElementById(`btn-${key.replace(/^tab_/, 'tab-').replace(/_/g, '-')}`);
+      if (btn) btn.classList.toggle('hidden', !this.hasPerm(key));
+    });
+  },
   async init() {
     this.initTheme();
     this.state.chartRemarks = {};
-    const isAdmin = this.state.currentUser.role === 'admin';
-    const canEditDispatch = ['admin','outbound','transport'].includes(this.state.currentUser.role);
+    const isAdmin = this.isTrueAdmin();
+    const canEditDispatch = this.hasPerm('edit_dispatch');
+    this.applyNavVisibility();
     if (canEditDispatch) {
       document.getElementById('actions-col-header').classList.remove('hidden');
     }
@@ -1041,9 +1081,10 @@ const App = {
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
   },
-  tryTab(tabId, allowedRoles) {
-    if (!allowedRoles.includes(this.state.currentUser?.role)) {
-      this.showToast(`🔒 Access restricted — ${allowedRoles.join(' / ')} only`, 'alert');
+  tryTab(tabId, permKey) {
+    if (!this.hasPerm(permKey)) {
+      const defaults = this.TAB_ROLE_DEFAULTS[permKey] || [];
+      this.showToast(`🔒 Access restricted — ask an admin to enable this for your account${defaults.length ? ` (default: ${defaults.join(' / ')})` : ''}`, 'alert');
       return;
     }
     this.switchTab(tabId);
@@ -1360,8 +1401,8 @@ const App = {
       const tr = document.createElement('tr');
       const priorityClass = d.priority === 'urgent' ? 'priority-urgent' : d.priority === 'high' ? 'priority-high' : '';
       tr.className = `hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${priorityClass}`;
-      const isAdmin = this.state.currentUser.role === 'admin';
-      const canSetPriority = ['admin','outbound','transport'].includes(this.state.currentUser.role);
+      const isAdmin = this.hasPerm('admin_override');
+      const canSetPriority = this.hasPerm('edit_dispatch');
       const priorityCell = canSetPriority
         ? `<td class="p-3 text-center"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
         : `<td class="p-3 text-center">${this.priorityBadge(d.priority)}</td>`;
@@ -1372,7 +1413,7 @@ const App = {
         const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
         // pick_start shares the 'pick' permission so anyone who can pick can also start picking
         const hasPermission = step === 'pick_start' ? allowed.includes('pick') : allowed.includes(step);
-        const clickable = isChecked ? (this.state.currentUser.role === 'admin') : (chronologyMet && hasPermission);
+        const clickable = isChecked ? isAdmin : (chronologyMet && hasPermission);
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
@@ -1435,8 +1476,8 @@ const App = {
                     <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
                   </div>
                 </td>`;
-      const canEditDispatch = ['admin','outbound','transport'].includes(this.state.currentUser.role);
-      const canDeleteDispatch = this.state.currentUser.role === 'admin';
+      const canEditDispatch = this.hasPerm('edit_dispatch');
+      const canDeleteDispatch = this.hasPerm('delete_dispatch');
       if (canEditDispatch || canDeleteDispatch) {
         html += `<td class="p-3">
                     ${canEditDispatch ? `<button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>` : ''}
@@ -1550,8 +1591,8 @@ const App = {
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     const isChecked = dispatch[`${step}_checked`];
     if (isChecked) {
-      if (this.state.currentUser.role === 'admin') this.openAdminEditModal(dispatch, step);
-      else alert('Only an admin can edit or untick a completed step.');
+      if (this.hasPerm('admin_override')) this.openAdminEditModal(dispatch, step);
+      else alert('You do not have permission to edit or untick a completed step. Ask an admin to grant this.');
       return;
     }
     this.state.pendingMilestoneUpdate = { dispatch, step };
@@ -1729,13 +1770,14 @@ const App = {
     await this.loadTrucks();
   },
   openRowEditModal(dispatchId) {
-    if (!['admin','outbound','transport'].includes(this.state.currentUser.role)) return;
+    if (!this.hasPerm('edit_dispatch')) return;
     const dispatch = this.state.dispatches.find(d => d.id === dispatchId);
     this.state.pendingRowEdit = dispatch;
     document.getElementById('row-edit-type').value = dispatch.truck_type;
     document.getElementById('row-edit-number').value = dispatch.dispatch_number;
-    document.getElementById('row-edit-delete-btn').classList.toggle('hidden', this.state.currentUser.role !== 'admin');
-    const isAdmin = this.state.currentUser.role === 'admin';
+    const canDelete = this.hasPerm('delete_dispatch');
+    document.getElementById('row-edit-delete-btn').classList.toggle('hidden', !canDelete);
+    const isAdmin = this.hasPerm('admin_override');
     const adminNote = document.getElementById('row-edit-admin-note');
     const adminFields = document.getElementById('row-edit-admin-fields');
     if (adminNote) adminNote.classList.toggle('hidden', !isAdmin);
@@ -1759,14 +1801,14 @@ const App = {
     this.openModal('row-edit-modal');
   },
   async saveDispatchRowEdit() {
-    if (!['admin','outbound','transport'].includes(this.state.currentUser.role)) return;
+    if (!this.hasPerm('edit_dispatch')) return;
     const dispatch = this.state.pendingRowEdit;
     const truck_type = document.getElementById('row-edit-type').value;
     const dispatch_number = document.getElementById('row-edit-number').value.trim();
     if (!dispatch_number) return alert('Dispatch number cannot be empty.');
     const payload = { truck_type, dispatch_number };
-    // Admin-only: apply timestamp overrides if any field was changed
-    if (this.state.currentUser.role === 'admin') {
+    // Admin-override only: apply timestamp overrides if any field was changed
+    if (this.hasPerm('admin_override')) {
       const tsFields = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
       tsFields.forEach(step => {
         const el = document.getElementById(`re-ts-${step}`);
@@ -1783,7 +1825,7 @@ const App = {
     await this.loadDispatches();
   },
   async deleteDispatchRow() {
-    if (this.state.currentUser.role !== 'admin') return alert('Only Admin can delete a dispatch row.');
+    if (!this.hasPerm('delete_dispatch')) return alert('You do not have permission to delete a dispatch row.');
     const dispatch = this.state.pendingRowEdit;
     await this.performDispatchDelete(dispatch);
     this.closeModal('row-edit-modal');
@@ -1831,9 +1873,8 @@ const App = {
     // may re-add it — and only after confirming it's an additional (2nd, 3rd, ...) trip.
     const existing = this.state.trucks.filter(t => t.truck_type === truck_type && t.plate_number === plate_number);
     if (existing.length > 0) {
-      const reAddRoles = ['admin', 'outbound', 'transport'];
-      if (!reAddRoles.includes(this.state.currentUser.role)) {
-        return alert(`${plate_number} (${truck_type}) was already added today. Only Transport, Outbound, or Admin can re-add a truck for another trip.`);
+      if (!this.hasPerm('edit_dispatch')) {
+        return alert(`${plate_number} (${truck_type}) was already added today. Only Transport, Outbound, or Admin (or anyone granted Edit Dispatches access) can re-add a truck for another trip.`);
       }
       const tripNumber = existing.length + 1;
       const confirmed = confirm(`${plate_number} (${truck_type}) was already added today.\n\nAdd it again as Trip #${tripNumber} for this truck?`);
@@ -1852,7 +1893,7 @@ const App = {
       grid.innerHTML = `<div class="col-span-3 p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD plan to see the active fleet.</div>`;
       return;
     }
-    const canCancel = this.state.currentUser.canCancelTruck || this.state.currentUser.role === 'admin';
+    const canCancel = this.state.currentUser.canCancelTruck || this.isTrueAdmin();
     const types = ['AUV', '4W', '6W', '10W', '20F', '40F'];
     types.forEach(type => {
       const all = this.state.trucks.filter(t => t.truck_type === type);
@@ -2425,6 +2466,12 @@ const App = {
     const tbody = document.getElementById('users-tbody');
     if (!tbody) return;
     const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const accessLabels = {
+      tab_trucks: 'Trucks', tab_personnel: 'Personnel', tab_reports: 'Reports',
+      tab_shift_compare: 'RDD Compare', tab_rdd_summary: 'RDD Summary',
+      tab_assignment_history: 'Assign. History', tab_users: 'User Mgmt',
+      edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
+    };
     tbody.innerHTML = this.state.appUsers.map(u => {
       const perms = Array.isArray(u.permissions) ? u.permissions : [];
       const hasAll = steps.every(s => perms.includes(s)) && !!u.can_cancel_truck;
@@ -2433,6 +2480,12 @@ const App = {
           ? '<span class="text-emerald-500 font-bold">✓</span>'
           : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>`
       ).join('');
+      const isUserAdmin = u.role === 'admin';
+      const extraGranted = isUserAdmin
+        ? '<span class="text-xs text-slate-400 italic">All (admin)</span>'
+        : (Object.keys(accessLabels).filter(k => perms.includes(k)).map(k =>
+            `<span class="inline-block text-[10px] font-semibold px-1.5 py-0.5 mr-1 mb-1 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">${accessLabels[k]}</span>`
+          ).join('') || '<span class="text-xs text-slate-300 dark:text-slate-600 italic">none</span>');
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
         <td class="p-3 font-semibold">${u.username}</td>
         <td class="p-3"><span class="px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${u.role}</span></td>
@@ -2440,14 +2493,18 @@ const App = {
         <td class="p-3 text-center">${u.can_cancel_truck
           ? '<span class="text-emerald-500 font-bold">✓</span>'
           : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>
+        <td class="p-3 max-w-[220px]">${extraGranted}</td>
         <td class="p-3">
           <button onclick="App.openEditUserModal('${u.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs font-semibold mr-2">Edit</button>
           <button onclick="App.openAdminResetPassword('${u.id}')" class="text-amber-600 dark:text-amber-400 hover:text-amber-800 text-xs font-semibold mr-2">Reset PW</button>
           ${!hasAll ? `<button onclick="App.grantAllAccessToUser('${u.id}')" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 text-xs font-semibold" title="Grant all milestone permissions + cancel truck">Allow All</button>` : '<span class="text-xs text-slate-300 dark:text-slate-600 italic">Full access</span>'}
         </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="10" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
+    }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
+  MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users'],
+  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users'],
   openAddUserModal() {
     this.state.pendingUserId = null;
     document.getElementById('user-modal-title').textContent = 'Add User';
@@ -2457,9 +2514,11 @@ const App = {
     document.getElementById('um-password').value = '';
     document.getElementById('um-pass-hint').textContent = '(required for new user)';
     document.getElementById('um-delete-btn').classList.add('hidden');
-    ['pick','pgi','invoiced','ds_printed','checking','loaded','cancel_truck'].forEach(p =>
+    [...this.MILESTONE_PERM_KEYS, 'cancel_truck', ...this.EXTRA_PERM_KEYS].forEach(p =>
       document.getElementById('um-perm-' + p).checked = false
     );
+    const sensitiveBox = document.getElementById('um-sensitive-perms');
+    if (sensitiveBox) sensitiveBox.classList.toggle('hidden', !this.isTrueAdmin());
     this.openModal('user-modal');
   },
   openEditUserModal(userId) {
@@ -2474,10 +2533,12 @@ const App = {
     document.getElementById('um-pass-hint').textContent = '(leave blank to keep current)';
     document.getElementById('um-delete-btn').classList.remove('hidden');
     const perms = Array.isArray(u.permissions) ? u.permissions : [];
-    ['pick','pgi','invoiced','ds_printed','checking','loaded'].forEach(p =>
+    [...this.MILESTONE_PERM_KEYS, ...this.EXTRA_PERM_KEYS].forEach(p =>
       document.getElementById('um-perm-' + p).checked = perms.includes(p)
     );
     document.getElementById('um-perm-cancel_truck').checked = !!u.can_cancel_truck;
+    const sensitiveBox = document.getElementById('um-sensitive-perms');
+    if (sensitiveBox) sensitiveBox.classList.toggle('hidden', !this.isTrueAdmin());
     this.openModal('user-modal');
   },
   openAdminResetPassword(userId) {
@@ -2496,17 +2557,25 @@ const App = {
     const username = document.getElementById('um-username').value.trim().toLowerCase();
     const role = document.getElementById('um-role').value;
     const pw = document.getElementById('um-password').value.trim();
-    const permissions = ['pick','pgi','invoiced','ds_printed','checking','loaded']
+    if (!this.isTrueAdmin() && role === 'admin') {
+      return alert('Only an existing Admin can assign the Admin role to a user.');
+    }
+    const permissions = [...this.MILESTONE_PERM_KEYS, ...this.EXTRA_PERM_KEYS]
       .filter(p => document.getElementById('um-perm-' + p).checked);
+    // Non-true-admins can never grant sensitive permissions, even if the
+    // checkboxes were somehow checked before the section was hidden.
+    const finalPermissions = this.isTrueAdmin()
+      ? permissions
+      : permissions.filter(p => !this.SENSITIVE_PERM_KEYS.includes(p));
     const can_cancel_truck = document.getElementById('um-perm-cancel_truck').checked;
     if (isNew) {
       if (!username) return alert('Username is required.');
       if (!pw) return alert('Password is required for new users.');
       const { error } = await supabaseClient.from('app_users')
-        .insert({ username, role, password_plain: pw, permissions, can_cancel_truck });
+        .insert({ username, role, password_plain: pw, permissions: finalPermissions, can_cancel_truck });
       if (error) return alert(error.message.includes('duplicate') ? 'Username already exists.' : error.message);
     } else {
-      const payload = { role, permissions, can_cancel_truck };
+      const payload = { role, permissions: finalPermissions, can_cancel_truck };
       if (pw) payload.password_plain = pw;
       const { error } = await supabaseClient.from('app_users')
         .update(payload).eq('id', this.state.pendingUserId);
@@ -2516,17 +2585,20 @@ const App = {
     await this.loadAppUsers();
   },
   grantAllPermissions() {
-    ['pick','pgi','invoiced','ds_printed','checking','loaded','cancel_truck'].forEach(p =>
-      document.getElementById('um-perm-' + p).checked = true
-    );
+    const keys = [...this.MILESTONE_PERM_KEYS, 'cancel_truck', ...this.EXTRA_PERM_KEYS];
+    keys.forEach(p => {
+      if (this.SENSITIVE_PERM_KEYS.includes(p) && !this.isTrueAdmin()) return;
+      document.getElementById('um-perm-' + p).checked = true;
+    });
   },
   async grantAllAccessToUser(userId) {
     const u = this.state.appUsers.find(x => x.id === userId);
     if (!u) return;
-    if (!confirm(`Grant full milestone access to "${u.username}"? This will enable all permissions including Cancel/Reinstate Trucks.`)) return;
-    const allPerms = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
+    if (!confirm(`Grant full milestone access to "${u.username}"? This will enable all milestone permissions including Cancel/Reinstate Trucks. Existing tab/edit/delete/admin permissions are kept as-is.`)) return;
+    const existing = Array.isArray(u.permissions) ? u.permissions : [];
+    const merged = [...new Set([...existing, ...this.MILESTONE_PERM_KEYS])];
     const { error } = await supabaseClient.from('app_users')
-      .update({ permissions: allPerms, can_cancel_truck: true })
+      .update({ permissions: merged, can_cancel_truck: true })
       .eq('id', userId);
     if (error) return alert('Error: ' + error.message);
     await this.loadAppUsers();
@@ -2807,7 +2879,7 @@ const App = {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.state.currentUser?.role === 'admin') this.loadAppUsers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
@@ -3026,7 +3098,7 @@ const App = {
           await this.loadDispatches();
           await this.loadChartRemarks(this.state.currentRddId);
         }
-        if (this.state.currentUser?.role === 'admin') await this.loadAppUsers();
+        if (this.hasPerm('tab_users')) await this.loadAppUsers();
         if (el) el.textContent = '●  live  ·  refresh in 60s';
       } catch (err) {
         console.error('Auto-refresh error:', err);
@@ -3518,6 +3590,27 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-loaded" class="accent-blue-600"> Loaded</label>
       </div>
       <label class="flex items-center gap-2 text-sm mt-2 px-2 py-1.5 border dark:border-slate-700 rounded-lg w-fit"><input type="checkbox" id="um-perm-cancel_truck" class="accent-blue-600"> Can Cancel/Reinstate Trucks</label>
+    </div>
+    <div class="mb-4">
+      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tab Access</div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_trucks" class="accent-blue-600"> Available Trucks</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_personnel" class="accent-blue-600"> Personnel</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_reports" class="accent-blue-600"> Reports</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_shift_compare" class="accent-blue-600"> RDD Comparison</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_rdd_summary" class="accent-blue-600"> RDD Summary</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_assignment_history" class="accent-blue-600"> Assignment History</label>
+      </div>
+    </div>
+    <div id="um-sensitive-perms" class="mb-4">
+      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Dispatch &amp; Admin Actions</div>
+      <div class="grid grid-cols-1 gap-2">
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-edit_dispatch" class="accent-blue-600"> Edit dispatch rows (truck type, dispatch #, re-add trucks)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-delete_dispatch" class="accent-red-600"> Delete dispatch rows</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-admin_override" class="accent-red-600"> Admin Override (untick/edit completed steps + timestamps)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
+      </div>
+      <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
     </div>
     <div class="flex justify-between items-center">
       <button id="um-delete-btn" onclick="App.deleteUser()" class="hidden px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Delete User</button>
