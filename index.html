@@ -195,7 +195,8 @@
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('truck_type')">Type <span id="sort-truck_type" class="sort-arrow"></span></th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('dispatch_number')">Dispatch No. <span id="sort-dispatch_number" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('priority')">⚑ <span id="sort-priority" class="sort-arrow"></span></th>
-              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick')">Pick <span id="sort-pick" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick_start')">Start Pick <span id="sort-pick_start" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick')">End Pick <span id="sort-pick" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pgi')">PGI <span id="sort-pgi" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('invoiced')">Invoiced <span id="sort-invoiced" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('ds_printed')">DS Printed <span id="sort-ds_printed" class="sort-arrow"></span></th>
@@ -671,7 +672,7 @@
 </div>
 <div id="pick-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
-    <h2 class="text-lg font-bold mb-4">Assign Picker(s)</h2>
+    <h2 class="text-lg font-bold mb-4">End Pick — Assign Picker(s)</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Pickers (select 1 or more from the pool)</label>
     <div id="pick-checkbox-list" class="border dark:border-slate-700 rounded-lg p-2 mb-1 max-h-52 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800"></div>
     <div id="pick-count-note" class="text-xs text-slate-400 mb-5"></div>
@@ -764,8 +765,8 @@ Chart.register(ChartDataLabels);
 // ROLE_PERMISSIONS and TRUCK_CANCEL_ROLES are now dynamic per user from DB
 // Kept as runtime state on App.state.currentUser
 const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_LABELS = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const App = {
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
@@ -996,12 +997,22 @@ const App = {
     data.forEach(rdd => {
       const opt = document.createElement('option');
       opt.value = rdd.id;
-      // Format: RDD MM-DD (e.g. RDD 06-27)
       const mmdd = rdd.rdd_date ? rdd.rdd_date.slice(5) : rdd.rdd_date;
       opt.textContent = `RDD ${mmdd}  (Plan: ${rdd.initial_planning_count})`;
       sel.appendChild(opt);
     });
-    if (prev) sel.value = prev;
+    if (prev) {
+      // Restore previous selection (e.g. after creating a new RDD)
+      sel.value = prev;
+    } else {
+      // First load — try to auto-select the RDD matching the default date
+      const defaultDate = this.getDefaultRddDateString();
+      const match = data.find(r => r.rdd_date === defaultDate);
+      if (match) {
+        sel.value = match.id;
+        await this.selectRDD(match.id);
+      }
+    }
     this.populateCompareSelects();
   },
   getDefaultRddDateString() {
@@ -1105,8 +1116,8 @@ const App = {
     const stuckMs = 30 * 60 * 1000;
     const alerts = [];
     // Alert 1: dispatches stuck at a step > 30 min
-    const STEPS_FLOW = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stepStuckCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
@@ -1212,7 +1223,16 @@ const App = {
   },
   milestoneTooltip(d, step) {
     const ts = d[`${step}_timestamp`] ? new Date(d[`${step}_timestamp`]).toLocaleString() : '';
-    if (step === 'pick' && d.pick_assigned_names && d.pick_assigned_names.length) return `${ts} — Picker(s): ${Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names}`;
+    if (step === 'pick_start') return ts ? `Pick started: ${ts}` : '';
+    if (step === 'pick' && d.pick_assigned_names && d.pick_assigned_names.length) {
+      const names = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names;
+      let tip = `${ts} — Picker(s): ${names}`;
+      if (d.pick_start_timestamp && d.pick_timestamp) {
+        const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
+        tip += ` — Pick duration: ${this.fmtDuration(dur)}`;
+      }
+      return tip;
+    }
     if (step === 'checking') {
       const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join(', ') : (d.checking_assigned_names || '');
       const bits = [ts];
@@ -1228,7 +1248,7 @@ const App = {
   },
   isDispatchStuck(d) {
     if (d.loaded_checked) return false;
-    const STEPS_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
     for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
       const step = STEPS_FLOW[i];
       if (d[`${step}_checked`]) {
@@ -1276,15 +1296,23 @@ const App = {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
         const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
-        const hasPermission = allowed.includes(step);
+        // pick_start shares the 'pick' permission so anyone who can pick can also start picking
+        const hasPermission = step === 'pick_start' ? allowed.includes('pick') : allowed.includes(step);
         const clickable = isChecked ? (this.state.currentUser.role === 'admin') : (chronologyMet && hasPermission);
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
+        // For End Pick (pick), show pick duration below the checkbox when both timestamps exist
+        let durationHtml = '';
+        if (step === 'pick' && isChecked && d.pick_start_timestamp && d.pick_timestamp) {
+          const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
+          durationHtml = `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">${this.fmtDuration(dur)}</div>`;
+        }
         html += `<td class="p-3 text-center" title="${tip}">
                     <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
                            ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
+                    ${durationHtml}
                   </td>`;
       });
       const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
@@ -1333,7 +1361,7 @@ const App = {
       String(d.status).toLowerCase().includes(q)
     );
     if (!rows.length) return alert('No dispatches match the current search to export.');
-    const headers = ['Type', 'Dispatch No.', 'Pick', 'Picker(s)', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Checker(s)', 'Bay', 'Loaded', 'Loaded Truck', 'Loaded Truck Timestamp', 'Remarks', 'Last Remark By', 'Status', 'Progress %'];
+    const headers = ['Type', 'Dispatch No.', 'Start Pick', 'End Pick', 'Pick Duration', 'Picker(s)', 'PGI', 'Invoiced', 'DS Printed', 'Checking', 'Checker(s)', 'Bay', 'Loaded', 'Loaded Truck', 'Loaded Truck Timestamp', 'Remarks', 'Last Remark By', 'Status', 'Progress %'];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [headers.map(esc).join(',')];
     rows.forEach(d => {
@@ -1341,9 +1369,11 @@ const App = {
       const checkerNames = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join('; ') : (d.checking_assigned_names || '');
       const pickerNames = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join('; ') : (d.pick_assigned_names || '');
       const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
+      const pickDur = d.pick_start_timestamp && d.pick_timestamp
+        ? this.fmtDuration(new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)) : '';
       lines.push([
         d.truck_type, d.dispatch_number,
-        cell('pick'), pickerNames,
+        cell('pick_start'), cell('pick'), pickDur, pickerNames,
         cell('pgi'), cell('invoiced'), cell('ds_printed'),
         cell('checking'), checkerNames, d.bay_location || '',
         cell('loaded'),
@@ -1392,8 +1422,8 @@ const App = {
   exportStuckDispatchesCSV() {
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
-    const STEPS_FLOW = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-    const STEP_NAMES = { pick: 'Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stuck = [];
     this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -1527,6 +1557,7 @@ const App = {
     toUncheck.forEach(s => {
       payload[`${s}_checked`] = false;
       payload[`${s}_timestamp`] = null;
+      if (s === 'pick_start') { /* pick_start_checked / pick_start_timestamp already set above */ }
       if (s === 'pick') payload.pick_assigned_names = null;
       if (s === 'checking') { payload.checking_assigned_names = null; payload.bay_location = null; }
       if (s === 'loaded' && dispatch.assigned_truck_id) {
@@ -2520,8 +2551,8 @@ const App = {
     if (stuckList) {
       const now2 = Date.now();
       const stuckMs = 30 * 60 * 1000;
-      const STEPS_FLOW = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const STEP_NAMES2 = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+      const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const STEP_NAMES2 = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
       const stuck = [];
       this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
         for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -2700,8 +2731,8 @@ const App = {
     if (!this.state.currentRddId) return;
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
-    const STEPS_FLOW = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stepCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
@@ -2811,7 +2842,7 @@ const App = {
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
     const STEPS = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
 
     // Step completion table
     const stepRows = STEPS.map(step => {
@@ -2999,7 +3030,7 @@ const App = {
       supabaseClient.from('dispatches').select('*').eq('rdd_id', idB),
     ]);
     const STEPS = ['pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick:'Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
+    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stat = (disps, step) => {
       const done = (disps||[]).filter(d => d[`${step}_checked`]).length;
       const total = (disps||[]).length;
