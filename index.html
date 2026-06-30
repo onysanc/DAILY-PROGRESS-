@@ -18,6 +18,14 @@
   .scrollbar-none::-webkit-scrollbar{display:none}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
   input[type=checkbox]{accent-color:#2563eb}
+  /* Per-step checkbox accent colors matching the graph */
+  .cb-pick_start{accent-color:#0284c7}
+  .cb-pick      {accent-color:#16a34a}
+  .cb-pgi       {accent-color:#ec4899}
+  .cb-invoiced  {accent-color:#dc2626}
+  .cb-ds_printed{accent-color:#c46262}
+  .cb-checking  {accent-color:#2563eb}
+  .cb-loaded    {accent-color:#7c3aed}
   ::-webkit-scrollbar{height:8px;width:8px}
   ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
   .dark ::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
@@ -768,6 +776,7 @@ Chart.register(ChartDataLabels);
 const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
+const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', checking: '#2563eb', loaded: '#7c3aed' };
 const App = {
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
@@ -1310,7 +1319,7 @@ const App = {
           durationHtml = `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">${this.fmtDuration(dur)}</div>`;
         }
         html += `<td class="p-3 text-center" title="${tip}">
-                    <input type="checkbox" class="w-5 h-5 cursor-pointer ${!clickable ? 'disabled-checkbox' : ''}"
+                    <input type="checkbox" class="w-5 h-5 cursor-pointer cb-${step} ${!clickable ? 'disabled-checkbox' : ''}"
                            ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
                     ${durationHtml}
@@ -1878,12 +1887,13 @@ const App = {
     };
 
     const STEP_META = {
+      pick_start: { label: 'Start Pick',  color: '#0284c7', icon: '✔' },
       pick:       { label: 'Picked',     color: '#16a34a', icon: '✔' },
-      pgi:        { label: 'PGI',        color: '#2563eb', icon: '✔' },
+      pgi:        { label: 'PGI',        color: '#ec4899', icon: '✔' },
       invoiced:   { label: 'Invoiced',   color: '#dc2626', icon: '✔' },
       ds_printed: { label: 'DS Printed', color: '#c46262', icon: '✔' },
-      checking:   { label: 'Checked',    color: '#7c3aed', icon: '✔' },
-      loaded:     { label: 'Loaded',     color: '#0f766e', icon: '✔' },
+      checking:   { label: 'Checked',    color: '#2563eb', icon: '✔' },
+      loaded:     { label: 'Loaded',     color: '#7c3aed', icon: '✔' },
     };
 
     // 1. Collect dispatch milestone events
@@ -2467,7 +2477,7 @@ const App = {
     if (funnelEl && funnelLabels) {
       const steps = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
       const names = ['Start Pick','End Pick','PGI','Invoice','DS Print','Check','Loaded'];
-      const colors = ['#0284c7','#16a34a','#2563eb','#dc2626','#1e293b','#7c3aed','#0f766e'];
+      const colors = ['#0284c7','#16a34a','#ec4899','#dc2626','#c46262','#2563eb','#7c3aed'];
       const total = this.state.dispatches.length;
       const counts = steps.map(s => this.state.dispatches.filter(d => d[`${s}_checked`]).length);
       const maxCount = Math.max(...counts, 1);
@@ -2488,18 +2498,21 @@ const App = {
       const names2 = ['Start Pick','End Pick (from Start)','PGI','Invoiced','DS Printed','Checking','Loaded'];
       durTbody.innerHTML = steps2.map((step, i) => {
         const prev = prevSteps[i];
+        const col = MILESTONE_COLORS[step] || '#64748b';
         const durations = this.state.dispatches.filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
           const endT = new Date(d[`${step}_timestamp`]).getTime();
           const startT = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
           return startT ? endT - startT : null;
         }).filter(v => v !== null && v > 0);
-        if (!durations.length) return `<tr><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${names2[i]}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-slate-400" colspan="3">—</td></tr>`;
+        if (!durations.length) return `<tr><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background:${col}"></span>${names2[i]}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-slate-400" colspan="3">—</td></tr>`;
         const avg = durations.reduce((s, v) => s + v, 0) / durations.length;
         const min = Math.min(...durations);
         const max = Math.max(...durations);
         return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">${names2[i]}</td>
-          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center">${this.fmtDuration(avg)}</td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold">
+            <div class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background:${col}"></span>${names2[i]}</div>
+          </td>
+          <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-semibold" style="color:${col}">${this.fmtDuration(avg)}</td>
           <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-emerald-600 dark:text-emerald-400">${this.fmtDuration(min)}</td>
           <td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-amber-600 dark:text-amber-400">${this.fmtDuration(max)}</td>
         </tr>`;
@@ -2857,11 +2870,16 @@ const App = {
     const stepRows = STEPS.map(step => {
       const done = disps.filter(d => d[`${step}_checked`]).length;
       const pctS = total > 0 ? Math.round((done / total) * 100) : 0;
+      const col = MILESTONE_COLORS[step] || '#64748b';
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">${STEP_NAMES[step]}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold text-emerald-600">${done}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${col}"></span>${STEP_NAMES[step]}
+        </td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold" style="color:${col}">${done}</td>
         <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${total - done}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">${pctS}%</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">
+          <div class="flex items-center gap-1"><div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5"><div class="rounded-full h-1.5" style="width:${pctS}%;background:${col}"></div></div><span class="text-[10px] w-7 text-right" style="color:${col}">${pctS}%</span></div>
+        </td>
       </tr>`;
     }).join('');
 
@@ -2921,11 +2939,15 @@ const App = {
           </div>`).join('')}
         </div>
         ${avgPickDur !== null ? `<div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
-          <div class="text-xs font-extrabold text-slate-500 tracking-widest mb-3">PICK DURATION (Start → End Pick)</div>
+          <div class="text-xs font-extrabold text-slate-500 tracking-widest mb-3 flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#0284c7"></span>START PICK
+            <span class="mx-1 text-slate-300">→</span>
+            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#16a34a"></span>END PICK — DURATION
+          </div>
           <div class="grid grid-cols-3 gap-3 text-center">
-            <div><div class="text-xs text-slate-400 mb-1">Avg Duration</div><div class="text-xl font-bold text-blue-600 dark:text-blue-400">${this.fmtDuration(avgPickDur)}</div></div>
-            <div><div class="text-xs text-slate-400 mb-1">Fastest</div><div class="text-xl font-bold text-emerald-600 dark:text-emerald-400">${this.fmtDuration(minPickDur)}</div></div>
-            <div><div class="text-xs text-slate-400 mb-1">Slowest</div><div class="text-xl font-bold text-amber-600 dark:text-amber-400">${this.fmtDuration(maxPickDur)}</div></div>
+            <div><div class="text-xs text-slate-400 mb-1">Avg Duration</div><div class="text-xl font-bold" style="color:#0284c7">${this.fmtDuration(avgPickDur)}</div></div>
+            <div><div class="text-xs text-slate-400 mb-1">Fastest</div><div class="text-xl font-bold" style="color:#16a34a">${this.fmtDuration(minPickDur)}</div></div>
+            <div><div class="text-xs text-slate-400 mb-1">Slowest</div><div class="text-xl font-bold text-amber-600">${this.fmtDuration(maxPickDur)}</div></div>
           </div>
           <div class="mt-3 text-xs text-slate-400 text-center">${pickDurs.length} dispatch${pickDurs.length !== 1 ? 'es' : ''} with complete pick timing</div>
         </div>` : ''}
@@ -3071,12 +3093,25 @@ const App = {
       const dA = avgDur(da, step, prevSteps[i]), dB = avgDur(db, step, prevSteps[i]);
       const winner = sA.pct > sB.pct ? 'A' : sB.pct > sA.pct ? 'B' : null;
       const fasterWinner = dA !== null && dB !== null ? (dA < dB ? 'A' : dB < dA ? 'B' : null) : null;
+      const col = MILESTONE_COLORS[step] || '#64748b';
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">${STEP_NAMES[step]}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${winner==='A'?'font-bold text-emerald-600':''}">${sA.done}/${sA.total} (${sA.pct}%)</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${winner==='B'?'font-bold text-emerald-600':''}">${sB.done}/${sB.total} (${sB.pct}%)</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${fasterWinner==='A'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${dA !== null ? this.fmtDuration(dA) : '—'}</td>
-        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${fasterWinner==='B'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${dB !== null ? this.fmtDuration(dB) : '—'}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">
+          <div class="flex items-center gap-2"><span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${col}"></span>${STEP_NAMES[step]}</div>
+        </td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${winner==='A'?'font-bold':''}" style="${winner==='A'?`color:${col}`:''}">
+          ${sA.done}/${sA.total} <span class="text-xs">(${sA.pct}%)</span>
+          ${winner==='A'?'<span class="ml-1 text-xs">✓</span>':''}
+        </td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${winner==='B'?'font-bold':''}" style="${winner==='B'?`color:${col}`:''}">
+          ${sB.done}/${sB.total} <span class="text-xs">(${sB.pct}%)</span>
+          ${winner==='B'?'<span class="ml-1 text-xs">✓</span>':''}
+        </td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${fasterWinner==='A'?'font-bold':''}" style="${fasterWinner==='A'?`color:${col}`:''}">
+          ${dA !== null ? this.fmtDuration(dA) : '—'}${fasterWinner==='A'?' ⚡':''}
+        </td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${fasterWinner==='B'?'font-bold':''}" style="${fasterWinner==='B'?`color:${col}`:''}">
+          ${dB !== null ? this.fmtDuration(dB) : '—'}${fasterWinner==='B'?' ⚡':''}
+        </td>
       </tr>`;
     }).join('');
     const pickDurA = avgDur(da, 'pick', 'pick_start');
@@ -3114,7 +3149,7 @@ const App = {
         </table>
       </div>
       ${(pickDurA !== null || pickDurB !== null) ? `<div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mt-4">
-        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">PICK DURATION COMPARISON (Start Pick → End Pick)</div>
+        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest flex items-center gap-2"><span class="inline-block w-2.5 h-2.5 rounded-full" style="background:#0284c7"></span>START PICK → <span class="inline-block w-2.5 h-2.5 rounded-full ml-1" style="background:#16a34a"></span>END PICK — DURATION COMPARISON</div>
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
             <tr>
@@ -3125,17 +3160,17 @@ const App = {
           </thead>
           <tbody>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Avg Pick Duration</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${pickFasterWinner==='A'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${pickDurA !== null ? this.fmtDuration(pickDurA) : '—'}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center ${pickFasterWinner==='B'?'font-bold text-emerald-600 dark:text-emerald-400':''}">${pickDurB !== null ? this.fmtDuration(pickDurB) : '—'}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#0284c7"></span>Avg Pick Duration</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#0284c7">${pickDurA !== null ? this.fmtDuration(pickDurA) + (pickFasterWinner==='A'?' ⚡':'') : '—'}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#0284c7">${pickDurB !== null ? this.fmtDuration(pickDurB) + (pickFasterWinner==='B'?' ⚡':'') : '—'}</td>
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Fastest Pick</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-emerald-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-emerald-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#16a34a"></span>Fastest Pick</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold">Slowest Pick</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#c46262"></span>Slowest Pick</td>
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
             </tr>
