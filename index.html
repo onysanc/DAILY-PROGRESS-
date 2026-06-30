@@ -45,6 +45,10 @@
   @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
   @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(110%);opacity:0}}
   .toast.removing{animation:slideOut .25s ease forwards}
+  /* Frozen/sticky dispatch table header */
+  #dispatch-table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px);position:relative}
+  #dispatch-table-wrap thead th{position:sticky;top:0;z-index:10;background:#f8fafc;box-shadow:0 1px 0 #e2e8f0}
+  .dark #dispatch-table-wrap thead th{background:#1e293b;box-shadow:0 1px 0 #334155}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
@@ -196,9 +200,10 @@
           </form>
         </div>
       </div>
-      <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-x-auto border dark:border-slate-800">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800">
+        <div id="dispatch-table-wrap">
         <table class="w-full text-sm text-left whitespace-nowrap">
-          <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
+          <thead class="text-slate-500 dark:text-slate-400 text-xs uppercase">
             <tr>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('truck_type')">Type <span id="sort-truck_type" class="sort-arrow"></span></th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('dispatch_number')">Dispatch No. <span id="sort-dispatch_number" class="sort-arrow"></span></th>
@@ -219,6 +224,7 @@
           </thead>
           <tbody id="dispatch-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
         </table>
+        </div>
         <div id="dispatch-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select or create an RDD to see dispatches.</div>
       </div>
     </section>
@@ -734,16 +740,30 @@
   </div>
 </div>
 <div id="admin-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800">
-    <h2 class="text-lg font-bold mb-1 text-red-600 dark:text-red-400">Admin Override</h2>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Edit the timestamp or completely untick this step (this will also wipe and uncheck every later step).</p>
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[480px] border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+    <h2 class="text-lg font-bold mb-1 text-red-600 dark:text-red-400">Admin Override — <span id="admin-edit-step-label"></span></h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Edit recorded data for this step or untick it entirely (also clears every later step).</p>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Timestamp</label>
-    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded-lg mb-6 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-    <div class="flex justify-between items-center">
+    <input type="datetime-local" id="admin-edit-time" class="w-full p-2 border rounded-lg mb-4 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+    <!-- Picker names editor (shown for pick step only) -->
+    <div id="admin-edit-pickers-section" class="hidden mb-4">
+      <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Picker(s) assigned</div>
+      <div id="admin-edit-picker-list" class="border dark:border-slate-700 rounded-lg p-2 max-h-44 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800 mb-1"></div>
+      <div class="text-[10px] text-slate-400 mt-1">Check the pickers who should be recorded for this dispatch. Uncheck to remove.</div>
+    </div>
+    <!-- Checker names + bay editor (shown for checking step only) -->
+    <div id="admin-edit-checkers-section" class="hidden mb-4">
+      <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Checker(s) assigned</div>
+      <div id="admin-edit-checker-list" class="border dark:border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800 mb-1"></div>
+      <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-3 mb-1">Bay Location(s)</div>
+      <div id="admin-edit-bay-list" class="border dark:border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 text-sm bg-white dark:bg-slate-800 mb-1"></div>
+      <div class="text-[10px] text-slate-400 mt-1">Select at least 1 checker and 1 bay.</div>
+    </div>
+    <div class="flex justify-between items-center mt-2">
       <button onclick="App.adminUntickMilestone()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg text-sm">Untick &amp; Clear</button>
       <div class="space-x-2">
         <button onclick="App.cancelMilestone()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
-        <button onclick="App.adminUpdateTimestamp()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Time</button>
+        <button onclick="App.adminSaveOverride()" class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg text-sm">Save Changes</button>
       </div>
     </div>
   </div>
@@ -1356,17 +1376,39 @@ const App = {
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-        // For End Pick (pick), show pick duration below the checkbox when both timestamps exist
-        let durationHtml = '';
-        if (step === 'pick' && isChecked && d.pick_start_timestamp && d.pick_timestamp) {
-          const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
-          durationHtml = `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">${this.fmtDuration(dur)}</div>`;
+        // Sub-label shown below the checkbox for pick/checking when checked
+        let subHtml = '';
+        if (isChecked) {
+          if (step === 'pick') {
+            // Pick duration
+            if (d.pick_start_timestamp && d.pick_timestamp) {
+              const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
+              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">${this.fmtDuration(dur)}</div>`;
+            }
+            // Picker names
+            if (d.pick_assigned_names && d.pick_assigned_names.length) {
+              const names = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names;
+              subHtml += `<div class="text-[10px] mt-0.5 leading-tight" style="color:#16a34a;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+            }
+            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline mt-0.5 block">✎ edit</button>`;
+          } else if (step === 'checking') {
+            // Checker names
+            if (d.checking_assigned_names && d.checking_assigned_names.length) {
+              const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join(', ') : d.checking_assigned_names;
+              subHtml += `<div class="text-[10px] mt-0.5 leading-tight" style="color:#2563eb;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+            }
+            // Bay
+            if (d.bay_location) {
+              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
+            }
+            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline mt-0.5 block">✎ edit</button>`;
+          }
         }
         html += `<td class="p-3 text-center" title="${tip}">
                     <input type="checkbox" class="w-5 h-5 cursor-pointer cb-${step} ${!clickable ? 'disabled-checkbox' : ''}"
                            ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
                            onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
-                    ${durationHtml}
+                    ${subHtml}
                   </td>`;
       });
       const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
@@ -1584,6 +1626,10 @@ const App = {
   },
   openAdminEditModal(dispatch, step) {
     this.state.pendingMilestoneUpdate = { dispatch, step };
+    // Step label
+    const labelEl = document.getElementById('admin-edit-step-label');
+    if (labelEl) labelEl.textContent = MILESTONE_LABELS[step] || step;
+    // Timestamp
     const current = dispatch[`${step}_timestamp`];
     if (current) {
       const dt = new Date(current);
@@ -1592,16 +1638,73 @@ const App = {
     } else {
       document.getElementById('admin-edit-time').value = '';
     }
+    // Show/hide picker section
+    const pickerSec = document.getElementById('admin-edit-pickers-section');
+    const checkerSec = document.getElementById('admin-edit-checkers-section');
+    pickerSec.classList.add('hidden');
+    checkerSec.classList.add('hidden');
+    if (step === 'pick') {
+      pickerSec.classList.remove('hidden');
+      const assigned = Array.isArray(dispatch.pick_assigned_names) ? dispatch.pick_assigned_names : [];
+      const pickers = this.state.personnel.filter(p => p.pool === 'picker');
+      // Merge: pool pickers + any names already assigned not in pool
+      const allNames = [...new Set([...pickers.map(p => p.name), ...assigned])];
+      document.getElementById('admin-edit-picker-list').innerHTML = allNames.map(n =>
+        `<label class="flex items-center gap-2 px-1 py-0.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer">
+          <input type="checkbox" value="${n}" ${assigned.includes(n) ? 'checked' : ''}
+                 class="accent-green-600"> <span>${n}</span>
+        </label>`
+      ).join('') || '<div class="text-xs text-slate-400 italic p-1">No pickers in pool</div>';
+    } else if (step === 'checking') {
+      checkerSec.classList.remove('hidden');
+      const assignedCheckers = Array.isArray(dispatch.checking_assigned_names) ? dispatch.checking_assigned_names : [];
+      const assignedBays = dispatch.bay_location ? dispatch.bay_location.split(',').map(b => b.trim()).filter(Boolean) : [];
+      const checkers = this.state.personnel.filter(p => p.pool === 'checker');
+      const allCheckerNames = [...new Set([...checkers.map(p => p.name), ...assignedCheckers])];
+      document.getElementById('admin-edit-checker-list').innerHTML = allCheckerNames.map(n =>
+        `<label class="flex items-center gap-2 px-1 py-0.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer">
+          <input type="checkbox" value="${n}" ${assignedCheckers.includes(n) ? 'checked' : ''}
+                 class="accent-blue-600"> <span>${n}</span>
+        </label>`
+      ).join('') || '<div class="text-xs text-slate-400 italic p-1">No checkers in pool</div>';
+      const allBays = this.getAllBayOptions();
+      const extraBays = assignedBays.filter(b => !allBays.includes(b));
+      const bayList = [...allBays, ...extraBays];
+      document.getElementById('admin-edit-bay-list').innerHTML = bayList.map(b =>
+        `<label class="flex items-center gap-2 px-1 py-0.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer">
+          <input type="checkbox" value="${b}" ${assignedBays.includes(b) ? 'checked' : ''}
+                 class="accent-blue-600"> <span>${b}</span>
+        </label>`
+      ).join('');
+    }
     this.openModal('admin-edit-modal');
   },
-  async adminUpdateTimestamp() {
+  async adminSaveOverride() {
     const { dispatch, step } = this.state.pendingMilestoneUpdate;
     const newTime = document.getElementById('admin-edit-time').value;
-    if (!newTime) return alert('Pick a date/time.');
-    const { error } = await supabaseClient.from('dispatches').update({ [`${step}_timestamp`]: new Date(newTime).toISOString() }).eq('id', dispatch.id);
+    const payload = {};
+    if (newTime) payload[`${step}_timestamp`] = new Date(newTime).toISOString();
+    if (step === 'pick') {
+      const names = [...document.querySelectorAll('#admin-edit-picker-list input[type=checkbox]:checked')].map(b => b.value);
+      if (!names.length) return alert('Select at least 1 picker.');
+      payload.pick_assigned_names = names;
+    } else if (step === 'checking') {
+      const names = [...document.querySelectorAll('#admin-edit-checker-list input[type=checkbox]:checked')].map(b => b.value);
+      if (!names.length) return alert('Select at least 1 checker.');
+      const bays = [...document.querySelectorAll('#admin-edit-bay-list input[type=checkbox]:checked')].map(b => b.value);
+      if (!bays.length) return alert('Select at least 1 bay.');
+      payload.checking_assigned_names = names;
+      payload.bay_location = bays.join(', ');
+    }
+    if (!Object.keys(payload).length) return alert('Nothing changed.');
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', dispatch.id);
     if (error) return alert(error.message);
     this.cancelMilestone();
     await this.loadDispatches();
+  },
+  async adminUpdateTimestamp() {
+    // Legacy path kept for safety — routes to adminSaveOverride
+    return this.adminSaveOverride();
   },
   async adminUntickMilestone() {
     const { dispatch, step } = this.state.pendingMilestoneUpdate;
