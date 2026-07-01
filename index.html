@@ -361,7 +361,7 @@
           <div class="flex justify-between items-center mb-2 shrink-0">
             <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Activity Timeline</h2>
             <div class="flex items-center gap-3">
-              <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Click a bar to add a remark</span>
+              <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Click a bar to add a colored note</span>
               <button onclick="App.openChartRemarkModal()" title="Add remark" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
@@ -683,6 +683,8 @@
     <h2 class="text-lg font-bold mb-4">Chart Remark</h2>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Hour (anchors to the tallest bar at that hour)</label>
     <select id="chart-remark-hour" onchange="App.onChartRemarkHourChange()" class="w-full p-2 border rounded-lg mb-3 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></select>
+    <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Attach to (bubble color follows this series)</label>
+    <select id="chart-remark-series" onchange="App.tintChartRemarkSeriesSelect()" class="w-full p-2 border-2 rounded-lg mb-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"></select>
     <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Remark text</label>
     <input type="text" id="chart-remark-input" maxlength="60" placeholder="e.g. LOADING DELAYED CONGESTION"
            class="w-full p-2 border rounded-lg mb-5 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white uppercase">
@@ -880,6 +882,7 @@ const App = {
     pendingPriorityId: null,
     chartInstance: null,
     chartRemarks: {},
+    chartSeriesMeta: [],
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -2318,6 +2321,7 @@ const App = {
       { key: 'trucks',   label: 'Avail. Trucks',  color: '#eab308', data: cutFuture(availableTrend) },
     ];
     this.updateLiveSummaryBox(series, labels, nowBucket);
+    this.state.chartSeriesMeta = series.map(s => ({ key: s.key, label: s.label, color: s.color }));
 
     // Target line = whichever is higher: initial plan or actual dispatches entered
     const targetCount = Math.max(planCount, dispatchCount);
@@ -2354,7 +2358,7 @@ const App = {
       data: {
         labels,
         datasets: [
-          ...series.map(s => ({ type: 'bar', label: s.label, data: s.data, backgroundColor: s.color })),
+          ...series.map(s => ({ type: 'bar', key: s.key, label: s.label, data: s.data, backgroundColor: s.color })),
           targetLineDataset,
         ],
       },
@@ -2366,9 +2370,18 @@ const App = {
         categoryPercentage: 0.65,
         barPercentage: 0.85,
         onClick: (evt, elements, chart) => {
-          const points = chart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
-          const bucket = points.length ? points[0].index : nowBucket;
-          if (bucket !== null && bucket !== undefined) this.openChartRemarkModal(bucket);
+          const exact = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+          let seriesKey = null;
+          let bucket = null;
+          if (exact.length) {
+            const ds = chart.data.datasets[exact[0].datasetIndex];
+            if (ds && ds.key) { seriesKey = ds.key; bucket = exact[0].index; }
+          }
+          if (bucket === null) {
+            const points = chart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+            bucket = points.length ? points[0].index : nowBucket;
+          }
+          if (bucket !== null && bucket !== undefined) this.openChartRemarkModal(bucket, seriesKey);
         },
         scales: {
           x: {
@@ -2414,7 +2427,7 @@ const App = {
     this.state.chartYStep = parseInt(step, 10) || 1;
     this.renderChart();
   },
-  openChartRemarkModal(bucket) {
+  openChartRemarkModal(bucket, seriesKey) {
     const labels = this.getChartHourLabels();
     const sel = document.getElementById('chart-remark-hour');
     sel.innerHTML = labels.map((l, i) => `<option value="${i}">${l}</option>`).join('');
@@ -2422,8 +2435,23 @@ const App = {
     const nowB = (h - 5 + 24) % 24;
     const bucketIndex = (bucket !== undefined && bucket !== null) ? bucket : nowB;
     sel.value = String(bucketIndex);
+    this.populateChartRemarkSeriesSelect(seriesKey);
     this.fillChartRemarkInputForHour();
     this.openModal('chart-remark-modal');
+  },
+  populateChartRemarkSeriesSelect(preferredKey) {
+    const sel = document.getElementById('chart-remark-series');
+    const meta = this.state.chartSeriesMeta || [];
+    sel.innerHTML = meta.map(m => `<option value="${m.key}" data-color="${m.color}">● ${m.label}</option>`).join('');
+    if (preferredKey && meta.some(m => m.key === preferredKey)) sel.value = preferredKey;
+    this.tintChartRemarkSeriesSelect();
+  },
+  tintChartRemarkSeriesSelect() {
+    const sel = document.getElementById('chart-remark-series');
+    const opt = sel.options[sel.selectedIndex];
+    const color = opt ? opt.dataset.color : '#f59e0b';
+    sel.style.borderColor = color;
+    sel.style.color = color;
   },
   onChartRemarkHourChange() {
     this.fillChartRemarkInputForHour();
@@ -2432,20 +2460,29 @@ const App = {
     const rddId = this.state.currentRddId;
     const bucket = document.getElementById('chart-remark-hour').value;
     const remarksForRdd = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || {};
-    document.getElementById('chart-remark-input').value = remarksForRdd[bucket] || '';
+    const entry = remarksForRdd[bucket];
+    const text = (entry && typeof entry === 'object') ? entry.text : (entry || '');
+    const seriesKey = (entry && typeof entry === 'object') ? entry.seriesKey : null;
+    document.getElementById('chart-remark-input').value = text || '';
+    if (seriesKey) {
+      const sel = document.getElementById('chart-remark-series');
+      if ([...sel.options].some(o => o.value === seriesKey)) sel.value = seriesKey;
+    }
+    this.tintChartRemarkSeriesSelect();
   },
   async saveChartRemark() {
     const rddId = this.state.currentRddId;
     if (!rddId) { this.closeModal('chart-remark-modal'); return; }
     const bucket = parseInt(document.getElementById('chart-remark-hour').value, 10);
     const text = document.getElementById('chart-remark-input').value.trim().toUpperCase();
+    const seriesKey = document.getElementById('chart-remark-series').value || null;
     if (text) {
       const { error } = await supabaseClient.from('chart_remarks')
-        .upsert({ rdd_id: rddId, bucket, remark: text }, { onConflict: 'rdd_id,bucket' })
+        .upsert({ rdd_id: rddId, bucket, remark: text, series_key: seriesKey }, { onConflict: 'rdd_id,bucket' })
         .select();
       if (error) { alert('Failed to save remark: ' + error.message); return; }
       if (!this.state.chartRemarks[rddId]) this.state.chartRemarks[rddId] = {};
-      this.state.chartRemarks[rddId][bucket] = text;
+      this.state.chartRemarks[rddId][bucket] = { text, seriesKey };
     } else {
       const { error } = await supabaseClient.from('chart_remarks')
         .delete().eq('rdd_id', rddId).eq('bucket', bucket);
@@ -2459,6 +2496,12 @@ const App = {
     document.getElementById('chart-remark-input').value = '';
     this.saveChartRemark();
   },
+  getContrastText(hex) {
+    if (!hex || hex[0] !== '#' || hex.length < 7) return '#ffffff';
+    const r = parseInt(hex.substring(1, 3), 16), g = parseInt(hex.substring(3, 5), 16), b = parseInt(hex.substring(5, 7), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#1e293b' : '#ffffff';
+  },
   positionChartRemark() {
     const container = document.getElementById('chart-remark-tags');
     const chart = this.state.chartInstance;
@@ -2467,25 +2510,46 @@ const App = {
     const rddId = this.state.currentRddId;
     const remarksForRdd = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || {};
     Object.keys(remarksForRdd).forEach(bucketStr => {
-      const text = remarksForRdd[bucketStr];
+      const entry = remarksForRdd[bucketStr];
+      const text = (entry && typeof entry === 'object') ? entry.text : entry;
+      const seriesKey = (entry && typeof entry === 'object') ? entry.seriesKey : null;
       if (!text) return;
       const bucket = parseInt(bucketStr, 10);
       let best = null;
-      chart.data.datasets.forEach((ds, di) => {
-        if (ds.type !== 'bar') return;
-        const meta = chart.getDatasetMeta(di);
-        const el = meta.data[bucket];
-        const v = ds.data[bucket];
-        if (el === undefined || v === null || v === undefined) return;
-        if (!best || v > best.v) best = { v, el };
-      });
+      let color = '#f59e0b';
+      if (seriesKey) {
+        const di = chart.data.datasets.findIndex(ds => ds.key === seriesKey);
+        if (di !== -1) {
+          const meta = chart.getDatasetMeta(di);
+          const el = meta.data[bucket];
+          const v = chart.data.datasets[di].data[bucket];
+          if (el !== undefined && v !== null && v !== undefined) {
+            best = { el };
+            color = chart.data.datasets[di].backgroundColor;
+          }
+        }
+      }
+      if (!best) {
+        // Fallback (no series attached, or that series has no value at this hour): pin to the tallest bar and pick up its color.
+        chart.data.datasets.forEach((ds, di) => {
+          if (ds.type !== 'bar') return;
+          const meta = chart.getDatasetMeta(di);
+          const el = meta.data[bucket];
+          const v = ds.data[bucket];
+          if (el === undefined || v === null || v === undefined) return;
+          if (!best || v > best.v) { best = { v, el }; color = ds.backgroundColor; }
+        });
+      }
       if (!best) return;
+      const textColor = this.getContrastText(color);
       const tag = document.createElement('div');
-      tag.className = 'absolute pointer-events-auto -translate-x-1/2 -translate-y-full px-3 py-1.5 bg-amber-500 text-white text-[11px] font-extrabold uppercase tracking-wide rounded-lg shadow-lg whitespace-nowrap cursor-pointer ring-2 ring-white dark:ring-slate-900';
+      tag.className = 'absolute pointer-events-auto -translate-x-1/2 -translate-y-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide rounded-lg shadow-lg whitespace-nowrap cursor-pointer ring-2 ring-white dark:ring-slate-900';
       tag.style.left = best.el.x + 'px';
       tag.style.top = (best.el.y - 34) + 'px';
-      tag.innerHTML = `${text}<div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-amber-500 rotate-45"></div>`;
-      tag.onclick = () => this.openChartRemarkModal(bucket);
+      tag.style.background = color;
+      tag.style.color = textColor;
+      tag.innerHTML = `${this.escapeHtml(text)}<div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rotate-45" style="background:${color}"></div>`;
+      tag.onclick = () => this.openChartRemarkModal(bucket, seriesKey);
       container.appendChild(tag);
     });
   },
@@ -2681,12 +2745,12 @@ const App = {
   },
   async loadChartRemarks(rddId) {
     const { data, error } = await supabaseClient.from('chart_remarks')
-      .select('bucket, remark').eq('rdd_id', rddId);
+      .select('bucket, remark, series_key').eq('rdd_id', rddId);
     if (error) { console.error('loadChartRemarks error:', error); return; }
     if (!this.state.chartRemarks) this.state.chartRemarks = {};
     this.state.chartRemarks[rddId] = {};
     (data || []).forEach(row => {
-      this.state.chartRemarks[rddId][row.bucket] = row.remark;
+      this.state.chartRemarks[rddId][row.bucket] = { text: row.remark, seriesKey: row.series_key || null };
     });
   },
   updateFilterPillStyles(filter) {
