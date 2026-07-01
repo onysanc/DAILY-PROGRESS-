@@ -164,11 +164,6 @@
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
         <h1 class="text-2xl font-bold">Dispatch Activity</h1>
         <div class="flex space-x-3 items-center flex-wrap gap-y-2">
-          <div class="relative">
-            <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-            <input type="text" id="dispatch-search-input" oninput="App.renderDispatches()" placeholder="Search dispatch #, type, status…"
-                   class="pl-8 pr-3 py-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm w-60">
-          </div>
           <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white">
             <option value="">Select RDD…</option>
           </select>
@@ -179,14 +174,10 @@
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
       <!-- Quick Filter Pills -->
       <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
-        <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Filter:</span>
-        <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white">All</button>
-        <button onclick="App.setDispatchFilter('pending')" id="filter-pending" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Pending</button>
-        <button onclick="App.setDispatchFilter('stuck')" id="filter-stuck" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Stuck (&gt;30 min)</button>
-        <button onclick="App.setDispatchFilter('done')" id="filter-done" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Done</button>
         <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
+        <button onclick="App.setDispatchFilter('at_not_started')" id="filter-at_not_started" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Start Picking<span id="filter-badge-at_not_started" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#64748b">0</span></button>
         <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
         <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
         <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
@@ -195,6 +186,13 @@
         <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
         <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
+      </div>
+      <div class="mb-4">
+        <div class="relative w-full sm:w-80">
+          <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+          <input type="text" id="dispatch-search-input" oninput="App.renderDispatches()" placeholder="Search dispatch #, type, status…"
+                 class="pl-8 pr-3 py-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm w-full">
+        </div>
       </div>
       <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-5 border dark:border-slate-800">
         <div class="flex justify-between items-center mb-3">
@@ -1477,6 +1475,7 @@ const App = {
     else if (filter === 'stuck') visible = searched.filter(d => this.isDispatchStuck(d));
     else if (filter === 'done') visible = searched.filter(d => d.loaded_checked);
     else if (filter === 'priority') visible = searched.filter(d => d.priority === 'urgent' || d.priority === 'high');
+    else if (filter === 'at_not_started') visible = searched.filter(d => !d.pick_start_checked);
     else if (filter.startsWith('at_')) {
       const step = filter.slice(3);
       const idx = MILESTONE_FLOW.indexOf(step);
@@ -2873,6 +2872,12 @@ const App = {
   },
   updateFilterBadgeCounts() {
     const list = this.state.dispatches || [];
+    const notStartedCount = list.filter(d => !d.pick_start_checked).length;
+    const notStartedBadge = document.getElementById('filter-badge-at_not_started');
+    if (notStartedBadge) {
+      notStartedBadge.textContent = notStartedCount;
+      notStartedBadge.style.opacity = notStartedCount > 0 ? '1' : '0.45';
+    }
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
       const count = list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
@@ -2884,7 +2889,7 @@ const App = {
     });
   },
   updateFilterPillStyles(filter) {
-    ['all', 'pending', 'stuck', 'done', 'priority', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
+    ['priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
       const btn = document.getElementById(`filter-${f}`);
       if (!btn) return;
       if (f === filter) {
