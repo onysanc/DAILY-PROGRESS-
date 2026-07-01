@@ -178,11 +178,11 @@
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
         <button onclick="App.setDispatchFilter('at_not_started')" id="filter-at_not_started" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Start Picking<span id="filter-badge-at_not_started" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#64748b">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
+        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to End Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
         <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
         <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
-        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending DS Printed<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
-        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending for Check<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
+        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
+        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
         <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
         <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
@@ -474,11 +474,11 @@
           </table>
         </div>
       </div>
-      <!-- Stuck dispatches + checker throughput -->
+      <!-- Pending dispatches + checker throughput -->
       <div class="grid grid-cols-2 gap-5 mb-5">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
           <div class="flex justify-between items-center mb-3">
-            <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest">⚠ STUCK DISPATCHES — CURRENT RDD</div>
+            <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest">⚠ PENDING DISPATCHES — CURRENT RDD</div>
             <button onclick="App.exportStuckDispatchesCSV()" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
           </div>
           <div id="stuck-dispatches-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
@@ -556,10 +556,10 @@
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">⚠ Alert Message Settings</h2>
         <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Customize the wording, thresholds, and on/off state of the automatic dispatch alerts (toast pop-ups + dashboard banner). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
         <div class="grid md:grid-cols-3 gap-3">
-          <!-- Stuck Alert -->
+          <!-- Pending-at-step Alert -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
-              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Stuck-at-step</label>
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Pending-at-step</label>
               <button onclick="App.resetAlertSetting('stuck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
             <textarea id="as-stuck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
@@ -567,7 +567,7 @@
             <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
               <span>Trigger when ≥</span>
               <input type="number" id="as-stuck-count" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-              <span>stuck ≥</span>
+              <span>pending ≥</span>
               <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
               <span>min</span>
             </div>
@@ -898,12 +898,13 @@ const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'l
 const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', checking: '#2563eb', loaded: '#7c3aed' };
-// When a dispatch is "stuck", it's stuck WAITING on the next step, not sitting at the one already checked.
+// A dispatch that hasn't reached the next milestone is "pending" on that next step, not sitting at the one already checked.
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
-const PENDING_LABELS = { pick_start: 'Pending Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending DS Printed', ds_printed: 'Pending for Check', checking: 'Pending to Load' };
+const NOT_STARTED_LABEL = 'Pending to Start Picking';
+const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
-    stuck:    { enabled: true, template: '{count} dispatches stuck at {step} for {minutes}+ min!', threshold_count: 3, threshold_minutes: 30 },
+    stuck:    { enabled: true, template: '{count} dispatches pending at {step} for {minutes}+ min!', threshold_count: 3, threshold_minutes: 30 },
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!' },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!' },
   },
@@ -1666,16 +1667,16 @@ const App = {
         }
       }
     });
-    if (!stuck.length) return alert('No stuck dispatches to export.');
+    if (!stuck.length) return alert('No pending dispatches to export.');
     stuck.sort((a, b) => b.elapsed - a.elapsed);
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lines = [['Type', 'Dispatch No.', 'Stuck At Step', 'Stuck Duration'].map(esc).join(',')];
+    const lines = [['Type', 'Dispatch No.', 'Pending At Step', 'Pending Duration'].map(esc).join(',')];
     stuck.forEach(({ d, step, elapsed }) => {
       lines.push([d.truck_type, d.dispatch_number, PENDING_LABELS[step], this.fmtDuration(elapsed)].map(esc).join(','));
     });
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const rddLabel = rdd ? rdd.rdd_date : 'export';
-    this.downloadCSV(lines.join('\r\n'), `${rddLabel}-stuck-dispatches.csv`);
+    this.downloadCSV(lines.join('\r\n'), `${rddLabel}-pending-dispatches.csv`);
   },
   handleMilestoneClick(event, dispatchId, step) {
     event.preventDefault();
@@ -3095,7 +3096,7 @@ const App = {
           <span class="font-semibold text-slate-800 dark:text-slate-200">${d.truck_type} ${d.dispatch_number}</span>
           <span class="text-amber-700 dark:text-amber-300">@ ${PENDING_LABELS[step]} — <b>${this.fmtDuration(elapsed)}</b></span>
         </div>`
-      ).join('') : '<div class="text-slate-400 italic text-center py-4">No stuck dispatches 🎉</div>';
+      ).join('') : '<div class="text-slate-400 italic text-center py-4">No pending dispatches 🎉</div>';
     }
   },
   async jumpToRDD(id) {
