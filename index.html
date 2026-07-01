@@ -3012,7 +3012,7 @@ const App = {
     if (pickerTbody) {
       const pickerMap = {};
       this.state.dispatches.filter(d => d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length).forEach(d => {
-        d.pick_assigned_names.forEach(n => { pickerMap[n] = (pickerMap[n] || 0) + 1; });
+        d.pick_assigned_names.forEach(n => { if (this.isVirtualPersonnelName(n)) return; pickerMap[n] = (pickerMap[n] || 0) + 1; });
       });
       const sorted = Object.entries(pickerMap).sort((a, b) => b[1] - a[1]);
       const totalPicked = sorted.reduce((s, [, c]) => s + c, 0);
@@ -3034,6 +3034,7 @@ const App = {
         const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
         const dur = (d.checking_timestamp && d.ds_printed_timestamp) ? new Date(d.checking_timestamp).getTime() - new Date(d.ds_printed_timestamp).getTime() : null;
         names.forEach(n => {
+          if (this.isVirtualPersonnelName(n)) return;
           if (!checkerMap[n]) checkerMap[n] = { count: 0, durs: [] };
           checkerMap[n].count++;
           if (dur && dur > 0) checkerMap[n].durs.push(dur);
@@ -3159,6 +3160,13 @@ const App = {
   // ═══════════════════════════════════════════════════════
   // REMARKS (per-dispatch, multi-entry, attributed by user)
   // ═══════════════════════════════════════════════════════
+  // Names used only as placeholders for virtual/batch dispatch records (not real people) —
+  // excluded from picker/checker leaderboards, throughput, and average-time calculations.
+  VIRTUAL_PERSONNEL_NAMES: ['ADVANCED'],
+  isVirtualPersonnelName(name) {
+    if (!name) return false;
+    return this.VIRTUAL_PERSONNEL_NAMES.includes(String(name).trim().toUpperCase());
+  },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   },
@@ -3577,7 +3585,7 @@ const App = {
     // Picker summary
     const pickerMap = {};
     disps.filter(d => d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length).forEach(d => {
-      d.pick_assigned_names.forEach(n => { pickerMap[n] = (pickerMap[n] || 0) + 1; });
+      d.pick_assigned_names.forEach(n => { if (this.isVirtualPersonnelName(n)) return; pickerMap[n] = (pickerMap[n] || 0) + 1; });
     });
     const pickerRows = Object.entries(pickerMap).sort((a,b) => b[1]-a[1]).map(([name, cnt]) =>
       `<tr><td class="border border-slate-200 dark:border-slate-700 px-3 py-2">${name}</td><td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold">${cnt}</td></tr>`
@@ -3587,7 +3595,7 @@ const App = {
     const checkerMap = {};
     disps.filter(d => d.checking_checked && d.checking_assigned_names).forEach(d => {
       const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
-      names.forEach(n => { checkerMap[n] = (checkerMap[n] || 0) + 1; });
+      names.forEach(n => { if (this.isVirtualPersonnelName(n)) return; checkerMap[n] = (checkerMap[n] || 0) + 1; });
     });
     const checkerRows = Object.entries(checkerMap).sort((a,b) => b[1]-a[1]).map(([name, cnt]) =>
       `<tr><td class="border border-slate-200 dark:border-slate-700 px-3 py-2">${name}</td><td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold">${cnt}</td></tr>`
@@ -3890,6 +3898,7 @@ const App = {
         const dur = (d.pick_start_checked && d.pick_start_timestamp && d.pick_timestamp)
           ? new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime() : null;
         d.pick_assigned_names.forEach(n => {
+          if (this.isVirtualPersonnelName(n)) return;
           if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {}, pickDurs: [] };
           if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
           personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
@@ -3899,6 +3908,7 @@ const App = {
       if (d.checking_checked && d.checking_assigned_names) {
         const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
         names.forEach(n => {
+          if (this.isVirtualPersonnelName(n)) return;
           if (!personMap[n]) personMap[n] = { pool: 'checker', rdds: {}, pickDurs: [] };
           if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
           personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
