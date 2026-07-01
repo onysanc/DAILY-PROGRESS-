@@ -137,6 +137,11 @@
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span>RDD Summary</span>
       </button>
+      <!-- 7b. Graph Recap (previous-day final graph recreation) -->
+      <button onclick="App.tryTab('tab-graph-recap','tab_graph_recap')" id="btn-tab-graph-recap" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V9m4 8V5m4 12v-6M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+        <span>Graph Recap</span>
+      </button>
       <!-- 8. Assignment History -->
       <button onclick="App.tryTab('tab-assignment-history','tab_assignment_history')" id="btn-tab-assignment-history" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -174,6 +179,8 @@
       <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
       <!-- Quick Filter Pills -->
       <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
+        <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Show All</button>
+        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
@@ -654,6 +661,30 @@
       </div>
     </section>
 
+    <!-- ══ GRAPH RECAP TAB (previous-day final graph recreation) ══ -->
+    <section id="tab-graph-recap" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 class="text-2xl font-bold">📈 Graph Recap — RDD Recreation</h1>
+        <div class="flex gap-2 flex-wrap items-center">
+          <select id="recap-rdd-select" onchange="App.renderGraphRecap()" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            <option value="">Select RDD…</option>
+          </select>
+          <button onclick="App.downloadRecapChartImage()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖼 Save Chart PNG</button>
+          <button onclick="App.exportRecapCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
+          <button onclick="App.printGraphRecap()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖨 Print / Save PDF</button>
+        </div>
+      </div>
+      <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
+        <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+        <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
+          <span class="font-semibold">Recreates the final Activity Timeline exactly as it stood at shift close</span> — the full 5:00 AM → 4:59 AM (next day) window for the selected RDD. This snapshot is frozen and separate from the live Dashboard chart, so it's safe to use for end-of-day archiving, audits, and reporting.
+        </div>
+      </div>
+      <div id="recap-content">
+        <div class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD above to recreate its final graph.</div>
+      </div>
+    </section>
+
     <!-- ══ ASSIGNMENT HISTORY TAB ══ -->
     <section id="tab-assignment-history" class="tab-content hidden">
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
@@ -1044,6 +1075,7 @@ const App = {
     tab_reports: ['admin','outbound'],
     tab_shift_compare: ['admin','outbound'],
     tab_rdd_summary: ['admin','outbound'],
+    tab_graph_recap: ['admin','outbound'],
     tab_assignment_history: ['admin','outbound'],
     tab_users: ['admin'],
   },
@@ -1155,6 +1187,7 @@ const App = {
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
+    if (tabId === 'tab-graph-recap') { this.initGraphRecapTab(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
   },
   tryTab(tabId, permKey) {
@@ -1637,14 +1670,14 @@ const App = {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   },
-  exportTableToCSV(tableId, filename) {
+  exportTableToCSV(tableId, filename, rddIdOverride) {
     const table = document.getElementById(tableId);
     if (!table) return;
     const rows = [...table.querySelectorAll('tr')].filter(tr => tr.children.length);
     if (!rows.length) return alert('Nothing to export yet.');
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const csvRows = rows.map(tr => [...tr.children].map(cell => esc(cell.textContent.trim().replace(/\s+/g, ' '))).join(','));
-    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const rdd = this.state.rdds.find(r => r.id === (rddIdOverride || this.state.currentRddId));
     const rddLabel = rdd ? rdd.rdd_date : 'export';
     this.downloadCSV(csvRows.join('\r\n'), `${rddLabel}-${filename}`);
   },
@@ -2621,6 +2654,7 @@ const App = {
     const accessLabels = {
       tab_trucks: 'Trucks', tab_personnel: 'Personnel', tab_reports: 'Reports',
       tab_shift_compare: 'RDD Compare', tab_rdd_summary: 'RDD Summary',
+      tab_graph_recap: 'Graph Recap',
       tab_assignment_history: 'Assign. History', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
     };
@@ -2655,7 +2689,7 @@ const App = {
     }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users'],
   SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users'],
   openAddUserModal() {
     this.state.pendingUserId = null;
@@ -2890,7 +2924,7 @@ const App = {
     });
   },
   updateFilterPillStyles(filter) {
-    ['priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
+    ['all', 'priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
       const btn = document.getElementById(`filter-${f}`);
       if (!btn) return;
       if (f === filter) {
@@ -3757,6 +3791,7 @@ const App = {
     const a = document.getElementById('compare-rdd-a');
     const b = document.getElementById('compare-rdd-b');
     const rep = document.getElementById('report-rdd-select');
+    const recap = document.getElementById('recap-rdd-select');
     if (!a || !b) return;
     const opts = '<option value="">Select…</option>' + this.state.rdds.map(r => {
       const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
@@ -3768,6 +3803,14 @@ const App = {
         const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
         return `<option value="${r.id}">RDD ${mmdd}</option>`;
       }).join('');
+    }
+    if (recap) {
+      const prevValue = recap.value;
+      recap.innerHTML = '<option value="">Select RDD…</option>' + this.state.rdds.map(r => {
+        const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
+        return `<option value="${r.id}">RDD ${mmdd}</option>`;
+      }).join('');
+      if (prevValue && this.state.rdds.some(r => r.id === prevValue)) recap.value = prevValue;
     }
   },
   async runShiftComparison() {
@@ -3891,6 +3934,288 @@ const App = {
           </tbody>
         </table>
       </div>` : ''}`;
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // GRAPH RECAP — recreates the final Activity Timeline for a
+  // past RDD exactly as it stood at shift close (5:00 AM →
+  // 4:59 AM next day), independent of the live Dashboard chart.
+  // ═══════════════════════════════════════════════════════
+  initGraphRecapTab() {
+    this.populateCompareSelects();
+    const sel = document.getElementById('recap-rdd-select');
+    if (sel && !sel.value) {
+      const idx = this.state.rdds.findIndex(r => r.id === this.state.currentRddId);
+      const prev = idx >= 0 ? this.state.rdds[idx + 1] : this.state.rdds[1];
+      if (prev) { sel.value = prev.id; this.renderGraphRecap(); return; }
+    }
+    if (sel && sel.value) this.renderGraphRecap();
+  },
+  async renderGraphRecap() {
+    const rddId = document.getElementById('recap-rdd-select').value;
+    const container = document.getElementById('recap-content');
+    if (this.state.recapChartInstance) { this.state.recapChartInstance.destroy(); this.state.recapChartInstance = null; }
+    if (!rddId) { container.innerHTML = '<div class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">Select an RDD above to recreate its final graph.</div>'; return; }
+    const rdd = this.state.rdds.find(r => r.id === rddId);
+    const [{ data: disps }, { data: trucks }, { data: remarks }] = await Promise.all([
+      supabaseClient.from('dispatches').select('*').eq('rdd_id', rddId),
+      supabaseClient.from('available_trucks').select('*').eq('rdd_id', rddId),
+      supabaseClient.from('chart_remarks').select('bucket, remark, series_key').eq('rdd_id', rddId),
+    ]);
+    const list = disps || [];
+    const truckList = trucks || [];
+    const mmdd = rdd?.rdd_date ? rdd.rdd_date.slice(5) : rdd?.rdd_date;
+    let nextDayLabel = '';
+    if (rdd?.rdd_date) {
+      const nd = new Date(rdd.rdd_date + 'T00:00:00');
+      nd.setDate(nd.getDate() + 1);
+      nextDayLabel = `${nd.getMonth() + 1}`.padStart(2, '0') + '-' + `${nd.getDate()}`.padStart(2, '0');
+    }
+    const isCurrent = rddId === this.state.currentRddId;
+
+    container.innerHTML = `
+      <div id="recap-printable" class="space-y-5">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
+          <div class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Graph Recap — Final Snapshot</div>
+          <div class="text-2xl font-extrabold text-blue-700 dark:text-blue-400 mb-1">RDD ${mmdd}${isCurrent ? ' <span class="text-xs font-semibold text-amber-500 align-middle">(still live — not yet final)</span>' : ''}</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400">Shift window: ${mmdd} 5:00 AM → ${nextDayLabel} 4:59 AM &nbsp;•&nbsp; Recreated ${new Date().toLocaleString()}</div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="recap-summary-cards"></div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col min-h-[520px]">
+          <div class="flex justify-between items-center mb-2 shrink-0">
+            <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Recreated Activity Timeline</h2>
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 italic">Frozen snapshot — not live</span>
+          </div>
+          <div class="relative flex-1 min-h-0"><canvas id="recapChart"></canvas></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
+          <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">MILESTONE BREAKDOWN</div>
+          <table class="w-full text-sm text-left" id="recap-step-table">
+            <thead class="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+              <tr>
+                <th class="border border-slate-200 dark:border-slate-700 px-3 py-2">Step</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">Done</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">Pending</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">% Complete</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="recap-remarks-wrap" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-hidden hidden">
+          <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">CHART REMARKS LOGGED THIS RDD</div>
+          <ul id="recap-remarks-list" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm"></ul>
+        </div>
+      </div>`;
+
+    // ── Summary cards ──
+    const total = list.length;
+    const loaded = list.filter(d => d.loaded_checked).length;
+    const plan = rdd ? (rdd.initial_planning_count || 0) : 0;
+    const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+    const pickDurs = list.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+      .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v > 0);
+    const avgPick = pickDurs.length ? pickDurs.reduce((a, b) => a + b, 0) / pickDurs.length : null;
+    const trucksUsed = truckList.filter(t => t.status === 'Dispatched').length;
+    const cards = [
+      { label: 'Plan', value: plan || '—' },
+      { label: 'Total Added', value: total },
+      { label: 'Loaded', value: loaded, color: '#7c3aed' },
+      { label: 'Completion', value: `${pct}%`, color: pct >= 100 ? '#16a34a' : '#f97316' },
+      { label: 'Avg Pick Time', value: avgPick !== null ? this.fmtDuration(avgPick) : '—' },
+      { label: 'Trucks Dispatched', value: trucksUsed },
+    ];
+    document.getElementById('recap-summary-cards').innerHTML = cards.map(c => `
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-3 text-center">
+        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wide">${c.label}</div>
+        <div class="text-xl font-extrabold mt-1" style="${c.color ? `color:${c.color}` : ''}">${c.value}</div>
+      </div>`).join('');
+
+    // ── Milestone breakdown table ──
+    const tbody = document.querySelector('#recap-step-table tbody');
+    tbody.innerHTML = MILESTONE_FLOW.map(step => {
+      const done = list.filter(d => d[`${step}_checked`]).length;
+      const pctS = total > 0 ? Math.round((done / total) * 100) : 0;
+      const col = MILESTONE_COLORS[step] || '#64748b';
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold"><div class="flex items-center gap-2"><span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${col}"></span>${MILESTONE_LABELS[step]}</div></td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-bold" style="color:${col}">${done}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${total - done}</td>
+        <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center">${pctS}%</td>
+      </tr>`;
+    }).join('');
+
+    // ── Remarks logged for this RDD (read-only, for reporting context) ──
+    if (remarks && remarks.length) {
+      const labels = this.getChartHourLabels();
+      const wrap = document.getElementById('recap-remarks-wrap');
+      wrap.classList.remove('hidden');
+      document.getElementById('recap-remarks-list').innerHTML = [...remarks].sort((a, b) => a.bucket - b.bucket).map(r => `
+        <li class="px-4 py-2 flex items-center gap-3">
+          <span class="text-xs font-bold text-slate-400 w-14 shrink-0">${labels[r.bucket] || ''}</span>
+          <span class="flex-1">${this.escapeHtml(r.remark)}</span>
+        </li>`).join('');
+    }
+
+    // ── Chart itself (full 24hr final state, no live "now" cap) ──
+    this.renderRecapChart(list, truckList, rdd);
+  },
+  renderRecapChart(list, truckList, rdd) {
+    const canvasEl = document.getElementById('recapChart');
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#f1f5f9' : '#334155';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const labels = this.getChartHourLabels();
+    const bucketOf = (isoString) => {
+      if (!isoString) return null;
+      const h = new Date(isoString).getHours();
+      return (h - 5 + 24) % 24;
+    };
+    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    list.forEach(d => {
+      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
+        const b = bucketOf(d[`${step}_timestamp`]);
+        if (b !== null) raw[step][b]++;
+      });
+    });
+    const toCumulative = (arr) => { let running = 0; return arr.map(v => { running += v; return running; }); };
+    const availableTrend = Array(24).fill(0);
+    truckList.filter(t => t.status !== 'Cancelled').forEach(t => {
+      const b = t.created_at ? bucketOf(t.created_at) : 0;
+      const safeB = (b === null || b === undefined) ? 0 : b;
+      for (let h = safeB; h < 24; h++) availableTrend[h]++;
+    });
+    truckList.filter(t => t.status === 'Dispatched').forEach(t => {
+      const dispatch = list.find(d => d.assigned_truck_id === t.id && d.loaded_checked);
+      const ts = dispatch ? dispatch.loaded_timestamp : t.updated_at;
+      const b = ts ? bucketOf(ts) : 23;
+      const safeB = (b === null || b === undefined) ? 23 : b;
+      for (let h = safeB; h < 24; h++) availableTrend[h] = Math.max(0, availableTrend[h] - 1);
+    });
+    const planCount = rdd ? (rdd.initial_planning_count || 0) : 0;
+    const dispatchCount = list.length;
+    const rawMax = Math.max(planCount, dispatchCount, 10);
+    const series = [
+      { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
+      { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
+      { key: 'ds',       label: 'DS Printed',     color: '#c46262', data: toCumulative(raw.ds_printed) },
+      { key: 'invoiced', label: 'Invoiced',        color: '#dc2626', data: toCumulative(raw.invoiced) },
+      { key: 'pgi',      label: 'PGI',            color: '#ec4899', data: toCumulative(raw.pgi) },
+      { key: 'pick',     label: 'Picked',          color: '#16a34a', data: toCumulative(raw.pick) },
+      { key: 'trucks',   label: 'Avail. Trucks',  color: '#eab308', data: availableTrend },
+    ];
+    const targetCount = Math.max(planCount, dispatchCount);
+    const axisMax = Math.max(targetCount, rawMax, 1);
+    const targetLineDataset = {
+      type: 'line',
+      label: `Target (${targetCount})`,
+      data: Array(24).fill(targetCount),
+      borderColor: '#f97316',
+      borderWidth: 2.5,
+      borderDash: [8, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      backgroundColor: 'transparent',
+      datalabels: {
+        display: (ctx) => ctx.dataIndex === 23,
+        anchor: 'end',
+        align: 'right',
+        offset: 4,
+        backgroundColor: '#f97316',
+        borderRadius: 6,
+        padding: { top: 3, bottom: 3, left: 6, right: 6 },
+        font: { size: 12, weight: 'bold' },
+        color: '#fff',
+        formatter: () => `Target: ${targetCount}`,
+      },
+    };
+    if (this.state.recapChartInstance) this.state.recapChartInstance.destroy();
+    this.state.recapChartInstance = new Chart(ctx, {
+      data: {
+        labels,
+        datasets: [
+          ...series.map(s => ({ type: 'bar', key: s.key, label: s.label, data: s.data, backgroundColor: s.color })),
+          targetLineDataset,
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        layout: { padding: { top: 18 } },
+        categoryPercentage: 0.65,
+        barPercentage: 0.85,
+        scales: {
+          x: {
+            title: { display: true, text: 'Hour', color: textColor, font: { size: 14, weight: 'bold' } },
+            ticks: { color: textColor, font: { size: 13 } },
+            grid: { color: gridColor },
+          },
+          y: {
+            beginAtZero: true,
+            min: 0,
+            max: axisMax,
+            autoSkip: false,
+            ticks: { stepSize: this.state.recapChartYStep || 1, color: textColor, font: { size: 13 } },
+            title: { display: true, text: 'Cumulative Count', color: textColor, font: { size: 14, weight: 'bold' } },
+            grid: { color: gridColor },
+          },
+        },
+        plugins: {
+          legend: {
+            align: 'start',
+            labels: { color: textColor, font: { size: 13, weight: 'bold' }, boxWidth: 16, boxHeight: 16, padding: 14 },
+          },
+          tooltip: { enabled: false },
+          datalabels: {
+            anchor: 'end', align: 'end', clamp: true, offset: 5,
+            backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
+            padding: { top: 3, bottom: 3, left: 6, right: 6 },
+            font: { size: 13, weight: 'bold' }, color: '#fff',
+            display: (ctx) => { const v = ctx.dataset.data[ctx.dataIndex]; return v !== null && v !== 0; },
+            formatter: (value) => value,
+          },
+        },
+      },
+    });
+  },
+  downloadRecapChartImage() {
+    if (!this.state.recapChartInstance) return alert('Select an RDD first to generate the chart.');
+    const rddId = document.getElementById('recap-rdd-select').value;
+    const rdd = this.state.rdds.find(r => r.id === rddId);
+    const url = this.state.recapChartInstance.toBase64Image('image/png', 1);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `graph-recap-${rdd ? rdd.rdd_date : 'rdd'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  },
+  exportRecapCSV() {
+    const rddId = document.getElementById('recap-rdd-select').value;
+    if (!rddId) return alert('Select an RDD first to export.');
+    this.exportTableToCSV('recap-step-table', 'graph-recap-milestones.csv', rddId);
+  },
+  printGraphRecap() {
+    const el = document.getElementById('recap-printable');
+    if (!el || !this.state.recapChartInstance) return alert('Select an RDD first to generate the recap.');
+    const chartImg = `<img src="${this.state.recapChartInstance.toBase64Image('image/png', 1)}" style="width:100%;max-width:900px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px" />`;
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>Graph Recap</title>
+      <style>body{font-family:sans-serif;color:#1e293b;background:#fff;padding:1.5rem}
+      table{border-collapse:collapse;width:100%;margin-bottom:16px}th,td{border:1px solid #cbd5e1;padding:6px 10px;text-align:left}
+      th{background:#f8fafc;font-size:11px;text-transform:uppercase}
+      .grid-cols-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+      .card{border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center}
+      h2{color:#1d4ed8}@media print{.no-print{display:none}}</style>
+    </head><body>${el.innerHTML.replace(/<div class="relative flex-1 min-h-0"><canvas[\s\S]*?<\/canvas><\/div>/, chartImg)}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
   },
 
   // ═══════════════════════════════════════════════════════
@@ -4044,6 +4369,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_reports" class="accent-blue-600"> Reports</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_shift_compare" class="accent-blue-600"> RDD Comparison</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_rdd_summary" class="accent-blue-600"> RDD Summary</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_graph_recap" class="accent-blue-600"> Graph Recap</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_assignment_history" class="accent-blue-600"> Assignment History</label>
       </div>
     </div>
