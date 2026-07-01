@@ -187,13 +187,13 @@
         <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
-        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Start Pick</button>
-        <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">End Pick</button>
-        <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">PGI</button>
-        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Invoice</button>
-        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">DS Print</button>
-        <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Check</button>
-        <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Loaded</button>
+        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
+        <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
+        <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
+        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending DS Printed<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
+        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending for Check<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
+        <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
+        <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
       </div>
       <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-5 border dark:border-slate-800">
@@ -1484,6 +1484,7 @@ const App = {
       visible = searched.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
     }
     if (countEl) countEl.textContent = `${visible.length} of ${this.state.dispatches.length} shown`;
+    this.updateFilterBadgeCounts();
     if (!visible.length) { emptyEl.textContent = q ? `No dispatches match “${q}”.` : 'No dispatches match this filter.'; emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
     const allowed = this.state.currentUser.permissions || [];
@@ -2868,6 +2869,18 @@ const App = {
     this.state.chartRemarks[rddId] = {};
     (data || []).forEach(row => {
       this.state.chartRemarks[rddId][row.bucket] = { text: row.remark, seriesKey: row.series_key || null };
+    });
+  },
+  updateFilterBadgeCounts() {
+    const list = this.state.dispatches || [];
+    MILESTONE_FLOW.forEach((step, idx) => {
+      const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
+      const count = list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
+      const badge = document.getElementById(`filter-badge-at_${step}`);
+      if (badge) {
+        badge.textContent = count;
+        badge.style.opacity = count > 0 ? '1' : '0.45';
+      }
     });
   },
   updateFilterPillStyles(filter) {
