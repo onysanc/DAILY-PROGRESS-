@@ -904,7 +904,7 @@ const NOT_STARTED_LABEL = 'Pending to Start Picking';
 const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
-    stuck:    { enabled: true, template: '{count} dispatches pending at {step} for {minutes}+ min!', threshold_count: 3, threshold_minutes: 30 },
+    stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30 },
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!' },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!' },
   },
