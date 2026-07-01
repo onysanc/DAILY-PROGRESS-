@@ -898,6 +898,9 @@ const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'l
 const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
 const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', checking: '#2563eb', loaded: '#7c3aed' };
+// When a dispatch is "stuck", it's stuck WAITING on the next step, not sitting at the one already checked.
+// Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
+const PENDING_LABELS = { pick_start: 'Pending Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending DS Printed', ds_printed: 'Pending for Check', checking: 'Pending to Load' };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
     stuck:    { enabled: true, template: '{count} dispatches stuck at {step} for {minutes}+ min!', threshold_count: 3, threshold_minutes: 30 },
@@ -1307,7 +1310,6 @@ const App = {
     const alerts = [];
     // Alert 1: dispatches stuck at a step > configured minutes
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stepStuckCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
@@ -1325,7 +1327,7 @@ const App = {
     if (stuckCfg.enabled) {
       Object.entries(stepStuckCounts).forEach(([step, count]) => {
         if (count >= (stuckCfg.threshold_count || 3)) {
-          alerts.push(this.formatAlertTemplate(stuckCfg.template, { count, step: STEP_NAMES[step], minutes: stuckCfg.threshold_minutes || 30 }));
+          alerts.push(this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }));
         }
       });
     }
@@ -1650,7 +1652,6 @@ const App = {
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stuck = [];
     this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -1670,7 +1671,7 @@ const App = {
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [['Type', 'Dispatch No.', 'Stuck At Step', 'Stuck Duration'].map(esc).join(',')];
     stuck.forEach(({ d, step, elapsed }) => {
-      lines.push([d.truck_type, d.dispatch_number, STEP_NAMES[step], this.fmtDuration(elapsed)].map(esc).join(','));
+      lines.push([d.truck_type, d.dispatch_number, PENDING_LABELS[step], this.fmtDuration(elapsed)].map(esc).join(','));
     });
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const rddLabel = rdd ? rdd.rdd_date : 'export';
@@ -3074,7 +3075,6 @@ const App = {
       const now2 = Date.now();
       const stuckMs = 30 * 60 * 1000;
       const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-      const STEP_NAMES2 = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
       const stuck = [];
       this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
         for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -3093,7 +3093,7 @@ const App = {
       stuckList.innerHTML = stuck.length ? stuck.map(({ d, step, elapsed }) =>
         `<div class="flex justify-between items-center px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
           <span class="font-semibold text-slate-800 dark:text-slate-200">${d.truck_type} ${d.dispatch_number}</span>
-          <span class="text-amber-700 dark:text-amber-300">@ ${STEP_NAMES2[step]} — <b>${this.fmtDuration(elapsed)}</b></span>
+          <span class="text-amber-700 dark:text-amber-300">@ ${PENDING_LABELS[step]} — <b>${this.fmtDuration(elapsed)}</b></span>
         </div>`
       ).join('') : '<div class="text-slate-400 italic text-center py-4">No stuck dispatches 🎉</div>';
     }
@@ -3456,7 +3456,6 @@ const App = {
     const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
     const stuckThreshold = stuckCfg.threshold_count || 3;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
     const stepCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
@@ -3474,7 +3473,7 @@ const App = {
         const key = `stuck-${step}-${count}`;
         if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
           this._alertedStuck.add(key);
-          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: STEP_NAMES[step], minutes: stuckCfg.threshold_minutes || 30 });
+          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 });
           this.showToast(msg, 'alert', 10000);
         }
       });
