@@ -37,6 +37,20 @@
   .priority-flag{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
   .priority-flag.urgent{background:#dc2626}
   .priority-flag.high{background:#f97316}
+  /* Floating team bulletin / chat */
+  #bulletin-fab{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9997;width:56px;height:56px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.28);cursor:pointer;transition:transform .15s ease;border:none}
+  #bulletin-fab:hover{transform:scale(1.07)}
+  #bulletin-badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;min-width:19px;height:19px;line-height:19px;text-align:center;border-radius:9px;padding:0 4px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .dark #bulletin-badge{border-color:#020617}
+  #bulletin-panel{position:fixed;bottom:5.5rem;right:1.5rem;z-index:9997;width:380px;max-width:calc(100vw - 2rem);height:min(560px, calc(100vh - 8rem));display:flex;flex-direction:column;border-radius:1rem;box-shadow:0 10px 44px rgba(0,0,0,.32);overflow:hidden}
+  #bulletin-messages{flex:1;overflow-y:auto}
+  .bulletin-msg{border-left:3px solid transparent;transition:opacity .2s}
+  .bulletin-msg.concern{border-left-color:#dc2626;background:rgba(220,38,38,.05)}
+  .dark .bulletin-msg.concern{background:rgba(220,38,38,.1)}
+  .bulletin-msg.resolved{opacity:.5}
+  .mention-chip{background:#dbeafe;color:#1d4ed8;font-weight:700;border-radius:4px;padding:0 3px}
+  .dark .mention-chip{background:#1e3a5f;color:#93c5fd}
+  #mention-suggest{max-height:160px;overflow-y:auto}
   #toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none}
   .toast{pointer-events:auto;min-width:260px;max-width:360px;padding:.75rem 1rem;border-radius:.75rem;box-shadow:0 4px 24px rgba(0,0,0,.18);font-size:.85rem;font-weight:600;display:flex;align-items:flex-start;gap:.6rem;animation:slideIn .25s ease}
   .toast.alert{background:#dc2626;color:#fff}
@@ -871,6 +885,13 @@ const App = {
     sortCol: null,
     sortDir: 1,
     customBays: [],
+    bulletinMessages: [],
+    chatUsers: [],
+    bulletinFilter: 'all',
+    bulletinOpen: false,
+    bulletinUnread: 0,
+    mentionActive: false,
+    mentionStart: -1,
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -1026,6 +1047,8 @@ const App = {
     await this.loadPersonnel();
     await this.loadCustomBays();
     if (isAdmin) await this.loadAppUsers();
+    await this.loadChatUsers();
+    await this.loadBulletinMessages();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
     this.startAutoRefresh();
@@ -2894,7 +2917,30 @@ const App = {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); this.loadChatUsers(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bulletin_messages' }, (payload) => {
+        const row = payload.new;
+        if (!this.state.bulletinMessages.some(m => m.id === row.id)) {
+          this.state.bulletinMessages = [row, ...this.state.bulletinMessages];
+        }
+        this.renderBulletin();
+        const me = this.state.currentUser?.username;
+        const mentionsMe = Array.isArray(row.mentions) && me && row.mentions.includes(me);
+        if (row.created_by !== me) {
+          if (!this.state.bulletinOpen) { this.state.bulletinUnread++; this.updateBulletinBadge(); }
+          const preview = (row.message || '').slice(0, 60) + ((row.message || '').length > 60 ? '…' : '');
+          if (mentionsMe) {
+            this.showToast(`💬 ${row.created_by} mentioned you: "${preview}"`, row.is_concern ? 'alert' : 'info');
+          } else if (row.is_concern) {
+            this.showToast(`🚩 New concern from ${row.created_by}: "${preview}"`, 'warn');
+          }
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bulletin_messages' }, (payload) => {
+        const idx = this.state.bulletinMessages.findIndex(m => m.id === payload.new.id);
+        if (idx !== -1) this.state.bulletinMessages[idx] = payload.new;
+        this.renderBulletin();
+      })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
@@ -2974,6 +3020,174 @@ const App = {
     input.value = '';
     await this.loadRemarksList(dispatchId);
     await this.loadDispatches();
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // TEAM BULLETIN / CHAT (floating widget, @mentions, concerns)
+  // ═══════════════════════════════════════════════════════
+  async loadChatUsers() {
+    const { data, error } = await supabaseClient.from('app_users').select('id, username').order('username', { ascending: true });
+    if (error) { console.error('loadChatUsers error:', error); return; }
+    this.state.chatUsers = data || [];
+  },
+  async loadBulletinMessages() {
+    const { data, error } = await supabaseClient.from('bulletin_messages').select('*').order('created_at', { ascending: false }).limit(150);
+    if (error) { console.error('loadBulletinMessages error:', error); return; }
+    this.state.bulletinMessages = data || [];
+    this.renderBulletin();
+    this.updateBulletinBadge();
+  },
+  toggleBulletin() {
+    const panel = document.getElementById('bulletin-panel');
+    if (!panel) return;
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    this.state.bulletinOpen = opening;
+    if (opening) {
+      this.state.bulletinUnread = 0;
+      this.updateBulletinBadge();
+      this.renderBulletin();
+      document.getElementById('bulletin-input')?.focus();
+    } else {
+      document.getElementById('mention-suggest')?.classList.add('hidden');
+      this.state.mentionActive = false;
+    }
+  },
+  updateBulletinBadge() {
+    const badge = document.getElementById('bulletin-badge');
+    if (!badge) return;
+    if (this.state.bulletinUnread > 0 && !this.state.bulletinOpen) {
+      badge.textContent = this.state.bulletinUnread > 9 ? '9+' : this.state.bulletinUnread;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  },
+  setBulletinFilter(f) {
+    this.state.bulletinFilter = f;
+    ['all', 'concern', 'mine'].forEach(k => {
+      const btn = document.getElementById(`bulletin-filter-${k}`);
+      if (!btn) return;
+      const active = k === f;
+      btn.classList.toggle('bg-blue-600', active);
+      btn.classList.toggle('text-white', active);
+      btn.classList.toggle('bg-slate-200', !active);
+      btn.classList.toggle('dark:bg-slate-700', !active);
+      btn.classList.toggle('text-slate-700', !active);
+      btn.classList.toggle('dark:text-slate-200', !active);
+    });
+    this.renderBulletin();
+  },
+  renderMentionText(msg, me) {
+    const escaped = this.escapeHtml(msg || '');
+    return escaped.replace(/@([a-zA-Z0-9_.]+)/g, (match, uname) => {
+      const known = (this.state.chatUsers || []).some(u => u.username.toLowerCase() === uname.toLowerCase());
+      if (!known) return match;
+      const isMe = me && uname.toLowerCase() === me.toLowerCase();
+      return `<span class="mention-chip${isMe ? ' ring-2 ring-blue-400' : ''}">@${this.escapeHtml(uname)}</span>`;
+    });
+  },
+  renderBulletin() {
+    const wrap = document.getElementById('bulletin-messages');
+    if (!wrap) return;
+    const me = this.state.currentUser?.username;
+    let msgs = this.state.bulletinMessages || [];
+    if (this.state.bulletinFilter === 'concern') msgs = msgs.filter(m => m.is_concern);
+    if (this.state.bulletinFilter === 'mine') msgs = msgs.filter(m => Array.isArray(m.mentions) && me && m.mentions.includes(me));
+    if (!msgs.length) {
+      wrap.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-10">No messages yet. Say something to the team.</div>`;
+      return;
+    }
+    wrap.innerHTML = msgs.map(m => {
+      const isConcern = !!m.is_concern;
+      const isResolved = !!m.resolved;
+      const text = this.renderMentionText(m.message, me);
+      const canResolve = isConcern && !isResolved && (this.isTrueAdmin() || m.created_by === me);
+      return `
+      <div class="bulletin-msg ${isConcern ? 'concern' : ''} ${isResolved ? 'resolved' : ''} rounded-lg px-3 py-2 bg-slate-50 dark:bg-slate-800/60">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-xs font-bold text-slate-700 dark:text-slate-200">${isConcern ? '🚩 ' : ''}${this.escapeHtml(m.created_by)}${isResolved ? ' <span class="text-emerald-500 font-normal">(resolved)</span>' : ''}</div>
+          <div class="text-[10px] text-slate-400 shrink-0">${new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+        <div class="text-sm text-slate-800 dark:text-slate-100 mt-1 whitespace-pre-wrap break-words">${text}</div>
+        ${canResolve ? `<button onclick="App.resolveConcern('${m.id}')" class="mt-1.5 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700">✓ Mark resolved</button>` : ''}
+      </div>`;
+    }).join('');
+  },
+  async resolveConcern(id) {
+    const { error } = await supabaseClient.from('bulletin_messages').update({ resolved: true }).eq('id', id);
+    if (error) return alert(error.message);
+    await this.loadBulletinMessages();
+  },
+  onBulletinInput(e) {
+    const el = e.target;
+    const val = el.value;
+    const caret = el.selectionStart;
+    const upToCaret = val.slice(0, caret);
+    const match = upToCaret.match(/@([a-zA-Z0-9_.]*)$/);
+    const box = document.getElementById('mention-suggest');
+    if (match) {
+      const query = match[1].toLowerCase();
+      const me = this.state.currentUser?.username;
+      const users = (this.state.chatUsers || [])
+        .filter(u => u.username.toLowerCase().includes(query))
+        .slice(0, 6);
+      if (users.length) {
+        this.state.mentionActive = true;
+        this.state.mentionStart = caret - match[0].length;
+        box.innerHTML = users.map(u => `<div class="px-3 py-1.5 text-sm hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-1.5" onmousedown="event.preventDefault();App.insertMention('${u.username.replace(/'/g, "\\'")}')"><span class="font-semibold">@${this.escapeHtml(u.username)}</span>${u.username === me ? '<span class=\"text-[10px] text-slate-400\">(you)</span>' : ''}</div>`).join('');
+        box.classList.remove('hidden');
+        return;
+      }
+    }
+    this.state.mentionActive = false;
+    box.classList.add('hidden');
+  },
+  insertMention(username) {
+    const el = document.getElementById('bulletin-input');
+    const val = el.value;
+    const caret = el.selectionStart;
+    const before = val.slice(0, this.state.mentionStart);
+    const after = val.slice(caret);
+    const insertion = `@${username} `;
+    el.value = before + insertion + after;
+    const newCaret = (before + insertion).length;
+    el.focus();
+    el.setSelectionRange(newCaret, newCaret);
+    this.state.mentionActive = false;
+    document.getElementById('mention-suggest').classList.add('hidden');
+  },
+  onBulletinKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !this.state.mentionActive) {
+      e.preventDefault();
+      this.sendBulletinMessage();
+    }
+    if (e.key === 'Escape') {
+      this.state.mentionActive = false;
+      document.getElementById('mention-suggest')?.classList.add('hidden');
+    }
+  },
+  async sendBulletinMessage() {
+    const input = document.getElementById('bulletin-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const concernBox = document.getElementById('bulletin-concern-toggle');
+    const isConcern = !!concernBox.checked;
+    const mentions = (this.state.chatUsers || [])
+      .map(u => u.username)
+      .filter(uname => new RegExp(`@${uname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text));
+    const { error } = await supabaseClient.from('bulletin_messages').insert({
+      message: text,
+      created_by: this.state.currentUser.username,
+      mentions,
+      is_concern: isConcern,
+      resolved: false,
+    });
+    if (error) return alert(error.message);
+    input.value = '';
+    concernBox.checked = false;
+    document.getElementById('mention-suggest').classList.add('hidden');
+    await this.loadBulletinMessages();
   },
 
   // ═══════════════════════════════════════════════════════
@@ -3674,6 +3888,38 @@ window.addEventListener('resize', () => {
     <div class="flex justify-end space-x-2">
       <button onclick="App.closeModal('change-password-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Cancel</button>
       <button onclick="App.changePassword()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Team Bulletin / Chat -->
+<button id="bulletin-fab" onclick="App.toggleBulletin()" title="Team Bulletin — mention teammates, raise concerns">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.093 0-2.14-.174-3.11-.494L3 21l1.5-4.5C3.55 15.16 3 13.63 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+  <span id="bulletin-badge" class="hidden">0</span>
+</button>
+
+<div id="bulletin-panel" class="hidden bg-white dark:bg-slate-900 border dark:border-slate-800">
+  <div class="bg-slate-900 dark:bg-slate-950 text-white px-4 py-3 flex items-center justify-between shrink-0">
+    <div>
+      <div class="font-bold text-sm">📌 Team Bulletin</div>
+      <div class="text-[11px] text-slate-400">@mention teammates &amp; flag concerns</div>
+    </div>
+    <button onclick="App.toggleBulletin()" class="text-slate-400 hover:text-white text-lg leading-none px-1">✕</button>
+  </div>
+  <div class="flex items-center gap-2 px-3 py-2 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+    <button onclick="App.setBulletinFilter('all')" id="bulletin-filter-all" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">All</button>
+    <button onclick="App.setBulletinFilter('concern')" id="bulletin-filter-concern" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">🚩 Concerns</button>
+    <button onclick="App.setBulletinFilter('mine')" id="bulletin-filter-mine" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">@Me</button>
+  </div>
+  <div id="bulletin-messages" class="p-3 space-y-2 scrollbar-none"></div>
+  <div class="border-t dark:border-slate-800 p-3 shrink-0 relative">
+    <div id="mention-suggest" class="hidden absolute left-3 right-3 bottom-full mb-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg z-20"></div>
+    <label class="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 cursor-pointer select-none mb-2 w-fit">
+      <input type="checkbox" id="bulletin-concern-toggle" class="accent-red-600 w-3.5 h-3.5"> 🚩 Mark as concern
+    </label>
+    <div class="flex items-end gap-2">
+      <textarea id="bulletin-input" rows="2" placeholder="Type a message… use @ to mention" class="flex-1 resize-none p-2 text-sm border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" oninput="App.onBulletinInput(event)" onkeydown="App.onBulletinKeydown(event)"></textarea>
+      <button onclick="App.sendBulletinMessage()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-sm shrink-0">Send</button>
     </div>
   </div>
 </div>
