@@ -426,7 +426,7 @@
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
         <h1 class="text-2xl font-bold">RDD Summary</h1>
         <div class="flex items-center gap-3">
-          <span class="text-sm text-slate-500 dark:text-slate-400">All RDDs — click a row to switch to that RDD</span>
+          <span class="text-sm text-slate-500 dark:text-slate-400">Selected / active RDD only</span>
         </div>
       </div>
       <!-- Overall stats strip -->
@@ -500,9 +500,9 @@
           </table>
         </div>
       </div>
-      <!-- All-RDD table -->
+      <!-- Current RDD row -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
-        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">ALL RDDs</div>
+        <div class="px-5 py-3 border-b dark:border-slate-800 text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">CURRENT RDD</div>
         <table class="w-full text-sm text-left">
           <thead class="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 border-b dark:border-slate-700">
             <tr>
@@ -513,12 +513,11 @@
               <th class="p-3 text-center">Pending</th>
               <th class="p-3 text-center">% Done</th>
               <th class="p-3 text-center">Gap vs Plan</th>
-              <th class="p-3">Action</th>
             </tr>
           </thead>
           <tbody id="all-rdd-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
         </table>
-        <div id="all-rdd-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No RDDs found.</div>
+        <div id="all-rdd-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No RDD selected.</div>
       </div>
     </section>
 
@@ -2926,7 +2925,8 @@ const App = {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   },
   async renderRDDSummaryTab() {
-    const allRdds = this.state.rdds;
+    const currentRdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    const allRdds = currentRdd ? [currentRdd] : [];
     // For each RDD we need dispatches count. Fetch from DB grouped.
     const { data: allDisp } = await supabaseClient.from('dispatches').select('rdd_id, loaded_checked');
     const dispMap = {};
@@ -2935,7 +2935,7 @@ const App = {
       dispMap[d.rdd_id].total++;
       if (d.loaded_checked) dispMap[d.rdd_id].loaded++;
     });
-    // All-RDD table
+    // Current-RDD table (single row)
     const tbody = document.getElementById('all-rdd-tbody');
     const emptyEl = document.getElementById('all-rdd-empty');
     if (!allRdds.length) { emptyEl.classList.remove('hidden'); tbody.innerHTML = ''; return; }
@@ -2946,9 +2946,8 @@ const App = {
       const pct = dm.total > 0 ? Math.round((dm.loaded / dm.total) * 100) : 0;
       const gap = dm.total - rdd.initial_planning_count;
       const gapStr = gap > 0 ? `<span class="text-emerald-600 font-bold">+${gap}</span>` : gap < 0 ? `<span class="text-red-600 font-bold">${gap}</span>` : '<span class="text-slate-400">0</span>';
-      const isCurrent = rdd.id === this.state.currentRddId;
-      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isCurrent ? 'bg-blue-50 dark:bg-blue-900/20' : ''}">
-        <td class="p-3 font-semibold">${rdd.rdd_date}${isCurrent ? ' <span class="text-xs text-blue-500 font-normal">(current)</span>' : ''}</td>
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors bg-blue-50 dark:bg-blue-900/20">
+        <td class="p-3 font-semibold">${rdd.rdd_date} <span class="text-xs text-blue-500 font-normal">(current)</span></td>
         <td class="p-3 text-center">${rdd.initial_planning_count}</td>
         <td class="p-3 text-center">${dm.total}</td>
         <td class="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">${dm.loaded}</td>
@@ -2960,20 +2959,17 @@ const App = {
           </div>
         </td>
         <td class="p-3 text-center">${gapStr}</td>
-        <td class="p-3"><button onclick="App.jumpToRDD('${rdd.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 text-xs font-semibold">Switch →</button></td>
       </tr>`;
     }).join('');
-    // Overview cards
+    // Overview cards (current RDD only)
     const overview = document.getElementById('rdd-summary-overview');
     if (overview) {
-      const totalRdds = allRdds.length;
-      const totalAdded = Object.values(dispMap).reduce((s, d) => s + d.total, 0);
-      const totalLoaded = Object.values(dispMap).reduce((s, d) => s + d.loaded, 0);
-      const totalPending = totalAdded - totalLoaded;
+      const dm = currentRdd ? (dispMap[currentRdd.id] || { total: 0, loaded: 0 }) : { total: 0, loaded: 0 };
+      const totalPending = dm.total - dm.loaded;
       overview.innerHTML = [
-        { label: 'Total RDDs', value: totalRdds },
-        { label: 'Total Dispatches', value: totalAdded },
-        { label: 'Total Loaded', value: totalLoaded, color: 'text-emerald-600 dark:text-emerald-400' },
+        { label: 'Plan', value: currentRdd ? currentRdd.initial_planning_count : 0 },
+        { label: 'Total Dispatches', value: dm.total },
+        { label: 'Total Loaded', value: dm.loaded, color: 'text-emerald-600 dark:text-emerald-400' },
         { label: 'Total Pending', value: totalPending, color: totalPending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
       ].map(c => `<div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4">
         <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
