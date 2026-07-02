@@ -39,6 +39,9 @@
   .priority-flag.high{background:#f97316}
   /* Team bulletin — docked footer (Dashboard / Dispatch Activity / Available Trucks) */
   #bulletin-footer{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.16);border-top:1px solid #e2e8f0;max-height:64vh}
+  /* Hard fail-safe: hide before login purely via CSS (independent of any JS timing) */
+  #app-wrapper.hidden ~ #bulletin-footer{display:none!important}
+  #bulletin-footer.tab-hide{display:none!important}
   .dark #bulletin-footer{border-top-color:#1e293b}
   #bulletin-footer.collapsed #bulletin-body{display:none}
   #bulletin-footer-chevron{transition:transform .18s ease}
@@ -3297,7 +3300,7 @@ const App = {
     const main = document.getElementById('main-content');
     if (!footer) return;
     const show = this.BULLETIN_FOOTER_TABS.includes(tabId);
-    footer.classList.toggle('hidden', !show);
+    footer.classList.toggle('tab-hide', !show);
     if (main) main.style.paddingBottom = show ? '3.25rem' : '';
     if (show) { this.renderBulletin(); this.updateBulletinFooterLatest(); }
   },
@@ -4515,7 +4518,7 @@ window.addEventListener('resize', () => {
 </div>
 
 <!-- Team Bulletin — docked footer (visible on Dashboard / Dispatch Activity / Available Trucks) -->
-<div id="bulletin-footer" class="hidden collapsed bg-white dark:bg-slate-900">
+<div id="bulletin-footer" class="collapsed bg-white dark:bg-slate-900">
   <button onclick="App.toggleBulletinFooter()" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-900 dark:bg-slate-950 text-white shrink-0">
     <div class="flex items-center gap-2">
       <span class="font-bold text-sm">📌 Team Bulletin</span>
