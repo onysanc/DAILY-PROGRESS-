@@ -38,7 +38,7 @@
   .priority-flag.urgent{background:#dc2626}
   .priority-flag.high{background:#f97316}
   /* Team bulletin — docked footer (Dashboard / Dispatch Activity / Available Trucks) */
-  #bulletin-footer{position:fixed;left:0;right:0;bottom:0;z-index:9997;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.16);border-top:1px solid #e2e8f0;max-height:64vh}
+  #bulletin-footer{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.16);border-top:1px solid #e2e8f0;max-height:64vh}
   .dark #bulletin-footer{border-top-color:#1e293b}
   #bulletin-footer.collapsed #bulletin-body{display:none}
   #bulletin-footer-chevron{transition:transform .18s ease}
@@ -1050,6 +1050,7 @@ const App = {
     document.getElementById('app-wrapper').classList.remove('hidden');
     document.getElementById('display-username').textContent = user.username.toUpperCase();
     document.getElementById('display-role').textContent = user.role.toUpperCase();
+    this.updateBulletinFooterVisibility('tab-dispatch');
     this.init();
   },
   logout() {
