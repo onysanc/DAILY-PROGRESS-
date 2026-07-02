@@ -37,17 +37,13 @@
   .priority-flag{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
   .priority-flag.urgent{background:#dc2626}
   .priority-flag.high{background:#f97316}
-  /* Team bulletin — docked footer (Dashboard / Dispatch Activity / Available Trucks) */
-  #bulletin-footer{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.16);border-top:1px solid #e2e8f0;max-height:64vh}
-  /* Hard fail-safe: hide before login purely via CSS (independent of any JS timing) */
-  #app-wrapper.hidden ~ #bulletin-footer{display:none!important}
-  #bulletin-footer.tab-hide{display:none!important}
-  .dark #bulletin-footer{border-top-color:#1e293b}
-  #bulletin-footer.collapsed #bulletin-body{display:none}
-  #bulletin-footer-chevron{transition:transform .18s ease}
-  #bulletin-footer.collapsed #bulletin-footer-chevron{transform:rotate(180deg)}
-  #bulletin-badge{background:#dc2626;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;padding:0 4px}
-  #bulletin-messages{flex:1;overflow-y:auto;min-height:120px;max-height:34vh}
+  /* Floating team bulletin / chat */
+  #bulletin-fab{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9997;width:56px;height:56px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.28);cursor:pointer;transition:transform .15s ease;border:none}
+  #bulletin-fab:hover{transform:scale(1.07)}
+  #bulletin-badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;min-width:19px;height:19px;line-height:19px;text-align:center;border-radius:9px;padding:0 4px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .dark #bulletin-badge{border-color:#020617}
+  #bulletin-panel{position:fixed;bottom:5.5rem;right:1.5rem;z-index:9997;width:380px;max-width:calc(100vw - 2rem);height:min(560px, calc(100vh - 8rem));display:flex;flex-direction:column;border-radius:1rem;box-shadow:0 10px 44px rgba(0,0,0,.32);overflow:hidden}
+  #bulletin-messages{flex:1;overflow-y:auto}
   .bulletin-msg{border-left:3px solid transparent;transition:opacity .2s}
   .bulletin-msg.concern{border-left-color:#dc2626;background:rgba(220,38,38,.05)}
   .dark .bulletin-msg.concern{background:rgba(220,38,38,.1)}
@@ -164,7 +160,7 @@
     </div>
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]" id="connection-status">●  connecting…</div>
   </aside>
-  <main id="main-content" class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
+  <main class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
     <div id="global-toggle-bar" class="flex items-center mb-3">
       <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -1053,7 +1049,6 @@ const App = {
     document.getElementById('app-wrapper').classList.remove('hidden');
     document.getElementById('display-username').textContent = user.username.toUpperCase();
     document.getElementById('display-role').textContent = user.role.toUpperCase();
-    this.updateBulletinFooterVisibility('tab-dispatch');
     this.init();
   },
   logout() {
@@ -1137,7 +1132,6 @@ const App = {
     this.startStuckAlertTimer();
     this.startAutoRefresh();
     this.populateCompareSelects();
-    this.updateBulletinFooterVisibility('tab-dispatch');
   },
   async loadCustomBays() {
     const { data, error } = await supabaseClient.from('custom_bays').select('*').order('name', { ascending: true });
@@ -1198,7 +1192,6 @@ const App = {
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
     if (tabId === 'tab-graph-recap') { this.initGraphRecapTab(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
-    this.updateBulletinFooterVisibility(tabId);
   },
   tryTab(tabId, permKey) {
     if (!this.hasPerm(permKey)) {
@@ -3166,7 +3159,6 @@ const App = {
           this.state.bulletinMessages = [row, ...this.state.bulletinMessages];
         }
         this.renderBulletin();
-        this.updateBulletinFooterLatest();
         const me = this.state.currentUser?.username;
         const mentionsMe = Array.isArray(row.mentions) && me && row.mentions.includes(me);
         if (row.created_by !== me) {
@@ -3188,7 +3180,6 @@ const App = {
         const id = payload.old?.id;
         this.state.bulletinMessages = this.state.bulletinMessages.filter(m => m.id !== id);
         this.renderBulletin();
-        this.updateBulletinFooterLatest();
       })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
@@ -3279,9 +3270,8 @@ const App = {
   },
 
   // ═══════════════════════════════════════════════════════
-  // TEAM BULLETIN / CHAT (docked footer, @mentions, concerns, replies)
+  // TEAM BULLETIN / CHAT (floating widget, @mentions, concerns, replies)
   // ═══════════════════════════════════════════════════════
-  BULLETIN_FOOTER_TABS: ['tab-analytics', 'tab-dispatch', 'tab-trucks'],
   async loadChatUsers() {
     const { data, error } = await supabaseClient.from('app_users').select('id, username').order('username', { ascending: true });
     if (error) { console.error('loadChatUsers error:', error); return; }
@@ -3293,25 +3283,13 @@ const App = {
     this.state.bulletinMessages = data || [];
     this.renderBulletin();
     this.updateBulletinBadge();
-    this.updateBulletinFooterLatest();
   },
-  updateBulletinFooterVisibility(tabId) {
-    const footer = document.getElementById('bulletin-footer');
-    const main = document.getElementById('main-content');
-    if (!footer) return;
-    const show = this.BULLETIN_FOOTER_TABS.includes(tabId);
-    footer.classList.toggle('tab-hide', !show);
-    if (main) main.style.paddingBottom = show ? '3.25rem' : '';
-    if (show) { this.renderBulletin(); this.updateBulletinFooterLatest(); }
-  },
-  toggleBulletinFooter() {
-    const footer = document.getElementById('bulletin-footer');
-    if (!footer) return;
-    const opening = footer.classList.contains('collapsed');
-    footer.classList.toggle('collapsed', !opening);
+  toggleBulletin() {
+    const panel = document.getElementById('bulletin-panel');
+    if (!panel) return;
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
     this.state.bulletinOpen = opening;
-    const main = document.getElementById('main-content');
-    if (main) main.style.paddingBottom = opening ? '0' : '3.25rem';
     if (opening) {
       this.state.bulletinUnread = 0;
       this.updateBulletinBadge();
@@ -3321,13 +3299,6 @@ const App = {
       document.getElementById('mention-suggest')?.classList.add('hidden');
       this.state.mentionActive = false;
     }
-  },
-  updateBulletinFooterLatest() {
-    const el = document.getElementById('bulletin-footer-latest');
-    if (!el) return;
-    const latest = (this.state.bulletinMessages || [])[0];
-    if (!latest) { el.textContent = 'No messages yet'; return; }
-    el.textContent = `${latest.created_by}: ${(latest.message || '').slice(0, 60)}`;
   },
   updateBulletinBadge() {
     const badge = document.getElementById('bulletin-badge');
@@ -3427,8 +3398,8 @@ const App = {
         <span class="text-slate-500 dark:text-slate-400 truncate">${this.escapeHtml((msg.message || '').slice(0, 80))}</span></div>
         <button onclick="App.cancelBulletinReply()" class="text-slate-400 hover:text-red-500 font-bold shrink-0 px-1">✕</button>`;
     }
-    const footer = document.getElementById('bulletin-footer');
-    if (footer && footer.classList.contains('collapsed')) this.toggleBulletinFooter();
+    const panel = document.getElementById('bulletin-panel');
+    if (panel && panel.classList.contains('hidden')) this.toggleBulletin();
     document.getElementById('bulletin-input')?.focus();
   },
   cancelBulletinReply() {
@@ -4517,36 +4488,35 @@ window.addEventListener('resize', () => {
   </div>
 </div>
 
-<!-- Team Bulletin — docked footer (visible on Dashboard / Dispatch Activity / Available Trucks) -->
-<div id="bulletin-footer" class="collapsed bg-white dark:bg-slate-900">
-  <button onclick="App.toggleBulletinFooter()" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-900 dark:bg-slate-950 text-white shrink-0">
-    <div class="flex items-center gap-2">
-      <span class="font-bold text-sm">📌 Team Bulletin</span>
-      <span id="bulletin-badge" class="hidden">0</span>
-      <span class="text-[11px] text-slate-400 hidden sm:inline">@mention teammates &amp; flag concerns</span>
+<!-- Floating Team Bulletin / Chat -->
+<button id="bulletin-fab" onclick="App.toggleBulletin()" title="Team Bulletin — mention teammates, raise concerns">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.093 0-2.14-.174-3.11-.494L3 21l1.5-4.5C3.55 15.16 3 13.63 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+  <span id="bulletin-badge" class="hidden">0</span>
+</button>
+
+<div id="bulletin-panel" class="hidden bg-white dark:bg-slate-900 border dark:border-slate-800">
+  <div class="bg-slate-900 dark:bg-slate-950 text-white px-4 py-3 flex items-center justify-between shrink-0">
+    <div>
+      <div class="font-bold text-sm">📌 Team Bulletin</div>
+      <div class="text-[11px] text-slate-400">@mention teammates &amp; flag concerns</div>
     </div>
-    <div class="flex items-center gap-2 min-w-0">
-      <span id="bulletin-footer-latest" class="text-[11px] text-slate-400 truncate max-w-[38vw] hidden sm:block"></span>
-      <svg id="bulletin-footer-chevron" class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
-    </div>
-  </button>
-  <div id="bulletin-body" class="flex flex-col">
-    <div class="flex items-center gap-2 px-3 py-2 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-      <button onclick="App.setBulletinFilter('all')" id="bulletin-filter-all" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">All</button>
-      <button onclick="App.setBulletinFilter('concern')" id="bulletin-filter-concern" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">🚩 Concerns</button>
-      <button onclick="App.setBulletinFilter('mine')" id="bulletin-filter-mine" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">@Me</button>
-    </div>
-    <div id="bulletin-messages" class="p-3 space-y-2 scrollbar-none"></div>
-    <div class="border-t dark:border-slate-800 p-3 shrink-0 relative">
-      <div id="mention-suggest" class="hidden absolute left-3 right-3 bottom-full mb-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg z-20"></div>
-      <div id="bulletin-reply-preview" class="hidden items-center justify-between gap-2 bulletin-reply-quote px-2.5 py-1.5 mb-2 text-xs"></div>
-      <label class="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 cursor-pointer select-none mb-2 w-fit">
-        <input type="checkbox" id="bulletin-concern-toggle" class="accent-red-600 w-3.5 h-3.5"> 🚩 Mark as concern
-      </label>
-      <div class="flex items-end gap-2">
-        <textarea id="bulletin-input" rows="2" placeholder="Type a message… use @ to mention" class="flex-1 resize-none p-2 text-sm border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" oninput="App.onBulletinInput(event)" onkeydown="App.onBulletinKeydown(event)"></textarea>
-        <button onclick="App.sendBulletinMessage()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-sm shrink-0">Send</button>
-      </div>
+    <button onclick="App.toggleBulletin()" class="text-slate-400 hover:text-white text-lg leading-none px-1">✕</button>
+  </div>
+  <div class="flex items-center gap-2 px-3 py-2 border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+    <button onclick="App.setBulletinFilter('all')" id="bulletin-filter-all" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">All</button>
+    <button onclick="App.setBulletinFilter('concern')" id="bulletin-filter-concern" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">🚩 Concerns</button>
+    <button onclick="App.setBulletinFilter('mine')" id="bulletin-filter-mine" class="filter-pill text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">@Me</button>
+  </div>
+  <div id="bulletin-messages" class="p-3 space-y-2 scrollbar-none"></div>
+  <div class="border-t dark:border-slate-800 p-3 shrink-0 relative">
+    <div id="mention-suggest" class="hidden absolute left-3 right-3 bottom-full mb-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-lg shadow-lg z-20"></div>
+    <div id="bulletin-reply-preview" class="hidden items-center justify-between gap-2 bulletin-reply-quote px-2.5 py-1.5 mb-2 text-xs"></div>
+    <label class="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 cursor-pointer select-none mb-2 w-fit">
+      <input type="checkbox" id="bulletin-concern-toggle" class="accent-red-600 w-3.5 h-3.5"> 🚩 Mark as concern
+    </label>
+    <div class="flex items-end gap-2">
+      <textarea id="bulletin-input" rows="2" placeholder="Type a message… use @ to mention" class="flex-1 resize-none p-2 text-sm border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500" oninput="App.onBulletinInput(event)" onkeydown="App.onBulletinKeydown(event)"></textarea>
+      <button onclick="App.sendBulletinMessage()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-3 py-2 text-sm shrink-0">Send</button>
     </div>
   </div>
 </div>
