@@ -3361,7 +3361,7 @@ const App = {
       durTbody.innerHTML = steps2.map((step, i) => {
         const prev = prevSteps[i];
         const col = MILESTONE_COLORS[step] || '#64748b';
-        const durations = this.state.dispatches.filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
+        const durations = this.state.dispatches.filter(d => !this.isVirtualDispatch(d) && d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
           const endT = new Date(d[`${step}_timestamp`]).getTime();
           const startT = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
           return startT ? endT - startT : null;
@@ -3545,6 +3545,17 @@ const App = {
   isVirtualPersonnelName(name) {
     if (!name) return false;
     return this.VIRTUAL_PERSONNEL_NAMES.includes(String(name).trim().toUpperCase());
+  },
+  // True if a dispatch was picked or checked under the virtual "ADVANCED" placeholder
+  // (used for special/batch dispatches, not a real person). Any such dispatch is
+  // excluded from ALL speed/duration/activity computations app-wide — not just
+  // the picker/checker leaderboards — since its timings aren't representative
+  // of real personnel throughput.
+  isVirtualDispatch(d) {
+    if (!d) return false;
+    const pickNames = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names : (d.pick_assigned_names ? [d.pick_assigned_names] : []);
+    const checkNames = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : (d.checking_assigned_names ? [d.checking_assigned_names] : []);
+    return pickNames.some(n => this.isVirtualPersonnelName(n)) || checkNames.some(n => this.isVirtualPersonnelName(n));
   },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -4038,7 +4049,7 @@ const App = {
     const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
 
     // Pick duration stats (Start Pick → End Pick)
-    const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+    const pickDurs = disps.filter(d => !this.isVirtualDispatch(d) && d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
       .filter(v => v > 0);
     const avgPickDur = pickDurs.length ? pickDurs.reduce((a,b)=>a+b,0)/pickDurs.length : null;
@@ -4266,7 +4277,7 @@ const App = {
       return { done, total, pct: total > 0 ? Math.round((done/total)*100) : 0 };
     };
     const avgDur = (disps, step, prev) => {
-      const durs = (disps||[]).filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
+      const durs = (disps||[]).filter(d => !this.isVirtualDispatch(d) && d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
         const e = new Date(d[`${step}_timestamp`]).getTime();
         const s = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
         return s ? e - s : null;
@@ -4445,7 +4456,7 @@ const App = {
     const loaded = list.filter(d => d.loaded_checked).length;
     const plan = rdd ? (rdd.initial_planning_count || 0) : 0;
     const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
-    const pickDurs = list.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+    const pickDurs = list.filter(d => !this.isVirtualDispatch(d) && d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v > 0);
     const avgPick = pickDurs.length ? pickDurs.reduce((a, b) => a + b, 0) / pickDurs.length : null;
     const trucksUsed = truckList.filter(t => t.status === 'Dispatched').length;
