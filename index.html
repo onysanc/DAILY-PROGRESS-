@@ -2684,14 +2684,40 @@ const App = {
     const chart = this.state.chartInstance;
     if (!container || !chart) return;
     container.innerHTML = '';
+    const chartArea = chart.chartArea;
+    if (!chartArea) return;
     const rddId = this.state.currentRddId;
     const remarksForRdd = (this.state.chartRemarks && this.state.chartRemarks[rddId]) || {};
-    Object.keys(remarksForRdd).forEach(bucketStr => {
-      const entry = remarksForRdd[bucketStr];
+
+    // Every bar segment on the chart is a no-go zone for tags, so remarks never sit on top of a bar.
+    const obstacles = [];
+    chart.data.datasets.forEach((ds, di) => {
+      if (ds.type && ds.type !== 'bar') return;
+      const meta = chart.getDatasetMeta(di);
+      if (!meta) return;
+      meta.data.forEach(el => {
+        if (!el) return;
+        const w = (typeof el.width === 'function' ? el.width() : el.width) || 0;
+        const base = el.base !== undefined ? el.base : chartArea.bottom;
+        obstacles.push({ left: el.x - w / 2, right: el.x + w / 2, top: Math.min(el.y, base), bottom: Math.max(el.y, base) });
+      });
+    });
+
+    const GAP = 6;    // breathing room kept between a tag and any obstacle
+    const STEP = 10;  // search granularity in px
+    const ARROW = 10; // reserved space for the little pointer triangle
+    const minY = chartArea.top + 4;
+    const placedRects = []; // tags already placed this pass, so new ones dodge them too
+
+    const overlaps = (a, b, pad) => a.left - pad < b.right && a.right + pad > b.left && a.top - pad < b.bottom && a.bottom + pad > b.top;
+    const collides = rect => obstacles.some(o => overlaps(rect, o, GAP)) || placedRects.some(p => overlaps(rect, p, GAP));
+
+    const bucketKeys = Object.keys(remarksForRdd).map(k => parseInt(k, 10)).sort((a, b) => a - b);
+    bucketKeys.forEach(bucket => {
+      const entry = remarksForRdd[bucket];
       const text = (entry && typeof entry === 'object') ? entry.text : entry;
       const seriesKey = (entry && typeof entry === 'object') ? entry.seriesKey : null;
       if (!text) return;
-      const bucket = parseInt(bucketStr, 10);
       let best = null;
       let color = '#f59e0b';
       if (seriesKey) {
@@ -2718,16 +2744,75 @@ const App = {
         });
       }
       if (!best) return;
+      const anchorX = best.el.x, anchorY = best.el.y;
       const textColor = this.getContrastText(color);
+
+      // Build the tag hidden first so we can measure its real (text-dependent) size before placing it.
       const tag = document.createElement('div');
-      tag.className = 'absolute pointer-events-auto -translate-x-1/2 -translate-y-full px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide rounded-lg shadow-lg whitespace-nowrap cursor-pointer ring-2 ring-white dark:ring-slate-900';
-      tag.style.left = best.el.x + 'px';
-      tag.style.top = (best.el.y - 34) + 'px';
+      tag.className = 'absolute pointer-events-auto px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide rounded-lg shadow-lg whitespace-nowrap cursor-pointer ring-2 ring-white dark:ring-slate-900';
+      tag.style.visibility = 'hidden';
       tag.style.background = color;
       tag.style.color = textColor;
-      tag.innerHTML = `${this.escapeHtml(text)}<div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rotate-45" style="background:${color}"></div>`;
-      tag.onclick = () => this.openChartRemarkModal(bucket, seriesKey);
+      tag.textContent = text;
       container.appendChild(tag);
+      const tw = tag.offsetWidth, th = tag.offsetHeight;
+
+      let chosen = null;
+      // Phase 1: climb straight up from directly above its own bar, looking for the first clear spot.
+      for (let y = anchorY - th - ARROW; y >= minY; y -= STEP) {
+        const rect = { left: anchorX - tw / 2, right: anchorX + tw / 2, top: y, bottom: y + th };
+        if (rect.left >= chartArea.left && rect.right <= chartArea.right && !collides(rect)) { chosen = { x: anchorX, y }; break; }
+      }
+      // Phase 2: nothing clear above its own bar (too crowded) — sweep outward left/right across
+      // the whole chart, band by band from the top down, until a vacant pocket turns up.
+      if (!chosen) {
+        const maxRadius = Math.max(chartArea.right - chartArea.left, 400);
+        outer:
+        for (let by = minY; by <= chartArea.bottom - th; by += STEP) {
+          for (let r = 0; r <= maxRadius; r += STEP) {
+            for (const dir of (r === 0 ? [0] : [-1, 1])) {
+              const cx = anchorX + dir * r;
+              const rect = { left: cx - tw / 2, right: cx + tw / 2, top: by, bottom: by + th };
+              if (rect.left < chartArea.left || rect.right > chartArea.right) continue;
+              if (!collides(rect)) { chosen = { x: cx, y: by }; break outer; }
+            }
+          }
+        }
+      }
+      // Last resort (chart is completely packed): clamp inside the plot area without further checks.
+      if (!chosen) chosen = { x: Math.min(Math.max(anchorX, chartArea.left + tw / 2), chartArea.right - tw / 2), y: minY };
+
+      tag.style.left = chosen.x + 'px';
+      tag.style.top = chosen.y + 'px';
+      tag.style.transform = 'translate(-50%, 0)';
+      tag.style.visibility = 'visible';
+
+      const displaced = Math.abs(chosen.x - anchorX) > (tw / 2 + 2) || (anchorY - (chosen.y + th)) > (ARROW + STEP);
+      if (!displaced) {
+        // Sits right above its own bar: keep the simple pointer triangle.
+        const arrow = document.createElement('div');
+        arrow.className = 'absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rotate-45';
+        arrow.style.background = color;
+        tag.appendChild(arrow);
+      } else {
+        // Floated elsewhere to find room: draw a thin leader line back to the bar it belongs to.
+        const tagCenterX = chosen.x, tagBottomY = chosen.y + th;
+        const dx = anchorX - tagCenterX, dy = anchorY - tagBottomY;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        const line = document.createElement('div');
+        line.className = 'absolute pointer-events-none';
+        line.style.cssText = `left:${tagCenterX}px;top:${tagBottomY}px;width:${len}px;height:2px;background:${color};opacity:.55;transform-origin:0 50%;transform:rotate(${angle}deg)`;
+        container.appendChild(line);
+        const dot = document.createElement('div');
+        dot.className = 'absolute -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ring-2 ring-white dark:ring-slate-900 pointer-events-none';
+        dot.style.left = anchorX + 'px';
+        dot.style.top = anchorY + 'px';
+        dot.style.background = color;
+        container.appendChild(dot);
+      }
+      tag.onclick = () => this.openChartRemarkModal(bucket, seriesKey);
+      placedRects.push({ left: chosen.x - tw / 2, right: chosen.x + tw / 2, top: chosen.y, bottom: chosen.y + th });
     });
   },
   // ═══════════════════════════════════════════════════════
