@@ -653,25 +653,55 @@
       <!-- Alert Message Settings -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">⚠ Alert Message Settings</h2>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Customize the wording, thresholds, and on/off state of the automatic dispatch alerts (toast pop-ups + dashboard banner). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
-        <div class="grid md:grid-cols-3 gap-3">
-          <!-- Pending-at-step Alert -->
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Delays are grouped into 3 severity tiers by how long a dispatch has been pending. Customize wording, minute thresholds, and on/off state below. Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
+        <div class="grid md:grid-cols-3 gap-3 mb-4">
+          <!-- Minimal -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
-              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Pending-at-step</label>
-              <button onclick="App.resetAlertSetting('stuck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-minimal-enabled" class="accent-amber-500"> 🟡 Minimal</label>
+              <button onclick="App.resetAlertSetting('minimal')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
-            <textarea id="as-stuck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes}</div>
+            <textarea id="as-minimal-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
             <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
-              <span>Trigger when ≥</span>
-              <input type="number" id="as-stuck-count" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-              <span>pending ≥</span>
-              <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-minimal-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
               <span>min</span>
             </div>
-            <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+            <button onclick="App.saveAlertSetting('minimal')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
+          <!-- Critical -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-critical-enabled" class="accent-orange-500"> 🟠 Critical</label>
+              <button onclick="App.resetAlertSetting('critical')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+            </div>
+            <textarea id="as-critical-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
+            <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-critical-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>min</span>
+            </div>
+            <button onclick="App.saveAlertSetting('critical')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+          </div>
+          <!-- Severe -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-severe-enabled" class="accent-red-600"> 🔴 Severe</label>
+              <button onclick="App.resetAlertSetting('severe')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+            </div>
+            <textarea id="as-severe-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
+            <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-severe-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>min</span>
+            </div>
+            <button onclick="App.saveAlertSetting('severe')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-3 mb-4">
           <!-- No Truck Alert -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -679,7 +709,7 @@
               <button onclick="App.resetAlertSetting('no_truck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
             <textarea id="as-no_truck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}</div>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}. Routes to whichever department is set below.</div>
             <button onclick="App.saveAlertSetting('no_truck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
           <!-- Urgent Alert -->
@@ -689,9 +719,21 @@
               <button onclick="App.resetAlertSetting('urgent')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
             <textarea id="as-urgent-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}</div>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}. Simple reminder — no reason box.</div>
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
+          <!-- Department Routing -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="mb-2">
+              <label class="text-sm font-bold">🧭 Delay Routing</label>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500">Which department must answer a delay alert for each step. Changes save instantly.</p>
+            </div>
+            <div id="alert-dept-routing" class="text-sm"></div>
+          </div>
+        </div>
+        <div class="border-t dark:border-slate-700 pt-3 mt-1">
+          <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-2">📝 Recent Delay Reasons</h3>
+          <div id="alert-responses-log" class="text-xs space-y-1.5 max-h-60 overflow-y-auto"></div>
         </div>
       </div>
 
@@ -1025,12 +1067,38 @@ const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
 const NOT_STARTED_LABEL = 'Pending to Start Picking';
 const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
+// Severity tiers for delay alerts, keyed lowest -> highest.
+const ALERT_SEVERITIES = ['minimal', 'critical', 'severe'];
+const SEVERITY_META = {
+  minimal:  { label: 'Minimal',  icon: '🟡', color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
+  critical: { label: 'Critical', icon: '🟠', color: '#ea580c', bg: '#fff7ed', border: '#fb923c' },
+  severe:   { label: 'Severe',   icon: '🔴', color: '#dc2626', bg: '#fef2f2', border: '#f87171' },
+};
+// Which department is responsible for a given pending step / condition.
+const DEPARTMENTS = ['outbound', 'transport', 'invoicing'];
+const DEPARTMENT_LABELS = { outbound: 'Outbound', transport: 'Transport', invoicing: 'Invoicing' };
+// Steps (and the synthetic 'no_truck' condition) that can trigger a delay alert, and their default department.
+const ALERT_STEP_KEYS = ['pick_start', 'pick', 'pgi', 'checking', 'ds_printed', 'loaded', 'invoiced', 'no_truck'];
+const ALERT_STEP_LABELS = { pick_start: 'Start Pick', pick: 'End Pick / Picking', pgi: 'PGI', checking: 'Checking', ds_printed: 'DS Printed', loaded: 'Loaded', invoiced: 'Invoiced', no_truck: 'No Available Truck' };
+const DEFAULT_STEP_DEPARTMENTS = {
+  pick_start: 'outbound',
+  pick: 'outbound',
+  pgi: 'outbound',
+  checking: 'outbound',
+  ds_printed: 'transport',
+  loaded: 'transport',
+  no_truck: 'transport',
+  invoiced: 'invoicing',
+};
 const App = {
   DEFAULT_ALERT_SETTINGS: {
-    stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30 },
+    minimal:  { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins', threshold_minutes: 30 },
+    critical: { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins — needs attention', threshold_minutes: 60 },
+    severe:   { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins — SEVERE DELAY', threshold_minutes: 120 },
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!' },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!' },
   },
+  DEFAULT_STEP_DEPARTMENTS: DEFAULT_STEP_DEPARTMENTS,
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
     currentRddId: null,
@@ -1047,6 +1115,7 @@ const App = {
     chartRemarks: {},
     chartSeriesMeta: [],
     alertSettings: null,
+    stepDepartments: null,
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1277,7 +1346,7 @@ const App = {
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
-    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); }
+    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponses(); }
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
@@ -1431,44 +1500,63 @@ const App = {
     const content = document.getElementById('dispatch-alert-content');
     if (!banner || !content || !this.state.currentRddId) { if (banner) banner.classList.add('hidden'); return; }
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const deptMap = this.state.stepDepartments || this.DEFAULT_STEP_DEPARTMENTS;
     const now = Date.now();
-    const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const alerts = [];
-    // Alert 1: dispatches stuck at a step > configured minutes
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const stepStuckCounts = {};
+    // groups[severity][department] = count ; plus per-severity list of step labels touched
+    const groups = { minimal: {}, critical: {}, severe: {} };
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
+      let step = null, ts = null;
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
-        const step = STEPS_FLOW[i];
-        if (d[`${step}_checked`]) {
-          const ts = d[`${step}_timestamp`];
-          if (ts && (now - new Date(ts).getTime()) > stuckMs) {
-            stepStuckCounts[step] = (stepStuckCounts[step] || 0) + 1;
-          }
+        if (d[`${STEPS_FLOW[i]}_checked`]) { step = STEPS_FLOW[i]; ts = d[`${STEPS_FLOW[i]}_timestamp`]; break; }
+      }
+      if (!step || !ts) return;
+      const elapsedMin = (now - new Date(ts).getTime()) / 60000;
+      const department = deptMap[step] || DEFAULT_STEP_DEPARTMENTS[step] || 'outbound';
+      // classify into the single highest tier crossed
+      for (let i = ALERT_SEVERITIES.length - 1; i >= 0; i--) {
+        const sev = ALERT_SEVERITIES[i];
+        const cfg = settings[sev];
+        if (cfg && cfg.enabled && elapsedMin >= (cfg.threshold_minutes || SEVERITY_META[sev].minutes)) {
+          groups[sev][department] = groups[sev][department] || { count: 0, steps: new Set() };
+          groups[sev][department].count++;
+          groups[sev][department].steps.add(PENDING_LABELS[step] || step);
           break;
         }
       }
     });
-    if (stuckCfg.enabled) {
-      Object.entries(stepStuckCounts).forEach(([step, count]) => {
-        if (count >= (stuckCfg.threshold_count || 3)) {
-          alerts.push(this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }));
-        }
-      });
-    }
-    // Alert 2: checking dispatches need trucks but none available
+    // No-truck condition, tagged with its configured department
     const noTruckCfg = settings.no_truck;
+    const noTruckLines = [];
     if (noTruckCfg.enabled) {
       const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
+      const ntDept = deptMap.no_truck || DEFAULT_STEP_DEPARTMENTS.no_truck;
       checkingTypes.forEach(type => {
         const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-        if (avail === 0) alerts.push(this.formatAlertTemplate(noTruckCfg.template, { type }));
+        if (avail === 0) noTruckLines.push(this.formatAlertTemplate(noTruckCfg.template, { type }) + ` (${DEPARTMENT_LABELS[ntDept] || ntDept})`);
       });
     }
-    if (alerts.length === 0) { banner.classList.add('hidden'); return; }
-    content.innerHTML = alerts.map(a => this.escapeHtml(a)).join('<br>');
+    const rows = [];
+    ALERT_SEVERITIES.forEach(sev => {
+      const depts = groups[sev];
+      const deptKeys = Object.keys(depts);
+      if (!deptKeys.length) return;
+      const meta = SEVERITY_META[sev];
+      const parts = deptKeys.map(dep => `${DEPARTMENT_LABELS[dep] || dep} (${[...depts[dep].steps].join(', ')}): <b>${depts[dep].count}</b>`).join(' &nbsp;|&nbsp; ');
+      rows.push(`<div class="flex items-start gap-2 py-1"><span style="color:${meta.color}">${meta.icon}</span><span><b style="color:${meta.color}">${meta.label.toUpperCase()} (${(settings[sev].threshold_minutes)}+ min):</b> ${parts}</span></div>`);
+    });
+    if (noTruckLines.length) {
+      rows.push(`<div class="flex items-start gap-2 py-1"><span>🟠</span><span>${noTruckLines.map(l => this.escapeHtml(l)).join('<br>')}</span></div>`);
+    }
+    // Urgent priority reminder (unchanged, no department)
+    const urgentCfg = settings.urgent;
+    if (urgentCfg.enabled) {
+      const urgent = this.state.dispatches.filter(d => d.priority === 'urgent' && !d.loaded_checked);
+      if (urgent.length > 0) rows.push(`<div class="flex items-start gap-2 py-1"><span>🔴</span><span>${this.escapeHtml(this.formatAlertTemplate(urgentCfg.template, { count: urgent.length }))}</span></div>`);
+    }
+    if (rows.length === 0) { banner.classList.add('hidden'); return; }
+    content.innerHTML = rows.join('');
     banner.classList.remove('hidden');
   },
   async loadDispatches() {
@@ -2994,7 +3082,6 @@ const App = {
           merged[row.key] = {
             enabled: (row.enabled !== null && row.enabled !== undefined) ? !!row.enabled : merged[row.key].enabled,
             template: row.template || merged[row.key].template,
-            threshold_count: row.threshold_count ?? merged[row.key].threshold_count,
             threshold_minutes: row.threshold_minutes ?? merged[row.key].threshold_minutes,
           };
         });
@@ -3003,21 +3090,78 @@ const App = {
       }
     } catch (e) { console.error('loadAlertSettings error:', e); }
     this.state.alertSettings = merged;
+    await this.loadStepDepartments();
     this.renderAlertSettingsPanel();
+  },
+  async loadStepDepartments() {
+    const merged = { ...DEFAULT_STEP_DEPARTMENTS };
+    try {
+      const { data, error } = await supabaseClient.from('alert_step_departments').select('*');
+      if (!error && data) {
+        data.forEach(row => { if (DEPARTMENTS.includes(row.department)) merged[row.step] = row.department; });
+      } else if (error) {
+        console.error('loadStepDepartments error:', error);
+      }
+    } catch (e) { console.error('loadStepDepartments error:', e); }
+    this.state.stepDepartments = merged;
+    this.renderStepDepartmentsPanel();
+  },
+  renderStepDepartmentsPanel() {
+    const wrap = document.getElementById('alert-dept-routing');
+    if (!wrap) return;
+    const s = this.state.stepDepartments || DEFAULT_STEP_DEPARTMENTS;
+    wrap.innerHTML = ALERT_STEP_KEYS.map(step => `
+      <div class="flex items-center justify-between gap-2 py-1.5 border-b last:border-0 dark:border-slate-700">
+        <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">${ALERT_STEP_LABELS[step]}</span>
+        <select id="dept-${step}" class="text-xs p-1.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" onchange="App.saveStepDepartment('${step}')">
+          ${DEPARTMENTS.map(dep => `<option value="${dep}" ${s[step] === dep ? 'selected' : ''}>${DEPARTMENT_LABELS[dep]}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  },
+  async saveStepDepartment(step) {
+    const sel = document.getElementById(`dept-${step}`);
+    if (!sel) return;
+    const department = sel.value;
+    const { error } = await supabaseClient.from('alert_step_departments').upsert({ step, department }, { onConflict: 'step' }).select();
+    if (error) return alert('Failed to save routing: ' + error.message);
+    this.state.stepDepartments[step] = department;
+    this.showToast(`✓ ${ALERT_STEP_LABELS[step]} now routes to ${DEPARTMENT_LABELS[department]}`, 'info', 3000);
+    this.renderAlertBanner();
+  },
+  async loadAlertResponses() {
+    const wrap = document.getElementById('alert-responses-log');
+    if (!wrap) return;
+    const { data, error } = await supabaseClient.from('dispatch_alert_responses').select('*').order('responded_at', { ascending: false }).limit(30);
+    if (error) { console.error('loadAlertResponses error:', error); return; }
+    this.renderAlertResponsesLog(data || []);
+  },
+  renderAlertResponsesLog(rows) {
+    const wrap = document.getElementById('alert-responses-log');
+    if (!wrap) return;
+    if (!rows.length) { wrap.innerHTML = '<div class="text-slate-400 italic">No delay reasons submitted yet.</div>'; return; }
+    wrap.innerHTML = rows.map(r => {
+      const meta = SEVERITY_META[r.severity] || SEVERITY_META.minimal;
+      const when = r.responded_at ? new Date(r.responded_at).toLocaleString() : '';
+      return `<div class="flex items-start gap-2 p-1.5 rounded-lg border dark:border-slate-700">
+        <span>${meta.icon}</span>
+        <div class="flex-1">
+          <div><b>${DEPARTMENT_LABELS[r.department] || r.department}</b> — ${this.escapeHtml(ALERT_STEP_LABELS[r.step] || r.step)}${r.truck_type ? ` (${this.escapeHtml(r.truck_type)})` : ''} <span class="text-slate-400">by ${this.escapeHtml(r.responded_by || '')} · ${when}</span></div>
+          <div class="text-slate-600 dark:text-slate-300">${this.escapeHtml(r.reason)}</div>
+        </div>
+      </div>`;
+    }).join('');
   },
   renderAlertSettingsPanel() {
     const s = this.state.alertSettings;
     if (!s) return;
-    ['stuck', 'no_truck', 'urgent'].forEach(key => {
+    [...ALERT_SEVERITIES, 'no_truck', 'urgent'].forEach(key => {
       const enabledEl = document.getElementById(`as-${key}-enabled`);
       const templateEl = document.getElementById(`as-${key}-template`);
       if (enabledEl) enabledEl.checked = !!s[key].enabled;
       if (templateEl) templateEl.value = s[key].template;
+      const minEl = document.getElementById(`as-${key}-minutes`);
+      if (minEl) minEl.value = s[key].threshold_minutes;
     });
-    const cnt = document.getElementById('as-stuck-count');
-    const min = document.getElementById('as-stuck-minutes');
-    if (cnt) cnt.value = s.stuck.threshold_count;
-    if (min) min.value = s.stuck.threshold_minutes;
   },
   async saveAlertSetting(key) {
     const enabledEl = document.getElementById(`as-${key}-enabled`);
@@ -3025,9 +3169,9 @@ const App = {
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
     const payload = { key, enabled: enabledEl.checked, template };
-    if (key === 'stuck') {
-      payload.threshold_count = parseInt(document.getElementById('as-stuck-count').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_count;
-      payload.threshold_minutes = parseInt(document.getElementById('as-stuck-minutes').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_minutes;
+    if (ALERT_SEVERITIES.includes(key)) {
+      const minEl = document.getElementById(`as-${key}-minutes`);
+      payload.threshold_minutes = parseInt(minEl.value, 10) || this.DEFAULT_ALERT_SETTINGS[key].threshold_minutes;
     }
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save: ' + error.message);
@@ -3041,9 +3185,9 @@ const App = {
     const templateEl = document.getElementById(`as-${key}-template`);
     if (enabledEl) enabledEl.checked = d.enabled;
     if (templateEl) templateEl.value = d.template;
-    if (key === 'stuck') {
-      document.getElementById('as-stuck-count').value = d.threshold_count;
-      document.getElementById('as-stuck-minutes').value = d.threshold_minutes;
+    if (ALERT_SEVERITIES.includes(key)) {
+      const minEl = document.getElementById(`as-${key}-minutes`);
+      if (minEl) minEl.value = d.threshold_minutes;
     }
   },
   // ═══════════════════════════════════════════════════════
@@ -3329,6 +3473,8 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); this.loadChatUsers(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_step_departments' }, () => { this.loadStepDepartments(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_alert_responses' }, () => { if (this.hasPerm('tab_users')) this.loadAlertResponses(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bulletin_messages' }, (payload) => {
         const row = payload.new;
         if (!this.state.bulletinMessages.some(m => m.id === row.id)) {
@@ -3712,34 +3858,39 @@ const App = {
   checkStuckAlerts() {
     if (!this.state.currentRddId) return;
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const deptMap = this.state.stepDepartments || this.DEFAULT_STEP_DEPARTMENTS;
     const now = Date.now();
-    const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const stuckThreshold = stuckCfg.threshold_count || 3;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const stepCounts = {};
+    // Per-dispatch, per-step delay alerts — classified into minimal/critical/severe by elapsed time.
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
+      let step = null, ts = null;
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
-        const step = STEPS_FLOW[i];
-        if (d[`${step}_checked`]) {
-          const ts = d[`${step}_timestamp`];
-          if (ts && (now - new Date(ts).getTime()) > stuckMs) stepCounts[step] = (stepCounts[step] || 0) + 1;
-          break;
+        if (d[`${STEPS_FLOW[i]}_checked`]) { step = STEPS_FLOW[i]; ts = d[`${STEPS_FLOW[i]}_timestamp`]; break; }
+      }
+      if (!step || !ts) return;
+      const elapsedMin = (now - new Date(ts).getTime()) / 60000;
+      const department = deptMap[step] || DEFAULT_STEP_DEPARTMENTS[step] || 'outbound';
+      for (let i = ALERT_SEVERITIES.length - 1; i >= 0; i--) {
+        const sev = ALERT_SEVERITIES[i];
+        const cfg = settings[sev];
+        if (!cfg || !cfg.enabled) continue;
+        const threshold = cfg.threshold_minutes || SEVERITY_META[sev].minutes;
+        if (elapsedMin >= threshold) {
+          const key = `${d.id}-${step}-${sev}`;
+          if (!this._alertedStuck.has(key)) {
+            this._alertedStuck.add(key);
+            const msg = this.formatAlertTemplate(cfg.template, {
+              count: 1, step: PENDING_LABELS[step] || step, minutes: threshold,
+              department: DEPARTMENT_LABELS[department] || department,
+            });
+            this.promptDelayResponse(d, step, sev, department, msg);
+          }
+          break; // only the single highest tier crossed fires
         }
       }
     });
-    if (stuckCfg.enabled) {
-      Object.entries(stepCounts).forEach(([step, count]) => {
-        const key = `stuck-${step}-${count}`;
-        if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
-          this._alertedStuck.add(key);
-          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 });
-          this.showToast(msg, 'alert', 10000);
-        }
-      });
-    }
-    // No-truck alert
+    // No-truck alert — also routed to a department and requires a reason.
     const noTruckCfg = settings.no_truck;
     const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
     checkingTypes.forEach(type => {
@@ -3747,13 +3898,14 @@ const App = {
       const key = `notruck-${type}`;
       if (noTruckCfg.enabled && avail === 0 && !this._alertedNoTruck.has(key)) {
         this._alertedNoTruck.add(key);
+        const department = deptMap.no_truck || DEFAULT_STEP_DEPARTMENTS.no_truck;
         const msg = this.formatAlertTemplate(noTruckCfg.template, { type });
-        this.showToast(msg, 'warn', 10000);
+        this.promptDelayResponse(null, 'no_truck', 'critical', department, msg, type);
       } else if (avail > 0) {
         this._alertedNoTruck.delete(key);
       }
     });
-    // Urgent priority reminder
+    // Urgent priority reminder (simple toast, no department / response needed)
     const urgentCfg = settings.urgent;
     const urgent = this.state.dispatches.filter(d => d.priority === 'urgent' && !d.loaded_checked);
     if (urgentCfg.enabled && urgent.length > 0) {
@@ -3764,6 +3916,56 @@ const App = {
         this.showToast(msg, 'alert', 8000);
       }
     }
+  },
+  // A persistent (non auto-dismissing) alert card that requires the user to type a reason before it can be closed.
+  promptDelayResponse(dispatch, step, severity, department, message, extraLabel) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const meta = SEVERITY_META[severity] || SEVERITY_META.minimal;
+    const elId = `alertresp-${dispatch ? dispatch.id : 'nt-' + (extraLabel || '')}-${step}-${severity}-${Date.now()}`;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.id = elId;
+    el.style.background = meta.bg;
+    el.style.color = '#1e293b';
+    el.style.border = `2px solid ${meta.border}`;
+    el.style.flexDirection = 'column';
+    el.style.alignItems = 'stretch';
+    el.style.gap = '.5rem';
+    el.style.pointerEvents = 'auto';
+    const dispatchTag = dispatch ? `${dispatch.truck_type || ''} ${dispatch.dispatch_number || ''}`.trim() : (extraLabel ? `${extraLabel} truck` : '');
+    el.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:.5rem">
+        <span style="font-size:1.15em;line-height:1">${meta.icon}</span>
+        <div class="flex-1">
+          <div style="font-weight:800;font-size:.8rem;color:${meta.color}">${meta.label.toUpperCase()} DELAY${dispatchTag ? ' — ' + this.escapeHtml(dispatchTag) : ''}</div>
+          <div style="font-size:.8rem;font-weight:600;margin-top:2px">${this.escapeHtml(message)}</div>
+          <div style="font-size:.7rem;font-weight:600;opacity:.7;margin-top:2px">Department: ${DEPARTMENT_LABELS[department] || department}</div>
+        </div>
+      </div>
+      <textarea placeholder="Reason for delay (required)" style="width:100%;font-size:.75rem;padding:.4rem;border-radius:.5rem;border:1px solid ${meta.border};color:#1e293b" rows="2"></textarea>
+      <button style="background:${meta.color};color:#fff;font-weight:700;font-size:.75rem;padding:.4rem .75rem;border-radius:.5rem;border:none;cursor:pointer;align-self:flex-end" onclick="App.submitDelayResponse('${elId}', ${dispatch ? `'${dispatch.id}'` : 'null'}, '${step}', '${severity}', '${department}', ${extraLabel ? `'${extraLabel}'` : 'null'})">Submit Reason</button>
+    `;
+    container.appendChild(el);
+    this.playAlertSound('alert');
+  },
+  async submitDelayResponse(elId, dispatchId, step, severity, department, extraLabel) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const ta = el.querySelector('textarea');
+    const reason = (ta.value || '').trim();
+    if (!reason) { ta.style.borderColor = '#dc2626'; ta.focus(); return; }
+    const payload = {
+      dispatch_id: dispatchId || null,
+      step, severity, department, reason,
+      truck_type: extraLabel || null,
+      rdd_id: this.state.currentRddId,
+      responded_by: this.state.currentUser?.username || 'unknown',
+    };
+    const { error } = await supabaseClient.from('dispatch_alert_responses').insert(payload);
+    if (error) { alert('Failed to save reason: ' + error.message); return; }
+    el.remove();
+    this.showToast('✓ Reason recorded', 'info', 2500);
   },
   startStuckAlertTimer() {
     if (this._stuckAlertTimer) clearInterval(this._stuckAlertTimer);
