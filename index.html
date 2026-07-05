@@ -384,11 +384,8 @@
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </button>
       </div>
-      <!-- Smart Alert Banner -->
-      <div id="dispatch-alert-banner" class="hidden mb-1 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
-        <span class="text-amber-600 dark:text-amber-400 text-lg leading-none mt-0.5">⚠</span>
-        <div id="dispatch-alert-content" class="text-sm text-amber-800 dark:text-amber-200 flex-1"></div>
-      </div>
+      <!-- Smart Alert Banner: 3 compact department tiles, minimized until clicked -->
+      <div id="dispatch-alert-banner" class="hidden mb-1 flex gap-2 flex-wrap"></div>
       <div class="flex gap-3 flex-wrap">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow overflow-hidden shrink-0 border dark:border-slate-800">
           <table class="text-xs border-collapse" id="dash-milestone-table">
@@ -653,25 +650,59 @@
       <!-- Alert Message Settings -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">⚠ Alert Message Settings</h2>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Customize the wording, thresholds, and on/off state of the automatic dispatch alerts (toast pop-ups + dashboard banner). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
-        <div class="grid md:grid-cols-3 gap-3">
-          <!-- Pending-at-step Alert -->
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Delays are grouped into 3 severity tiers by how long a dispatch has been pending. Each step below has its <b>own independent</b> thresholds, wording, and on/off state — changing one step never affects another. Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
+        <div class="flex items-center gap-2 mb-3">
+          <label class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Editing step:</label>
+          <select id="as-step-select" onchange="App.onAlertStepSelectChange()" class="text-sm p-1.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"></select>
+        </div>
+        <div class="grid md:grid-cols-3 gap-3 mb-4">
+          <!-- Minimal -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
-              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Pending-at-step</label>
-              <button onclick="App.resetAlertSetting('stuck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-minimal-enabled" class="accent-amber-500"> 🟡 Minimal</label>
+              <button onclick="App.resetAlertSetting('minimal')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
-            <textarea id="as-stuck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes}</div>
+            <textarea id="as-minimal-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
             <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
-              <span>Trigger when ≥</span>
-              <input type="number" id="as-stuck-count" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-              <span>pending ≥</span>
-              <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-minimal-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
               <span>min</span>
             </div>
-            <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+            <button onclick="App.saveAlertSetting('minimal')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
+          <!-- Critical -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-critical-enabled" class="accent-orange-500"> 🟠 Critical</label>
+              <button onclick="App.resetAlertSetting('critical')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+            </div>
+            <textarea id="as-critical-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
+            <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-critical-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>min</span>
+            </div>
+            <button onclick="App.saveAlertSetting('critical')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+          </div>
+          <!-- Severe -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-severe-enabled" class="accent-red-600"> 🔴 Severe</label>
+              <button onclick="App.resetAlertSetting('severe')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
+            </div>
+            <textarea id="as-severe-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} {department}</div>
+            <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Trigger when pending ≥</span>
+              <input type="number" id="as-severe-minutes" min="1" class="w-16 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+              <span>min</span>
+            </div>
+            <button onclick="App.saveAlertSetting('severe')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-3 mb-4">
           <!-- No Truck Alert -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -679,7 +710,7 @@
               <button onclick="App.resetAlertSetting('no_truck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
             <textarea id="as-no_truck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}</div>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}. Routes to whichever department is set below.</div>
             <button onclick="App.saveAlertSetting('no_truck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
           <!-- Urgent Alert -->
@@ -689,9 +720,21 @@
               <button onclick="App.resetAlertSetting('urgent')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
             </div>
             <textarea id="as-urgent-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}</div>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}. Simple reminder — no reason box.</div>
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
+          <!-- Department Routing -->
+          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
+            <div class="mb-2">
+              <label class="text-sm font-bold">🧭 Delay Routing</label>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500">Which department must answer a delay alert for each step. Changes save instantly.</p>
+            </div>
+            <div id="alert-dept-routing" class="text-sm"></div>
+          </div>
+        </div>
+        <div class="border-t dark:border-slate-700 pt-3 mt-1">
+          <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-2">📝 Recent Delay Reasons</h3>
+          <div id="alert-responses-log" class="text-xs space-y-1.5 max-h-60 overflow-y-auto"></div>
         </div>
       </div>
 
@@ -890,6 +933,15 @@
     </div>
   </div>
 </div>
+<div id="delay-response-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[460px] border dark:border-slate-800 max-h-[85vh] flex flex-col">
+    <h2 id="delay-response-modal-title" class="text-lg font-bold mb-3">Delay Reasons Needed</h2>
+    <div id="delay-response-list" class="flex-1 overflow-y-auto pr-1"></div>
+    <div class="flex justify-end mt-3">
+      <button onclick="App.closeDelayModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Close</button>
+    </div>
+  </div>
+</div>
 <div id="checking-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[420px] border dark:border-slate-800 max-h-[90vh] overflow-y-auto">
     <h2 class="text-lg font-bold mb-4">Checking Details</h2>
@@ -1025,12 +1077,53 @@ const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
 const NOT_STARTED_LABEL = 'Pending to Start Picking';
 const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
+// Severity tiers for delay alerts, keyed lowest -> highest.
+const ALERT_SEVERITIES = ['minimal', 'critical', 'severe'];
+const SEVERITY_META = {
+  minimal:  { label: 'Minimal',  icon: '🟡', color: '#d97706', bg: '#fffbeb', border: '#fcd34d' },
+  critical: { label: 'Critical', icon: '🟠', color: '#ea580c', bg: '#fff7ed', border: '#fb923c' },
+  severe:   { label: 'Severe',   icon: '🔴', color: '#dc2626', bg: '#fef2f2', border: '#f87171' },
+};
+// Which department is responsible for a given pending step / condition.
+const DEPARTMENTS = ['outbound', 'transport', 'invoicing'];
+const DEPARTMENT_LABELS = { outbound: 'Outbound', transport: 'Transport', invoicing: 'Invoicing' };
+// Steps (and the synthetic 'no_truck' condition) that can trigger a delay alert, and their default department.
+const ALERT_STEP_KEYS = ['pick_start', 'pick', 'pgi', 'checking', 'ds_printed', 'loaded', 'invoiced', 'no_truck'];
+const ALERT_STEP_LABELS = { pick_start: 'Start Pick', pick: 'End Pick / Picking', pgi: 'PGI', checking: 'Checking', ds_printed: 'DS Printed', loaded: 'Loaded', invoiced: 'Invoiced', no_truck: 'No Available Truck' };
+const DEFAULT_STEP_DEPARTMENTS = {
+  pick_start: 'outbound',
+  pick: 'outbound',
+  pgi: 'outbound',
+  checking: 'outbound',
+  ds_printed: 'transport',
+  loaded: 'transport',
+  no_truck: 'transport',
+  invoiced: 'invoicing',
+};
+// The real dispatch-flow steps that get their OWN independent Minimal/Critical/Severe
+// tiers (thresholds + wording + on/off). 'no_truck' and 'urgent' stay global/single-tier
+// since they are not tied to one flow step.
+const ALERT_TIER_STEPS = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+// Fallback defaults used the first time a step is opened (before any admin customization),
+// and restored per-step (not globally) when "Reset" is clicked.
+function buildDefaultStepAlertTiers() {
+  const out = {};
+  ALERT_TIER_STEPS.forEach(step => {
+    out[step] = {
+      minimal:  { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins', threshold_minutes: 30 },
+      critical: { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins — needs attention', threshold_minutes: 60 },
+      severe:   { enabled: true, template: '{department}: {count} dispatch(es) pending {step} for {minutes}+ mins — SEVERE DELAY', threshold_minutes: 120 },
+    };
+  });
+  return out;
+}
+const DEFAULT_STEP_ALERT_TIERS = buildDefaultStepAlertTiers();
 const App = {
   DEFAULT_ALERT_SETTINGS: {
-    stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30 },
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!' },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!' },
   },
+  DEFAULT_STEP_DEPARTMENTS: DEFAULT_STEP_DEPARTMENTS,
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
     currentRddId: null,
@@ -1047,6 +1140,12 @@ const App = {
     chartRemarks: {},
     chartSeriesMeta: [],
     alertSettings: null,
+    stepAlertTiers: null,
+    alertSettingsSelectedStep: ALERT_TIER_STEPS[0],
+    stepDepartments: null,
+    answeredAlertKeys: new Set(),
+    openDelayAlerts: [],
+    openDelayModalDept: null,
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1219,6 +1318,7 @@ const App = {
     await this.loadChatUsers();
     await this.loadBulletinMessages();
     await this.loadAlertSettings();
+    await this.loadAnsweredAlertKeys();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
     this.startAutoRefresh();
@@ -1277,7 +1377,7 @@ const App = {
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
-    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); }
+    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponses(); }
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
@@ -1426,50 +1526,159 @@ const App = {
     // Smart alert banner
     this.renderAlertBanner();
   },
-  renderAlertBanner() {
-    const banner = document.getElementById('dispatch-alert-banner');
-    const content = document.getElementById('dispatch-alert-content');
-    if (!banner || !content || !this.state.currentRddId) { if (banner) banner.classList.add('hidden'); return; }
+  // Key that uniquely identifies one delay condition (a specific dispatch at a specific
+  // step/severity, or a specific truck-type "no truck" condition) so it can be marked answered.
+  delayAlertKey(dispatchId, step, severity, truckType) {
+    return dispatchId ? `${dispatchId}-${step}-${severity}` : `nt-${truckType}-${step}-${severity}`;
+  },
+  // Recomputes every currently-open (unanswered) delay alert from live dispatch data,
+  // minus anything that already has a submitted reason. This is the single source of
+  // truth for both the 3 dashboard tiles and the per-department response modal.
+  computeOpenDelayAlerts() {
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const stepTiers = this.state.stepAlertTiers || DEFAULT_STEP_ALERT_TIERS;
+    const deptMap = this.state.stepDepartments || DEFAULT_STEP_DEPARTMENTS;
+    const answered = this.state.answeredAlertKeys || new Set();
     const now = Date.now();
-    const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const alerts = [];
-    // Alert 1: dispatches stuck at a step > configured minutes
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const stepStuckCounts = {};
+    const out = [];
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
+      let step = null, ts = null;
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
-        const step = STEPS_FLOW[i];
-        if (d[`${step}_checked`]) {
-          const ts = d[`${step}_timestamp`];
-          if (ts && (now - new Date(ts).getTime()) > stuckMs) {
-            stepStuckCounts[step] = (stepStuckCounts[step] || 0) + 1;
+        if (d[`${STEPS_FLOW[i]}_checked`]) { step = STEPS_FLOW[i]; ts = d[`${STEPS_FLOW[i]}_timestamp`]; break; }
+      }
+      if (!step || !ts) return;
+      const elapsedMin = (now - new Date(ts).getTime()) / 60000;
+      const department = deptMap[step] || DEFAULT_STEP_DEPARTMENTS[step] || 'outbound';
+      // Each step now has its own independent Minimal/Critical/Severe thresholds & wording.
+      const tiers = stepTiers[step] || DEFAULT_STEP_ALERT_TIERS[step];
+      if (!tiers) return;
+      for (let i = ALERT_SEVERITIES.length - 1; i >= 0; i--) {
+        const sev = ALERT_SEVERITIES[i];
+        const cfg = tiers[sev];
+        if (!cfg || !cfg.enabled) continue;
+        const threshold = cfg.threshold_minutes || SEVERITY_META[sev].minutes;
+        if (elapsedMin >= threshold) {
+          const key = this.delayAlertKey(d.id, step, sev, null);
+          if (!answered.has(key)) {
+            out.push({
+              key, dispatch: d, step, severity: sev, department, truckType: null,
+              message: this.formatAlertTemplate(cfg.template, { count: 1, step: PENDING_LABELS[step] || step, minutes: threshold, department: DEPARTMENT_LABELS[department] || department }),
+            });
           }
-          break;
+          break; // only the highest tier crossed counts
         }
       }
     });
-    if (stuckCfg.enabled) {
-      Object.entries(stepStuckCounts).forEach(([step, count]) => {
-        if (count >= (stuckCfg.threshold_count || 3)) {
-          alerts.push(this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }));
-        }
-      });
-    }
-    // Alert 2: checking dispatches need trucks but none available
+    // No-truck condition — also department-routed and requires a reason.
     const noTruckCfg = settings.no_truck;
     if (noTruckCfg.enabled) {
       const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
+      const ntDept = deptMap.no_truck || DEFAULT_STEP_DEPARTMENTS.no_truck;
       checkingTypes.forEach(type => {
         const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-        if (avail === 0) alerts.push(this.formatAlertTemplate(noTruckCfg.template, { type }));
+        if (avail === 0) {
+          const key = this.delayAlertKey(null, 'no_truck', 'critical', type);
+          if (!answered.has(key)) {
+            out.push({
+              key, dispatch: null, step: 'no_truck', severity: 'critical', department: ntDept, truckType: type,
+              message: this.formatAlertTemplate(noTruckCfg.template, { type }),
+            });
+          }
+        }
       });
     }
-    if (alerts.length === 0) { banner.classList.add('hidden'); return; }
-    content.innerHTML = alerts.map(a => this.escapeHtml(a)).join('<br>');
+    return out;
+  },
+  // Compact, minimized-by-default dashboard alert area: just 3 tiles (Outbound / Transport /
+  // Invoicing) showing how many delays in that department still need a reason. Nothing is
+  // ever shown "open" on the page — clicking a tile opens a small modal to respond.
+  renderAlertBanner() {
+    const banner = document.getElementById('dispatch-alert-banner');
+    if (!banner) return;
+    if (!this.state.currentRddId) { banner.classList.add('hidden'); this.state.openDelayAlerts = []; return; }
+    const items = this.computeOpenDelayAlerts();
+    this.state.openDelayAlerts = items;
+    const byDept = { outbound: [], transport: [], invoicing: [] };
+    items.forEach(it => { (byDept[it.department] || byDept.outbound).push(it); });
+    banner.innerHTML = DEPARTMENTS.map(dep => {
+      const list = byDept[dep];
+      let worst = null;
+      list.forEach(it => { if (worst === null || ALERT_SEVERITIES.indexOf(it.severity) > ALERT_SEVERITIES.indexOf(worst)) worst = it.severity; });
+      const meta = worst ? SEVERITY_META[worst] : null;
+      const color = meta ? meta.color : '#94a3b8';
+      const bg = meta ? meta.bg : 'transparent';
+      const border = meta ? meta.border : '#e2e8f0';
+      return `<button onclick="App.openDelayTile('${dep}')" class="flex-1 min-w-[130px] rounded-xl border-2 px-3 py-1.5 text-left transition hover:brightness-95 dark:bg-slate-900" style="background:${bg};border-color:${border}">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] font-bold uppercase tracking-wide" style="color:${color}">${DEPARTMENT_LABELS[dep]}</span>
+          <span class="text-lg font-extrabold leading-none" style="color:${color}">${list.length}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 dark:text-slate-500">${list.length ? (list.length === 1 ? 'delay needs a reason' : 'delays need a reason') : 'all clear'}</div>
+      </button>`;
+    }).join('');
     banner.classList.remove('hidden');
+    // Keep an already-open response modal in sync (e.g. after one item gets answered).
+    if (this.state.openDelayModalDept) this.renderDelayModalList(this.state.openDelayModalDept);
+  },
+  openDelayTile(dept) {
+    this.state.openDelayModalDept = dept;
+    const titleEl = document.getElementById('delay-response-modal-title');
+    if (titleEl) titleEl.textContent = `${DEPARTMENT_LABELS[dept] || dept} — Delay Reasons Needed`;
+    this.renderDelayModalList(dept);
+    this.openModal('delay-response-modal');
+  },
+  closeDelayModal() {
+    this.state.openDelayModalDept = null;
+    this.closeModal('delay-response-modal');
+  },
+  renderDelayModalList(dept) {
+    const wrap = document.getElementById('delay-response-list');
+    if (!wrap) return;
+    const items = (this.state.openDelayAlerts || []).filter(i => i.department === dept);
+    if (!items.length) { wrap.innerHTML = '<div class="text-sm text-slate-400 italic text-center py-6">No delays pending in this department 🎉</div>'; return; }
+    wrap.innerHTML = items.map(it => {
+      const meta = SEVERITY_META[it.severity];
+      const label = it.dispatch ? `${it.dispatch.truck_type || ''} ${it.dispatch.dispatch_number || ''}`.trim() : (it.truckType ? `${it.truckType} truck` : '');
+      return `<div class="border rounded-lg p-2.5 mb-2" style="border-color:${meta.border};background:${meta.bg}">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span>${meta.icon}</span>
+          <span class="text-xs font-bold" style="color:${meta.color}">${meta.label.toUpperCase()}${label ? ' — ' + this.escapeHtml(label) : ''}</span>
+        </div>
+        <div class="text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-200">${this.escapeHtml(it.message)}</div>
+        <textarea id="dr-${it.key}" placeholder="Reason for delay (required)" rows="2" class="w-full text-xs p-1.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-1.5"></textarea>
+        <div class="text-right"><button onclick="App.submitDelayResponse('${it.key}')" class="text-xs font-bold px-3 py-1 rounded-lg text-white" style="background:${meta.color}">Submit</button></div>
+      </div>`;
+    }).join('');
+  },
+  async submitDelayResponse(key) {
+    const item = (this.state.openDelayAlerts || []).find(i => i.key === key);
+    if (!item) return;
+    const ta = document.getElementById(`dr-${key}`);
+    const reason = (ta?.value || '').trim();
+    if (!reason) { if (ta) ta.style.borderColor = '#dc2626'; return; }
+    const payload = {
+      dispatch_id: item.dispatch ? item.dispatch.id : null,
+      rdd_id: this.state.currentRddId,
+      step: item.step, severity: item.severity, department: item.department,
+      truck_type: item.truckType || null,
+      reason,
+      responded_by: this.state.currentUser?.username || 'unknown',
+    };
+    const { error } = await supabaseClient.from('dispatch_alert_responses').insert(payload);
+    if (error) return alert('Failed to save reason: ' + error.message);
+    this.state.answeredAlertKeys.add(key);
+    this.showToast('✓ Reason recorded', 'info', 2500);
+    this.renderAlertBanner();
+    this.loadAlertResponses();
+  },
+  async loadAnsweredAlertKeys() {
+    try {
+      const { data, error } = await supabaseClient.from('dispatch_alert_responses').select('dispatch_id, step, severity, truck_type');
+      if (error) { console.error('loadAnsweredAlertKeys error:', error); return; }
+      this.state.answeredAlertKeys = new Set((data || []).map(r => this.delayAlertKey(r.dispatch_id, r.step, r.severity, r.truck_type)));
+    } catch (e) { console.error('loadAnsweredAlertKeys error:', e); }
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
@@ -2985,6 +3194,7 @@ const App = {
     return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null ? vars[k] : m));
   },
   async loadAlertSettings() {
+    // 'no_truck' and 'urgent' remain single global settings, still stored in alert_settings.
     const merged = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_SETTINGS));
     try {
       const { data, error } = await supabaseClient.from('alert_settings').select('*');
@@ -2994,7 +3204,6 @@ const App = {
           merged[row.key] = {
             enabled: (row.enabled !== null && row.enabled !== undefined) ? !!row.enabled : merged[row.key].enabled,
             template: row.template || merged[row.key].template,
-            threshold_count: row.threshold_count ?? merged[row.key].threshold_count,
             threshold_minutes: row.threshold_minutes ?? merged[row.key].threshold_minutes,
           };
         });
@@ -3003,32 +3212,145 @@ const App = {
       }
     } catch (e) { console.error('loadAlertSettings error:', e); }
     this.state.alertSettings = merged;
+    await this.loadStepAlertTiers();
+    await this.loadStepDepartments();
     this.renderAlertSettingsPanel();
+  },
+  // Per-step Minimal/Critical/Severe tiers — each flow step is independently configurable.
+  async loadStepAlertTiers() {
+    const merged = JSON.parse(JSON.stringify(DEFAULT_STEP_ALERT_TIERS));
+    try {
+      const { data, error } = await supabaseClient.from('alert_step_severity_settings').select('*');
+      if (!error && data) {
+        data.forEach(row => {
+          if (!merged[row.step] || !ALERT_SEVERITIES.includes(row.severity)) return;
+          merged[row.step][row.severity] = {
+            enabled: (row.enabled !== null && row.enabled !== undefined) ? !!row.enabled : merged[row.step][row.severity].enabled,
+            template: row.template || merged[row.step][row.severity].template,
+            threshold_minutes: row.threshold_minutes ?? merged[row.step][row.severity].threshold_minutes,
+          };
+        });
+      } else if (error) {
+        console.error('loadStepAlertTiers error:', error);
+      }
+    } catch (e) { console.error('loadStepAlertTiers error:', e); }
+    this.state.stepAlertTiers = merged;
+  },
+  async loadStepDepartments() {
+    const merged = { ...DEFAULT_STEP_DEPARTMENTS };
+    try {
+      const { data, error } = await supabaseClient.from('alert_step_departments').select('*');
+      if (!error && data) {
+        data.forEach(row => { if (DEPARTMENTS.includes(row.department)) merged[row.step] = row.department; });
+      } else if (error) {
+        console.error('loadStepDepartments error:', error);
+      }
+    } catch (e) { console.error('loadStepDepartments error:', e); }
+    this.state.stepDepartments = merged;
+    this.renderStepDepartmentsPanel();
+  },
+  renderStepDepartmentsPanel() {
+    const wrap = document.getElementById('alert-dept-routing');
+    if (!wrap) return;
+    const s = this.state.stepDepartments || DEFAULT_STEP_DEPARTMENTS;
+    wrap.innerHTML = ALERT_STEP_KEYS.map(step => `
+      <div class="flex items-center justify-between gap-2 py-1.5 border-b last:border-0 dark:border-slate-700">
+        <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">${ALERT_STEP_LABELS[step]}</span>
+        <select id="dept-${step}" class="text-xs p-1.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" onchange="App.saveStepDepartment('${step}')">
+          ${DEPARTMENTS.map(dep => `<option value="${dep}" ${s[step] === dep ? 'selected' : ''}>${DEPARTMENT_LABELS[dep]}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  },
+  async saveStepDepartment(step) {
+    const sel = document.getElementById(`dept-${step}`);
+    if (!sel) return;
+    const department = sel.value;
+    const { error } = await supabaseClient.from('alert_step_departments').upsert({ step, department }, { onConflict: 'step' }).select();
+    if (error) return alert('Failed to save routing: ' + error.message);
+    this.state.stepDepartments[step] = department;
+    this.showToast(`✓ ${ALERT_STEP_LABELS[step]} now routes to ${DEPARTMENT_LABELS[department]}`, 'info', 3000);
+    this.renderAlertBanner();
+  },
+  async loadAlertResponses() {
+    const wrap = document.getElementById('alert-responses-log');
+    if (!wrap) return;
+    const { data, error } = await supabaseClient.from('dispatch_alert_responses').select('*').order('responded_at', { ascending: false }).limit(30);
+    if (error) { console.error('loadAlertResponses error:', error); return; }
+    this.renderAlertResponsesLog(data || []);
+  },
+  renderAlertResponsesLog(rows) {
+    const wrap = document.getElementById('alert-responses-log');
+    if (!wrap) return;
+    if (!rows.length) { wrap.innerHTML = '<div class="text-slate-400 italic">No delay reasons submitted yet.</div>'; return; }
+    wrap.innerHTML = rows.map(r => {
+      const meta = SEVERITY_META[r.severity] || SEVERITY_META.minimal;
+      const when = r.responded_at ? new Date(r.responded_at).toLocaleString() : '';
+      return `<div class="flex items-start gap-2 p-1.5 rounded-lg border dark:border-slate-700">
+        <span>${meta.icon}</span>
+        <div class="flex-1">
+          <div><b>${DEPARTMENT_LABELS[r.department] || r.department}</b> — ${this.escapeHtml(ALERT_STEP_LABELS[r.step] || r.step)}${r.truck_type ? ` (${this.escapeHtml(r.truck_type)})` : ''} <span class="text-slate-400">by ${this.escapeHtml(r.responded_by || '')} · ${when}</span></div>
+          <div class="text-slate-600 dark:text-slate-300">${this.escapeHtml(r.reason)}</div>
+        </div>
+      </div>`;
+    }).join('');
   },
   renderAlertSettingsPanel() {
     const s = this.state.alertSettings;
     if (!s) return;
-    ['stuck', 'no_truck', 'urgent'].forEach(key => {
+    // Populate the step selector once (or if the step list ever changes).
+    const stepSel = document.getElementById('as-step-select');
+    if (stepSel && stepSel.options.length !== ALERT_TIER_STEPS.length) {
+      stepSel.innerHTML = ALERT_TIER_STEPS.map(step => `<option value="${step}">${ALERT_STEP_LABELS[step]}</option>`).join('');
+      stepSel.value = this.state.alertSettingsSelectedStep;
+    }
+    // Minimal / Critical / Severe boxes reflect whichever step is currently selected.
+    const step = this.state.alertSettingsSelectedStep || ALERT_TIER_STEPS[0];
+    const tiers = (this.state.stepAlertTiers && this.state.stepAlertTiers[step]) || DEFAULT_STEP_ALERT_TIERS[step];
+    ALERT_SEVERITIES.forEach(sev => {
+      const enabledEl = document.getElementById(`as-${sev}-enabled`);
+      const templateEl = document.getElementById(`as-${sev}-template`);
+      const minEl = document.getElementById(`as-${sev}-minutes`);
+      if (enabledEl) enabledEl.checked = !!tiers[sev].enabled;
+      if (templateEl) templateEl.value = tiers[sev].template;
+      if (minEl) minEl.value = tiers[sev].threshold_minutes;
+    });
+    // 'no_truck' and 'urgent' stay global, unaffected by the step selector.
+    ['no_truck', 'urgent'].forEach(key => {
       const enabledEl = document.getElementById(`as-${key}-enabled`);
       const templateEl = document.getElementById(`as-${key}-template`);
       if (enabledEl) enabledEl.checked = !!s[key].enabled;
       if (templateEl) templateEl.value = s[key].template;
     });
-    const cnt = document.getElementById('as-stuck-count');
-    const min = document.getElementById('as-stuck-minutes');
-    if (cnt) cnt.value = s.stuck.threshold_count;
-    if (min) min.value = s.stuck.threshold_minutes;
+  },
+  // Called when the admin switches which step they're editing — just re-renders
+  // the 3 tier boxes from already-loaded data, no refetch needed.
+  onAlertStepSelectChange() {
+    const stepSel = document.getElementById('as-step-select');
+    if (!stepSel) return;
+    this.state.alertSettingsSelectedStep = stepSel.value;
+    this.renderAlertSettingsPanel();
   },
   async saveAlertSetting(key) {
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
-    const payload = { key, enabled: enabledEl.checked, template };
-    if (key === 'stuck') {
-      payload.threshold_count = parseInt(document.getElementById('as-stuck-count').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_count;
-      payload.threshold_minutes = parseInt(document.getElementById('as-stuck-minutes').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_minutes;
+    if (ALERT_SEVERITIES.includes(key)) {
+      // Per-step tier save: goes to alert_step_severity_settings keyed by (step, severity).
+      const step = this.state.alertSettingsSelectedStep || ALERT_TIER_STEPS[0];
+      const minEl = document.getElementById(`as-${key}-minutes`);
+      const threshold_minutes = parseInt(minEl.value, 10) || DEFAULT_STEP_ALERT_TIERS[step][key].threshold_minutes;
+      const payload = { step, severity: key, enabled: enabledEl.checked, template, threshold_minutes };
+      const { error } = await supabaseClient.from('alert_step_severity_settings').upsert(payload, { onConflict: 'step,severity' }).select();
+      if (error) return alert('Failed to save: ' + error.message);
+      if (!this.state.stepAlertTiers[step]) this.state.stepAlertTiers[step] = {};
+      this.state.stepAlertTiers[step][key] = { enabled: payload.enabled, template: payload.template, threshold_minutes: payload.threshold_minutes };
+      this.showToast(`✓ ${ALERT_STEP_LABELS[step]} — ${SEVERITY_META[key].label} alert updated`, 'info', 3000);
+      this.renderAlertBanner();
+      return;
     }
+    // 'no_truck' / 'urgent' — unchanged global save path.
+    const payload = { key, enabled: enabledEl.checked, template };
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save: ' + error.message);
     this.state.alertSettings[key] = { ...this.state.alertSettings[key], ...payload };
@@ -3036,15 +3358,23 @@ const App = {
     this.renderAlertBanner();
   },
   resetAlertSetting(key) {
+    if (ALERT_SEVERITIES.includes(key)) {
+      // Resets only the currently-selected step's tier — other steps are untouched.
+      const step = this.state.alertSettingsSelectedStep || ALERT_TIER_STEPS[0];
+      const d = DEFAULT_STEP_ALERT_TIERS[step][key];
+      const enabledEl = document.getElementById(`as-${key}-enabled`);
+      const templateEl = document.getElementById(`as-${key}-template`);
+      const minEl = document.getElementById(`as-${key}-minutes`);
+      if (enabledEl) enabledEl.checked = d.enabled;
+      if (templateEl) templateEl.value = d.template;
+      if (minEl) minEl.value = d.threshold_minutes;
+      return;
+    }
     const d = this.DEFAULT_ALERT_SETTINGS[key];
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
     if (enabledEl) enabledEl.checked = d.enabled;
     if (templateEl) templateEl.value = d.template;
-    if (key === 'stuck') {
-      document.getElementById('as-stuck-count').value = d.threshold_count;
-      document.getElementById('as-stuck-minutes').value = d.threshold_minutes;
-    }
   },
   // ═══════════════════════════════════════════════════════
   // CHANGE PASSWORD (self-service)
@@ -3217,7 +3547,7 @@ const App = {
       durTbody.innerHTML = steps2.map((step, i) => {
         const prev = prevSteps[i];
         const col = MILESTONE_COLORS[step] || '#64748b';
-        const durations = this.state.dispatches.filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
+        const durations = this.state.dispatches.filter(d => !this.isVirtualDispatch(d) && d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
           const endT = new Date(d[`${step}_timestamp`]).getTime();
           const startT = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
           return startT ? endT - startT : null;
@@ -3329,6 +3659,13 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); this.loadChatUsers(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_step_severity_settings' }, async () => { await this.loadStepAlertTiers(); this.renderAlertSettingsPanel(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_step_departments' }, () => { this.loadStepDepartments(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatch_alert_responses' }, async () => {
+        await this.loadAnsweredAlertKeys();
+        this.renderAlertBanner();
+        if (this.hasPerm('tab_users')) this.loadAlertResponses();
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bulletin_messages' }, (payload) => {
         const row = payload.new;
         if (!this.state.bulletinMessages.some(m => m.id === row.id)) {
@@ -3399,6 +3736,17 @@ const App = {
   isVirtualPersonnelName(name) {
     if (!name) return false;
     return this.VIRTUAL_PERSONNEL_NAMES.includes(String(name).trim().toUpperCase());
+  },
+  // True if a dispatch was picked or checked under the virtual "ADVANCED" placeholder
+  // (used for special/batch dispatches, not a real person). Any such dispatch is
+  // excluded from ALL speed/duration/activity computations app-wide — not just
+  // the picker/checker leaderboards — since its timings aren't representative
+  // of real personnel throughput.
+  isVirtualDispatch(d) {
+    if (!d) return false;
+    const pickNames = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names : (d.pick_assigned_names ? [d.pick_assigned_names] : []);
+    const checkNames = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : (d.checking_assigned_names ? [d.checking_assigned_names] : []);
+    return pickNames.some(n => this.isVirtualPersonnelName(n)) || checkNames.some(n => this.isVirtualPersonnelName(n));
   },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -3664,6 +4012,7 @@ const App = {
   // ═══════════════════════════════════════════════════════
   _alertedStuck: new Set(),
   _alertedNoTruck: new Set(),
+  _notifiedKeys: new Set(),
   showToast(msg, type = 'info', duration = 6000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -3709,51 +4058,27 @@ const App = {
       }
     } catch(e) {}
   },
+  // Periodic check: refreshes the 3 department tiles and pings (sound + brief
+  // auto-dismissing toast) only for delay conditions that are brand new since the
+  // last check — nothing is left permanently open on screen. Answering happens
+  // by clicking a tile, never from the toast itself.
   checkStuckAlerts() {
     if (!this.state.currentRddId) return;
+    const items = this.computeOpenDelayAlerts();
+    const currentKeys = new Set(items.map(i => i.key));
+    items.forEach(it => {
+      if (!this._notifiedKeys.has(it.key)) {
+        this._notifiedKeys.add(it.key);
+        const meta = SEVERITY_META[it.severity];
+        this.showToast(`${meta.icon} ${DEPARTMENT_LABELS[it.department] || it.department}: ${it.message}`, 'alert', 8000);
+      }
+    });
+    // Forget keys that are no longer open (answered or resolved) so the set doesn't grow forever
+    // and so the same condition can ping again if it recurs later.
+    this._notifiedKeys.forEach(k => { if (!currentKeys.has(k)) this._notifiedKeys.delete(k); });
+    this.renderAlertBanner();
+    // Urgent priority reminder (simple auto-dismissing toast, no department / response needed)
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
-    const now = Date.now();
-    const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const stuckThreshold = stuckCfg.threshold_count || 3;
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
-    const stepCounts = {};
-    this.state.dispatches.forEach(d => {
-      if (d.loaded_checked) return;
-      for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
-        const step = STEPS_FLOW[i];
-        if (d[`${step}_checked`]) {
-          const ts = d[`${step}_timestamp`];
-          if (ts && (now - new Date(ts).getTime()) > stuckMs) stepCounts[step] = (stepCounts[step] || 0) + 1;
-          break;
-        }
-      }
-    });
-    if (stuckCfg.enabled) {
-      Object.entries(stepCounts).forEach(([step, count]) => {
-        const key = `stuck-${step}-${count}`;
-        if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
-          this._alertedStuck.add(key);
-          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 });
-          this.showToast(msg, 'alert', 10000);
-        }
-      });
-    }
-    // No-truck alert
-    const noTruckCfg = settings.no_truck;
-    const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
-    checkingTypes.forEach(type => {
-      const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-      const key = `notruck-${type}`;
-      if (noTruckCfg.enabled && avail === 0 && !this._alertedNoTruck.has(key)) {
-        this._alertedNoTruck.add(key);
-        const msg = this.formatAlertTemplate(noTruckCfg.template, { type });
-        this.showToast(msg, 'warn', 10000);
-      } else if (avail > 0) {
-        this._alertedNoTruck.delete(key);
-      }
-    });
-    // Urgent priority reminder
     const urgentCfg = settings.urgent;
     const urgent = this.state.dispatches.filter(d => d.priority === 'urgent' && !d.loaded_checked);
     if (urgentCfg.enabled && urgent.length > 0) {
@@ -3836,7 +4161,7 @@ const App = {
     const STEP_NAMES = { pick_start:'Start Pick', pick:'End Pick', pgi:'PGI', invoiced:'Invoiced', ds_printed:'DS Printed', checking:'Checking', loaded:'Loaded' };
 
     // Pick duration stats (Start Pick → End Pick)
-    const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+    const pickDurs = disps.filter(d => !this.isVirtualDispatch(d) && d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
       .filter(v => v > 0);
     const avgPickDur = pickDurs.length ? pickDurs.reduce((a,b)=>a+b,0)/pickDurs.length : null;
@@ -4064,7 +4389,7 @@ const App = {
       return { done, total, pct: total > 0 ? Math.round((done/total)*100) : 0 };
     };
     const avgDur = (disps, step, prev) => {
-      const durs = (disps||[]).filter(d => d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
+      const durs = (disps||[]).filter(d => !this.isVirtualDispatch(d) && d[`${step}_checked`] && d[`${step}_timestamp`] && (prev === null || (d[`${prev}_checked`] && d[`${prev}_timestamp`]))).map(d => {
         const e = new Date(d[`${step}_timestamp`]).getTime();
         const s = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
         return s ? e - s : null;
@@ -4243,7 +4568,7 @@ const App = {
     const loaded = list.filter(d => d.loaded_checked).length;
     const plan = rdd ? (rdd.initial_planning_count || 0) : 0;
     const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
-    const pickDurs = list.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
+    const pickDurs = list.filter(d => !this.isVirtualDispatch(d) && d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v > 0);
     const avgPick = pickDurs.length ? pickDurs.reduce((a, b) => a + b, 0) / pickDurs.length : null;
     const trucksUsed = truckList.filter(t => t.status === 'Dispatched').length;
