@@ -13,6 +13,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   .hidden{display:none!important}
   .scrollbar-none::-webkit-scrollbar{display:none}
@@ -27,8 +30,10 @@
   .cb-checking  {accent-color:#2563eb}
   .cb-loaded    {accent-color:#7c3aed}
   ::-webkit-scrollbar{height:8px;width:8px}
-  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
-  .dark ::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
+  ::-webkit-scrollbar-thumb{background:#b8c4d4;border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#0e7490}
+  .dark ::-webkit-scrollbar-thumb{background:#243244;border-radius:4px}
+  .dark ::-webkit-scrollbar-thumb:hover{background:#0891b2}
   #live-summary-box{min-width:170px}
   .sort-arrow{font-size:10px;opacity:0.7}
   .filter-pill{transition:all 0.15s}
@@ -57,50 +62,136 @@
   .toast{pointer-events:auto;min-width:260px;max-width:360px;padding:.75rem 1rem;border-radius:.75rem;box-shadow:0 4px 24px rgba(0,0,0,.18);font-size:.85rem;font-weight:600;display:flex;align-items:flex-start;gap:.6rem;animation:slideIn .25s ease}
   .toast.alert{background:#dc2626;color:#fff}
   .toast.warn{background:#f97316;color:#fff}
-  .toast.info{background:#2563eb;color:#fff}
+  .toast.info{background:#0e7490;color:#fff}
   @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
   @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(110%);opacity:0}}
   .toast.removing{animation:slideOut .25s ease forwards}
   /* Frozen/sticky dispatch table header */
   #dispatch-table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px);position:relative}
   #dispatch-table-wrap thead th{position:sticky;top:0;z-index:10;background:#f8fafc;box-shadow:0 1px 0 #e2e8f0}
-  .dark #dispatch-table-wrap thead th{background:#1e293b;box-shadow:0 1px 0 #334155}
+  .dark #dispatch-table-wrap thead th{background:#132133;box-shadow:0 1px 0 #1e3a4d}
+
+  /* ============================================================
+     FLEET CONSOLE DESIGN SYSTEM — brand remap + typography
+     ============================================================ */
+  :root{
+    --brand-50:#ecfeff; --brand-100:#cffafe; --brand-200:#a5f3fc;
+    --brand-300:#67e8f9; --brand-400:#22d3ee; --brand-500:#06b6d4;
+    --brand-600:#0891b2; --brand-700:#0e7490; --brand-800:#155e75; --brand-900:#164e63;
+    --ink-950:#060b16; --ink-900:#0b1424; --ink-850:#0f1b2e;
+    --font-display:'Space Grotesk',ui-sans-serif,sans-serif;
+    --font-body:'Inter',ui-sans-serif,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  body{font-family:var(--font-body)}
+  h1,h2{font-family:var(--font-display);letter-spacing:-0.01em}
+  #display-username, .nav-btn span, #bulletin-fab, .text-lg.font-bold{font-family:var(--font-display)}
+  table, .font-mono{font-family:var(--font-mono)}
+  table td, table th{font-variant-numeric:tabular-nums}
+
+  /* Brand color remap: blue -> signal cyan/teal, tuned for a fleet-ops console */
+  .bg-blue-600{background-color:var(--brand-600)!important}
+  .hover\:bg-blue-700:hover{background-color:var(--brand-700)!important}
+  .bg-blue-700{background-color:var(--brand-700)!important}
+  .bg-blue-500{background-color:var(--brand-500)!important}
+  .bg-blue-50{background-color:var(--brand-50)!important}
+  .bg-blue-100{background-color:var(--brand-100)!important}
+  .bg-blue-900{background-color:var(--brand-900)!important}
+  .text-blue-600{color:var(--brand-700)!important}
+  .text-blue-700{color:var(--brand-800)!important}
+  .text-blue-800{color:var(--brand-800)!important}
+  .text-blue-500{color:var(--brand-600)!important}
+  .text-blue-400{color:var(--brand-400)!important}
+  .text-blue-300{color:var(--brand-300)!important}
+  .text-blue-200{color:var(--brand-200)!important}
+  .hover\:text-blue-300:hover{color:var(--brand-300)!important}
+  .hover\:text-blue-700:hover{color:var(--brand-800)!important}
+  .border-blue-300{border-color:var(--brand-300)!important}
+  .border-blue-700{border-color:var(--brand-700)!important}
+  .ring-blue-400{--tw-ring-color:var(--brand-400)!important}
+  .ring-blue-500,.focus\:ring-blue-500:focus{--tw-ring-color:var(--brand-500)!important}
+  input[type=checkbox]{accent-color:var(--brand-600)}
+  .accent-blue-600{accent-color:var(--brand-600)!important}
+
+  /* Focus visibility, tuned to the brand */
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--brand-400); outline-offset:2px;
+  }
+
+  /* Card surfaces: softer, more deliberate elevation than a flat default shadow */
+  .shadow{box-shadow:0 1px 2px rgba(15,23,42,.04), 0 6px 20px -8px rgba(15,23,42,.10)!important}
+  .dark .shadow{box-shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -10px rgba(0,0,0,.55)!important}
+  .shadow-xl{box-shadow:0 12px 32px -12px rgba(15,23,42,.22)!important}
+  .dark .shadow-xl{box-shadow:0 16px 40px -14px rgba(0,0,0,.6)!important}
+
+  /* Table header rhythm: quiet, technical, small-caps tracking to match section labels */
+  table thead th{font-weight:700;letter-spacing:.03em;font-size:.7rem;text-transform:uppercase;font-family:var(--font-body)}
+
+  /* Primary action buttons get a touch of tactile depth */
+  button.bg-blue-600, button[class*="bg-blue-600"]{
+    box-shadow:0 1px 2px rgba(8,60,74,.15), 0 4px 12px -4px rgba(8,145,178,.45);
+    transition:transform .1s ease, box-shadow .15s ease, background-color .15s ease;
+  }
+  button.bg-blue-600:active, button[class*="bg-blue-600"]:active{transform:translateY(1px)}
+
+  /* Sidebar navigation rhythm */
+  .nav-btn{position:relative;font-size:.875rem;font-weight:500;color:#b6c2d4;transition:background-color .12s ease,color .12s ease}
+  .nav-btn:hover{color:#fff}
+  .nav-btn.bg-blue-600{color:#fff;font-weight:600}
+  .nav-btn.bg-blue-600::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--brand-400);box-shadow:0 0 8px var(--brand-400)}
+  .nav-btn svg{opacity:.85}
+  .nav-btn.bg-blue-600 svg{opacity:1}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
-<div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center">
-  <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-2xl w-96 border dark:border-slate-800">
-    <h1 class="text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">Dispatch Tracker</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in with your credentials.</p>
-    <form onsubmit="App.login(event)" class="space-y-4">
-      <div>
-        <label class="block text-sm font-semibold mb-1">Username</label>
-        <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+<div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center" style="background:radial-gradient(1200px 700px at 15% 20%, #0f2436 0%, #060b16 55%, #030509 100%)">
+  <div class="absolute inset-0 opacity-[0.07] pointer-events-none" style="background-image:linear-gradient(#22d3ee 1px, transparent 1px), linear-gradient(90deg, #22d3ee 1px, transparent 1px); background-size:42px 42px"></div>
+  <div class="relative w-full max-w-md mx-4">
+    <div class="flex items-center gap-2.5 mb-5 px-1">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:linear-gradient(135deg, var(--brand-400), var(--brand-700))">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 18H5a2 2 0 01-2-2V8a2 2 0 012-2h3m0 12h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zm1-12h2l3 5v5h-5V6z"/></svg>
       </div>
-      <div>
-        <label class="block text-sm font-semibold mb-1">Password</label>
-        <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
-      </div>
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="login-remember" class="w-4 h-4 rounded accent-blue-600">
-        <label for="login-remember" class="text-sm text-slate-600 dark:text-slate-400 select-none">Remember me for 7 days</label>
-      </div>
-      <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
-      <div id="login-loading" class="hidden text-blue-600 text-sm font-semibold text-center">Signing in…</div>
-      <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
-    </form>
+      <div class="text-[11px] font-bold tracking-[0.25em] uppercase" style="color:var(--brand-300)">Fleet Console</div>
+    </div>
+    <div class="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border dark:border-slate-800">
+      <h1 class="text-2xl font-bold mb-1 text-slate-800 dark:text-slate-100">Dispatch Tracker</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in with your credentials.</p>
+      <form onsubmit="App.login(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Username</label>
+          <input type="text" id="login-username" autocomplete="username" class="w-full p-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Password</label>
+          <input type="password" id="login-password" autocomplete="current-password" class="w-full p-2.5 bg-white dark:bg-slate-800 border dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="login-remember" class="w-4 h-4 rounded accent-blue-600">
+          <label for="login-remember" class="text-sm text-slate-600 dark:text-slate-400 select-none">Remember me for 7 days</label>
+        </div>
+        <div id="login-error" class="hidden text-red-600 text-sm font-semibold">Invalid username or password.</div>
+        <div id="login-loading" class="hidden text-blue-600 text-sm font-semibold text-center">Signing in…</div>
+        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">Log In</button>
+      </form>
+    </div>
+    <p class="text-center text-xs mt-5 tracking-wide" style="color:#3d5266">Internal use only &middot; Warehouse Operations</p>
   </div>
 </div>
 <div id="app-wrapper" class="hidden flex h-full">
-  <aside id="sidebar" class="w-60 bg-slate-900 text-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden">
-    <div class="p-5 border-b border-slate-700 min-w-[15rem]">
-      <div class="text-lg font-bold">Dispatch Tracker</div>
-      <div class="text-xs text-slate-400 mt-2">Logged in as</div>
+  <aside id="sidebar" class="w-60 text-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden" style="background:linear-gradient(180deg, var(--ink-900) 0%, var(--ink-950) 100%); box-shadow:1px 0 0 rgba(34,211,238,.08)">
+    <div class="p-5 border-b border-white/[0.06] min-w-[15rem]">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style="background:linear-gradient(135deg, var(--brand-400), var(--brand-700))">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 18H5a2 2 0 01-2-2V8a2 2 0 012-2h3m0 12h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zm1-12h2l3 5v5h-5V6z"/></svg>
+        </div>
+        <div class="text-base font-bold leading-tight">Dispatch Tracker</div>
+      </div>
+      <div class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Logged in as</div>
       <div id="display-username" class="font-bold"></div>
-      <div id="display-role" class="text-xs text-blue-400 mb-2"></div>
+      <div id="display-role" class="text-xs mb-2" style="color:var(--brand-400)"></div>
       <div class="flex justify-between items-center mt-2">
         <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline">Log out</button>
-        <button onclick="App.toggleTheme()" id="theme-toggle-btn" class="text-xs text-blue-400 hover:text-blue-300 underline">Dark Mode</button>
+        <button onclick="App.toggleTheme()" id="theme-toggle-btn" class="text-xs hover:underline underline" style="color:var(--brand-400)">Dark Mode</button>
       </div>
     </div>
     <nav class="flex-1 p-3 space-y-1 min-w-[15rem] overflow-y-auto">
