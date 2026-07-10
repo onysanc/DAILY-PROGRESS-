@@ -698,6 +698,20 @@
         </div>
       </div>
 
+      <!-- WOPS-Outbound Auto-Check Approval Setting -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
+        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">🔄 WOPS-Outbound Auto-Check Approval</h2>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Controls whether Start Pick / End Pick / Checking suggestions pulled live from WOPS-Outbound need someone to click Apply (Outbound or Admin, via the WOPS Sync panel), or whether they get checked off automatically the moment they're detected.</p>
+        <div class="flex items-center justify-between border dark:border-slate-700 rounded-lg p-3">
+          <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+            <input type="checkbox" id="wops-auto-apply-toggle" class="accent-emerald-600">
+            Auto-check without approval (skip the manual Apply step)
+          </label>
+          <button onclick="App.saveWopsAutoApplySetting()" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">Save</button>
+        </div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-2">Off (default): matches wait in the WOPS Sync panel for a user with the "Apply WOPS-Outbound Sync" permission to approve. On: matches write straight to the dispatch as soon as WOPS-Outbound shows them, for every user viewing the app — no click needed.</p>
+      </div>
+
       <!-- Alert Dismiss Response Log -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <div class="flex items-center justify-between mb-1">
@@ -1084,6 +1098,7 @@ const App = {
     dispatches: [],
     wopsStatusMap: {}, // dispatch_number -> live WOPS-Outbound status (see fetchWopsStatuses)
     wopsSyncQueue: [], // pending Pick/Checking auto-fill suggestions awaiting admin approval (see computeWopsSyncQueue)
+    wopsAutoApply: false, // admin toggle (User Management tab) — false = suggestions need manual Apply, true = they write straight through with no approval step
     wopsCheckedPendingChronology: {}, // dispatch.id -> true when WOPS-Outbound shows Outbound Checker done but PGI/Invoiced/DS Printed aren't ticked here yet (highlight only, not auto-applied)
     trucks: [],
     personnel: [],
@@ -1272,6 +1287,7 @@ const App = {
     await this.loadChatUsers();
     await this.loadBulletinMessages();
     await this.loadAlertSettings();
+    await this.loadWopsAutoApplySetting();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
     this.startAutoRefresh();
@@ -1717,6 +1733,7 @@ const App = {
     this.state.wopsSyncQueue = queue;
     this.state.wopsCheckedPendingChronology = chronoFlags;
     this.renderWopsSyncPanel();
+    if (this.state.wopsAutoApply && queue.length) this.autoApplyWopsSyncQueue();
   },
   // Shows/hides the floating sync button + updates its badge count.
   // Only visible to users with the apply_wops_sync permission — the
@@ -1741,11 +1758,14 @@ const App = {
     if (!list) return;
     const queue = this.state.wopsSyncQueue;
     document.getElementById('wops-sync-count').textContent = queue.length;
+    const banner = this.state.wopsAutoApply
+      ? `<p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold p-2 border-b dark:border-slate-800">🔄 Auto-Approval is ON — matches apply automatically, no manual click needed. Any item below is mid-flight.</p>`
+      : `<p class="text-[11px] text-slate-400 dark:text-slate-500 p-2 border-b dark:border-slate-800">Manual approval required — hit Apply below, or turn on Auto-Approval in User Management.</p>`;
     if (!queue.length) {
-      list.innerHTML = `<p class="text-xs text-slate-400 italic p-3">No pending WOPS-Outbound sync suggestions right now.</p>`;
+      list.innerHTML = banner + `<p class="text-xs text-slate-400 italic p-3">No pending WOPS-Outbound sync suggestions right now.</p>`;
       return;
     }
-    list.innerHTML = queue.map(item => {
+    list.innerHTML = banner + queue.map(item => {
       const stepLabel = item.kind === 'pick'
         ? [item.needsStart ? 'Start Pick' : null, item.needsEnd ? 'End Pick' : null].filter(Boolean).join(' + ')
         : 'Checking';
@@ -3415,6 +3435,64 @@ const App = {
     this.state.alertSettings[key] = { ...this.state.alertSettings[key], ...payload };
     this.showToast('✓ Alert message updated', 'info', 3000);
     this.renderAlertBanner();
+  },
+  // ── WOPS-Outbound auto-check approval toggle ──
+  // Reuses the same key-value alert_settings table (key = 'wops_auto_apply')
+  // rather than a new table. When enabled=true, matching Pick/Checking
+  // suggestions from WOPS-Outbound write straight to the dispatch — no
+  // Outbound/Admin approval click needed. When false (default), suggestions
+  // still land in the WOPS Sync panel and require someone with the
+  // apply_wops_sync permission to hit Apply, same as before this toggle existed.
+  async loadWopsAutoApplySetting() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'wops_auto_apply').maybeSingle();
+      if (error) { console.error('loadWopsAutoApplySetting error:', error); return; }
+      this.state.wopsAutoApply = !!(data && data.enabled);
+    } catch (e) { console.error('loadWopsAutoApplySetting error:', e); }
+    this.renderWopsAutoApplyToggle();
+  },
+  renderWopsAutoApplyToggle() {
+    const el = document.getElementById('wops-auto-apply-toggle');
+    if (el) el.checked = !!this.state.wopsAutoApply;
+    this.renderWopsSyncPanel();
+  },
+  async saveWopsAutoApplySetting() {
+    if (!this.hasPerm('tab_users')) return; // this control only renders inside the admin-gated User Management tab anyway
+    const el = document.getElementById('wops-auto-apply-toggle');
+    const enabled = !!(el && el.checked);
+    const payload = { key: 'wops_auto_apply', enabled, template: 'WOPS-Outbound auto-check approval toggle (not a chat/toast alert — used by User Management only).', require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) return alert('Failed to save: ' + error.message);
+    this.state.wopsAutoApply = enabled;
+    this.showToast(enabled ? '✓ WOPS auto-check will now apply without approval' : '✓ WOPS auto-check now requires manual approval', 'info', 4000);
+    this.renderWopsSyncPanel();
+    if (enabled) this.autoApplyWopsSyncQueue();
+  },
+  // Writes every currently-queued WOPS suggestion straight to the dispatches
+  // table, with no permission gate — only reachable when an admin has turned
+  // wopsAutoApply ON via User Management. Guarded against re-entrant/overlapping
+  // runs since fetchWopsStatuses can fire again (autorefresh, realtime) while this is in flight.
+  async autoApplyWopsSyncQueue() {
+    if (!this.state.wopsAutoApply || this._wopsAutoApplyInFlight) return;
+    const items = [...this.state.wopsSyncQueue];
+    if (!items.length) return;
+    this._wopsAutoApplyInFlight = true;
+    try {
+      let applied = 0;
+      for (const item of items) {
+        const payload = this.buildWopsSyncPayload(item);
+        if (!Object.keys(payload).length) continue;
+        const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
+        if (error) console.error(`WOPS auto-apply failed for ${item.dispatch_number}:`, error.message);
+        else applied++;
+      }
+      if (applied) {
+        this.showToast(`Auto-applied ${applied} WOPS-Outbound update(s) — no approval required.`, 'info', 3500);
+        await this.loadDispatches();
+      }
+    } finally {
+      this._wopsAutoApplyInFlight = false;
+    }
   },
   resetAlertSetting(key) {
     const d = this.DEFAULT_ALERT_SETTINGS[key];
