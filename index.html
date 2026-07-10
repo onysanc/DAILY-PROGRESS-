@@ -1083,6 +1083,8 @@ const App = {
     rdds: [],
     dispatches: [],
     wopsStatusMap: {}, // dispatch_number -> live WOPS-Outbound status (see fetchWopsStatuses)
+    wopsSyncQueue: [], // pending Pick/Checking auto-fill suggestions awaiting admin approval (see computeWopsSyncQueue)
+    wopsCheckedPendingChronology: {}, // dispatch.id -> true when WOPS-Outbound shows Outbound Checker done but PGI/Invoiced/DS Printed aren't ticked here yet (highlight only, not auto-applied)
     trucks: [],
     personnel: [],
     appUsers: [],        // for User Management tab
@@ -1227,6 +1229,7 @@ const App = {
     edit_dispatch: ['admin','outbound','transport'],
     delete_dispatch: ['admin'],
     admin_override: ['admin'],
+    apply_wops_sync: ['admin'], // apply WOPS-Outbound auto-fill suggestions (Pick/Checking) — admin by default, grantable to specific users
   },
   isTrueAdmin() {
     return this.state.currentUser?.role === 'admin';
@@ -1651,10 +1654,140 @@ const App = {
         map[s.shipment_no] = { so_number: s.so_number, shipment_status: s.status, steps };
       });
       this.state.wopsStatusMap = map;
+      this.computeWopsSyncQueue();
       this.renderDispatches();
+      this.renderWopsSyncFab();
     } catch (err) {
       console.error('WOPS lookup error:', err);
     }
+  },
+  // Builds the list of pending Pick/Checking auto-fill suggestions from live
+  // WOPS-Outbound data (state.wopsStatusMap) vs. what's currently ticked in
+  // this app. Nothing here writes to the database — it's a preview queue;
+  // applyWopsSyncItem()/applyAllWopsSyncItems() are what actually apply it,
+  // gated behind the 'apply_wops_sync' permission.
+  //   • Picker completed in WOPS  -> queue a 'pick' item (Start Pick / End
+  //     Pick, whichever isn't ticked yet here).
+  //   • Outbound Checker completed in WOPS -> queue a 'checking' item, but
+  //     ONLY if this app's own chronology is already satisfied (DS Printed
+  //     ticked). If not, it's surfaced as a highlight instead (see
+  //     wopsCheckedPendingChronology) rather than queued, since forcing
+  //     "Checking" ahead of PGI/Invoiced/DS Printed here would be misleading.
+  computeWopsSyncQueue() {
+    const queue = [];
+    const chronoFlags = {};
+    this.state.dispatches.forEach(d => {
+      const info = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+      if (!info) return;
+      const pickLog = (info.steps.find(s => s.role === 'Picker') || {}).log;
+      const checkLog = (info.steps.find(s => s.role === 'Outbound Checker') || {}).log;
+
+      if (pickLog && pickLog.status === 'Completed') {
+        const needsStart = !d.pick_start_checked;
+        const needsEnd = !d.pick_checked;
+        if (needsStart || needsEnd) {
+          queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, log: pickLog });
+        }
+      }
+      if (checkLog && checkLog.status === 'Completed' && !d.checking_checked) {
+        if (d.ds_printed_checked) {
+          queue.push({ id: `${d.id}-checking`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'checking', log: checkLog });
+        } else {
+          chronoFlags[d.id] = true;
+        }
+      }
+    });
+    this.state.wopsSyncQueue = queue;
+    this.state.wopsCheckedPendingChronology = chronoFlags;
+    this.renderWopsSyncPanel();
+  },
+  // Shows/hides the floating sync button + updates its badge count.
+  // Only visible to users with the apply_wops_sync permission — the
+  // chronology highlight in the table itself stays visible to everyone.
+  renderWopsSyncFab() {
+    const fab = document.getElementById('wops-sync-fab');
+    if (!fab) return;
+    const canApply = this.hasPerm('apply_wops_sync');
+    fab.classList.toggle('hidden', !canApply);
+    const badge = document.getElementById('wops-sync-badge');
+    const count = this.state.wopsSyncQueue.length;
+    if (badge) { badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+  },
+  toggleWopsSyncPanel() {
+    if (!this.hasPerm('apply_wops_sync')) return;
+    const panel = document.getElementById('wops-sync-panel');
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) this.renderWopsSyncPanel();
+  },
+  renderWopsSyncPanel() {
+    const list = document.getElementById('wops-sync-list');
+    if (!list) return;
+    const queue = this.state.wopsSyncQueue;
+    document.getElementById('wops-sync-count').textContent = queue.length;
+    if (!queue.length) {
+      list.innerHTML = `<p class="text-xs text-slate-400 italic p-3">No pending WOPS-Outbound sync suggestions right now.</p>`;
+      return;
+    }
+    list.innerHTML = queue.map(item => {
+      const stepLabel = item.kind === 'pick'
+        ? [item.needsStart ? 'Start Pick' : null, item.needsEnd ? 'End Pick' : null].filter(Boolean).join(' + ')
+        : 'Checking';
+      const when = item.log.end_time ? new Date(item.log.end_time).toLocaleString() : (item.log.start_time ? new Date(item.log.start_time).toLocaleString() : '—');
+      return `<div class="flex items-center justify-between gap-2 p-2.5 border-b dark:border-slate-800 text-xs">
+                <div>
+                  <div class="font-semibold">${this.escapeHtml(String(item.dispatch_number))} <span class="font-normal text-slate-400">— ${stepLabel}</span></div>
+                  <div class="text-slate-500 dark:text-slate-400">${this.escapeHtml(item.log.personnel_name || '—')} · ${when}</div>
+                </div>
+                <button onclick="App.applyWopsSyncItem('${item.id}')" class="shrink-0 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">Apply</button>
+              </div>`;
+    }).join('');
+  },
+  // Applies one queued suggestion by writing the corresponding milestone
+  // field(s) straight to the dispatches row, using the exact name/timestamp
+  // recorded in WOPS-Outbound. Requires apply_wops_sync.
+  async applyWopsSyncItem(itemId) {
+    if (!this.hasPerm('apply_wops_sync')) return alert('You do not have permission to apply WOPS-Outbound sync updates. Ask an admin to grant it in User Management.');
+    const item = this.state.wopsSyncQueue.find(q => q.id === itemId);
+    if (!item) return;
+    const payload = this.buildWopsSyncPayload(item);
+    if (!Object.keys(payload).length) return;
+    const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
+    if (error) return alert('Sync failed: ' + error.message);
+    this.showToast(`Synced ${item.kind === 'pick' ? 'Pick' : 'Checking'} for dispatch ${item.dispatch_number} from WOPS-Outbound.`, 'info', 3500);
+    await this.loadDispatches();
+  },
+  async applyAllWopsSyncItems() {
+    if (!this.hasPerm('apply_wops_sync')) return alert('You do not have permission to apply WOPS-Outbound sync updates. Ask an admin to grant it in User Management.');
+    const items = [...this.state.wopsSyncQueue];
+    if (!items.length) return;
+    if (!confirm(`Apply ${items.length} pending WOPS-Outbound sync update(s)? This checks off Pick/Checking milestones here using data pulled live from WOPS-Outbound.`)) return;
+    for (const item of items) {
+      const payload = this.buildWopsSyncPayload(item);
+      if (!Object.keys(payload).length) continue;
+      const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
+      if (error) console.error(`WOPS sync failed for ${item.dispatch_number}:`, error.message);
+    }
+    this.showToast(`Applied ${items.length} WOPS-Outbound sync update(s).`, 'info', 3500);
+    await this.loadDispatches();
+  },
+  buildWopsSyncPayload(item) {
+    const payload = {};
+    if (item.kind === 'pick') {
+      if (item.needsStart) {
+        payload.pick_start_checked = true;
+        payload.pick_start_timestamp = item.log.start_time || item.log.end_time || new Date().toISOString();
+      }
+      if (item.needsEnd) {
+        payload.pick_checked = true;
+        payload.pick_timestamp = item.log.end_time || new Date().toISOString();
+        payload.pick_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
+      }
+    } else if (item.kind === 'checking') {
+      payload.checking_checked = true;
+      payload.checking_timestamp = item.log.end_time || new Date().toISOString();
+      payload.checking_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
+    }
+    return payload;
   },
   // Compact inline cell for the Outbound Status column — a row of dots, one
   // per WOPS-Outbound stage, filled in as each stage completes.
@@ -3053,6 +3186,7 @@ const App = {
       tab_graph_recap: 'Graph Recap',
       tab_assignment_history: 'Assign. History', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
+      apply_wops_sync: 'WOPS Sync Apply',
     };
     tbody.innerHTML = this.state.appUsers.map(u => {
       const perms = Array.isArray(u.permissions) ? u.permissions : [];
@@ -3085,8 +3219,8 @@ const App = {
     }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users'],
-  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync'],
+  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync'],
   openAddUserModal() {
     this.state.pendingUserId = null;
     document.getElementById('user-modal-title').textContent = 'Add User';
@@ -4856,6 +4990,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-delete_dispatch" class="accent-red-600"> Delete dispatch rows</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-admin_override" class="accent-red-600"> Admin Override (untick/edit completed steps + timestamps)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Checking using live WOPS-Outbound data)</label>
       </div>
       <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
     </div>
