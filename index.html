@@ -670,6 +670,7 @@
               <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
               <span>min</span>
             </div>
+            <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-stuck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
             <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
           <!-- No Truck Alert -->
@@ -680,6 +681,7 @@
             </div>
             <textarea id="as-no_truck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
             <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}</div>
+            <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-no_truck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
             <button onclick="App.saveAlertSetting('no_truck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
           <!-- Urgent Alert -->
@@ -693,6 +695,16 @@
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
         </div>
+      </div>
+
+      <!-- Alert Dismiss Response Log -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">📝 Alert Response Log</h2>
+          <button onclick="App.loadAlertResponseLog()" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Refresh</button>
+        </div>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Written reasons users typed when dismissing an alert marked "require a written reason" above.</p>
+        <div id="alert-response-log" class="overflow-x-auto max-h-72 overflow-y-auto rounded-lg border dark:border-slate-800"></div>
       </div>
 
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
@@ -1027,9 +1039,9 @@ const NOT_STARTED_LABEL = 'Pending to Start Picking';
 const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
-    stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30 },
-    no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!' },
-    urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!' },
+    stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30, require_response: false },
+    no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!', require_response: false },
+    urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!', require_response: false },
   },
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
@@ -1047,6 +1059,9 @@ const App = {
     chartRemarks: {},
     chartSeriesMeta: [],
     alertSettings: null,
+    dismissedAlertKeys: {},   // { [rddId]: Set(alertKey) } — alerts dismissed after a written response
+    openAlertResponseKey: null, // which banner alert row currently has its response box open
+    alertResponseDrafts: {}, // alertKey -> in-progress typed text
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1277,7 +1292,7 @@ const App = {
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
-    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); }
+    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); }
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
@@ -1371,6 +1386,7 @@ const App = {
   async selectRDD(id) {
     this.state.currentRddId = id || null;
     this.state.dispatchFilter = 'all';
+    this.state.openAlertResponseKey = null;
     this.updateFilterPillStyles('all');
     this.state.sortCol = null;
     this.state.sortDir = 1;
@@ -1434,7 +1450,7 @@ const App = {
     const now = Date.now();
     const stuckCfg = settings.stuck;
     const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const alerts = [];
+    const alerts = []; // { key, text, requireResponse }
     // Alert 1: dispatches stuck at a step > configured minutes
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
     const stepStuckCounts = {};
@@ -1454,7 +1470,11 @@ const App = {
     if (stuckCfg.enabled) {
       Object.entries(stepStuckCounts).forEach(([step, count]) => {
         if (count >= (stuckCfg.threshold_count || 3)) {
-          alerts.push(this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }));
+          alerts.push({
+            key: `stuck-${step}`,
+            text: this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }),
+            requireResponse: !!stuckCfg.require_response,
+          });
         }
       });
     }
@@ -1464,12 +1484,81 @@ const App = {
       const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
       checkingTypes.forEach(type => {
         const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-        if (avail === 0) alerts.push(this.formatAlertTemplate(noTruckCfg.template, { type }));
+        if (avail === 0) {
+          alerts.push({
+            key: `no_truck-${type}`,
+            text: this.formatAlertTemplate(noTruckCfg.template, { type }),
+            requireResponse: !!noTruckCfg.require_response,
+          });
+        }
       });
     }
-    if (alerts.length === 0) { banner.classList.add('hidden'); return; }
-    content.innerHTML = alerts.map(a => this.escapeHtml(a)).join('<br>');
+    // Filter out alerts already dismissed (with a written response) for this RDD
+    const rddId = this.state.currentRddId;
+    const dismissed = (this.state.dismissedAlertKeys && this.state.dismissedAlertKeys[rddId]) || new Set();
+    const visibleAlerts = alerts.filter(a => !dismissed.has(a.key));
+    if (visibleAlerts.length === 0) { banner.classList.add('hidden'); return; }
+    // Keep a lookup so submitAlertResponse can find the alert text without relying on inline-attribute escaping
+    this._alertTextByKey = {};
+    visibleAlerts.forEach(a => { this._alertTextByKey[a.key] = a.text; });
+    const openKey = this.state.openAlertResponseKey;
+    content.innerHTML = visibleAlerts.map(a => {
+      let row = `<div class="mb-1 flex flex-wrap items-center gap-2"><span>${this.escapeHtml(a.text)}</span>`;
+      if (a.requireResponse) {
+        row += `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline text-amber-700 dark:text-amber-300 font-semibold">Dismiss…</button>`;
+      }
+      row += `</div>`;
+      if (a.requireResponse && openKey === a.key) {
+        const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
+        row += `<div class="flex items-start gap-2 mb-2 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
+          <textarea id="alert-response-${a.key}" oninput="App.alertResponseDraft('${a.key}', this.value)" rows="2" placeholder="Type a reason before this alert can be dismissed…" class="flex-1 text-xs p-1.5 border border-amber-300 dark:border-amber-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white">${draft}</textarea>
+          <div class="flex flex-col gap-1">
+            <button onclick="App.submitAlertResponse('${a.key}')" class="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold rounded-md">Submit</button>
+            <button onclick="App.toggleAlertResponseBox('${a.key}')" class="px-2 py-1 text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Cancel</button>
+          </div>
+        </div>`;
+      }
+      return row;
+    }).join('');
     banner.classList.remove('hidden');
+  },
+  toggleAlertResponseBox(key) {
+    this.state.openAlertResponseKey = (this.state.openAlertResponseKey === key) ? null : key;
+    this.renderAlertBanner();
+    if (this.state.openAlertResponseKey === key) {
+      setTimeout(() => { const ta = document.getElementById(`alert-response-${key}`); if (ta) ta.focus(); }, 0);
+    }
+  },
+  alertResponseDraft(key, val) {
+    if (!this.state.alertResponseDrafts) this.state.alertResponseDrafts = {};
+    this.state.alertResponseDrafts[key] = val;
+  },
+  async submitAlertResponse(key) {
+    const ta = document.getElementById(`alert-response-${key}`);
+    const text = ((ta ? ta.value : this.state.alertResponseDrafts[key]) || '').trim();
+    if (!text) { alert('Please type a reason before dismissing this alert.'); return; }
+    const rddId = this.state.currentRddId;
+    const rdd = this.state.rdds.find(r => r.id === rddId);
+    const alertText = (this._alertTextByKey && this._alertTextByKey[key]) || key;
+    const payload = {
+      rdd_id: rddId,
+      rdd_label: rdd ? rdd.rdd_date : null,
+      alert_key: key,
+      alert_message: alertText,
+      response: text,
+      username: this.state.currentUser ? this.state.currentUser.username : null,
+    };
+    const { error } = await supabaseClient.from('alert_acknowledgments').insert(payload);
+    if (error) { alert('Failed to save response: ' + error.message); return; }
+    if (!this.state.dismissedAlertKeys) this.state.dismissedAlertKeys = {};
+    if (!this.state.dismissedAlertKeys[rddId]) this.state.dismissedAlertKeys[rddId] = new Set();
+    this.state.dismissedAlertKeys[rddId].add(key);
+    delete this.state.alertResponseDrafts[key];
+    this.state.openAlertResponseKey = null;
+    this.showToast('✓ Response saved, alert dismissed', 'info', 3000);
+    this.renderAlertBanner();
+    const usersTab = document.getElementById('tab-users');
+    if (usersTab && !usersTab.classList.contains('hidden')) this.loadAlertResponseLog();
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
@@ -2996,6 +3085,7 @@ const App = {
             template: row.template || merged[row.key].template,
             threshold_count: row.threshold_count ?? merged[row.key].threshold_count,
             threshold_minutes: row.threshold_minutes ?? merged[row.key].threshold_minutes,
+            require_response: (row.require_response !== null && row.require_response !== undefined) ? !!row.require_response : merged[row.key].require_response,
           };
         });
       } else if (error) {
@@ -3011,8 +3101,10 @@ const App = {
     ['stuck', 'no_truck', 'urgent'].forEach(key => {
       const enabledEl = document.getElementById(`as-${key}-enabled`);
       const templateEl = document.getElementById(`as-${key}-template`);
+      const requireEl = document.getElementById(`as-${key}-require`);
       if (enabledEl) enabledEl.checked = !!s[key].enabled;
       if (templateEl) templateEl.value = s[key].template;
+      if (requireEl) requireEl.checked = !!s[key].require_response;
     });
     const cnt = document.getElementById('as-stuck-count');
     const min = document.getElementById('as-stuck-minutes');
@@ -3022,9 +3114,10 @@ const App = {
   async saveAlertSetting(key) {
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
+    const requireEl = document.getElementById(`as-${key}-require`);
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
-    const payload = { key, enabled: enabledEl.checked, template };
+    const payload = { key, enabled: enabledEl.checked, template, require_response: requireEl ? requireEl.checked : false };
     if (key === 'stuck') {
       payload.threshold_count = parseInt(document.getElementById('as-stuck-count').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_count;
       payload.threshold_minutes = parseInt(document.getElementById('as-stuck-minutes').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_minutes;
@@ -3039,12 +3132,37 @@ const App = {
     const d = this.DEFAULT_ALERT_SETTINGS[key];
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
+    const requireEl = document.getElementById(`as-${key}-require`);
     if (enabledEl) enabledEl.checked = d.enabled;
     if (templateEl) templateEl.value = d.template;
+    if (requireEl) requireEl.checked = d.require_response;
     if (key === 'stuck') {
       document.getElementById('as-stuck-count').value = d.threshold_count;
       document.getElementById('as-stuck-minutes').value = d.threshold_minutes;
     }
+  },
+  async loadAlertResponseLog() {
+    const box = document.getElementById('alert-response-log');
+    if (!box) return;
+    box.innerHTML = `<div class="text-xs text-slate-400 p-3">Loading…</div>`;
+    const { data, error } = await supabaseClient.from('alert_acknowledgments')
+      .select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) { box.innerHTML = `<div class="text-xs text-red-500 p-3">${this.escapeHtml(error.message)}</div>`; return; }
+    if (!data || data.length === 0) { box.innerHTML = `<div class="text-xs text-slate-400 p-3">No dismiss responses logged yet.</div>`; return; }
+    box.innerHTML = `<table class="w-full text-xs text-left">
+      <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase">
+        <tr><th class="p-2">Time</th><th class="p-2">RDD</th><th class="p-2">Alert</th><th class="p-2">Response</th><th class="p-2">By</th></tr>
+      </thead>
+      <tbody>
+        ${data.map(r => `<tr class="border-b dark:border-slate-800">
+          <td class="p-2 whitespace-nowrap text-slate-400">${new Date(r.created_at).toLocaleString()}</td>
+          <td class="p-2 whitespace-nowrap">${this.escapeHtml(r.rdd_label || String(r.rdd_id || ''))}</td>
+          <td class="p-2 max-w-[220px]">${this.escapeHtml(r.alert_message || r.alert_key || '')}</td>
+          <td class="p-2 max-w-[280px] whitespace-pre-wrap">${this.escapeHtml(r.response || '')}</td>
+          <td class="p-2 whitespace-nowrap font-semibold">${this.escapeHtml(r.username || '—')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
   },
   // ═══════════════════════════════════════════════════════
   // CHANGE PASSWORD (self-service)
