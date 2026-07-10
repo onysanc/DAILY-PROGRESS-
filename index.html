@@ -1677,6 +1677,9 @@ const App = {
         }
       });
 
+      if (shipments && shipments.length) {
+        console.log('[WOPS DEBUG] Sample raw shipment record — check this for the real Customer/Quantity/Target field names:', shipments[0]);
+      }
       const map = {};
       (shipments || []).forEach(s => {
         const steps = WOPS_ROLE_STEPS.map(step => {
