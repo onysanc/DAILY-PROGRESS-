@@ -904,6 +904,22 @@
     </div>
   </div>
 </div>
+<!-- WOPS-Outbound Sync FAB — floating button, bottom-right, only visible to users with the apply_wops_sync permission (see renderWopsSyncFab) -->
+<button id="wops-sync-fab" onclick="App.toggleWopsSyncPanel()" class="hidden fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg w-14 h-14 flex items-center justify-center text-2xl" title="WOPS-Outbound Sync — pending approvals">
+  🔄
+  <span id="wops-sync-badge" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-[11px] font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">0</span>
+</button>
+<!-- WOPS-Outbound Sync panel — this is where you Approve/Apply pending Pick/Checking suggestions -->
+<div id="wops-sync-panel" class="hidden fixed bottom-24 right-6 z-40 w-[380px] max-h-[70vh] bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+  <div class="flex items-center justify-between p-3 border-b dark:border-slate-800">
+    <h2 class="text-sm font-bold">WOPS-Outbound Sync <span id="wops-sync-count" class="text-slate-400 font-normal">0</span></h2>
+    <div class="flex items-center gap-2">
+      <button onclick="App.applyAllWopsSyncItems()" class="text-[11px] px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg">Apply All</button>
+      <button onclick="App.toggleWopsSyncPanel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl leading-none">&times;</button>
+    </div>
+  </div>
+  <div id="wops-sync-list" class="overflow-y-auto flex-1"></div>
+</div>
 <div id="wops-detail-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800 max-h-[85vh] overflow-y-auto">
     <div class="flex items-center justify-between mb-1">
