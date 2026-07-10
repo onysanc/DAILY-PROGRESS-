@@ -1663,12 +1663,10 @@ const App = {
         map[s.shipment_no] = {
           so_number: s.so_number,
           shipment_status: s.status,
-          // Field names below fall back across a few likely aliases since
-          // WOPS-Outbound's exact column names weren't confirmed from here —
-          // if a hover shows "—" for one of these, check the real column
-          // name in the WOPS-Outbound `shipments` table and add it to the
-          // matching fallback list.
-          customer: s.customer ?? s.ship_to_party_name ?? s.customer_name ?? null,
+          // Customer name confirmed as the `sold_to_party_name` column on
+          // WOPS-Outbound's `shipments` table. Older aliases kept as a
+          // fallback only in case a given row has that field blank.
+          customer: s.sold_to_party_name ?? s.customer ?? s.ship_to_party_name ?? s.customer_name ?? null,
           quantity: s.quantity ?? s.qty ?? null,
           target_minutes: s.target_minutes ?? s.target_time ?? s.target ?? null,
           steps
@@ -2034,9 +2032,9 @@ const App = {
       const isAdmin = this.hasPerm('admin_override');
       const canSetPriority = this.hasPerm('edit_dispatch');
       const priorityCell = canSetPriority
-        ? `<td class="p-3 text-center"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
-        : `<td class="p-3 text-center">${this.priorityBadge(d.priority)}</td>`;
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3 cursor-help" title="${this.escapeHtml(this.wopsHoverTitle(d.dispatch_number))}">${d.dispatch_number}</td><td class="p-3 text-center">${this.wopsStatusCellHtml(d.dispatch_number)}${this.wopsChronoWarningHtml(d.id)}</td>${priorityCell}`;
+        ? `<td class="p-3 text-center align-top"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
+        : `<td class="p-3 text-center align-top">${this.priorityBadge(d.priority)}</td>`;
+      let html = `<td class="p-3 font-semibold align-top">${d.truck_type}</td><td class="p-3 cursor-help align-top" title="${this.escapeHtml(this.wopsHoverTitle(d.dispatch_number))}">${d.dispatch_number}</td><td class="p-3 text-center align-top">${this.wopsStatusCellHtml(d.dispatch_number)}${this.wopsChronoWarningHtml(d.id)}</td>${priorityCell}`;
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
@@ -2047,43 +2045,57 @@ const App = {
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
           : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
-        // Sub-label shown below the checkbox for pick/checking when checked
+        // Sub-content shown below the checkbox when checked: gap time from the
+        // previous milestone (every step), plus picker/checker names + bay
+        // for pick/checking specifically. Everything below the checkbox lives
+        // in one fixed-layout column so the checkboxes themselves stay on a
+        // straight line across the row no matter how much sub-content a
+        // given cell has.
         let subHtml = '';
         if (isChecked) {
+          // Gap time from the previous milestone's timestamp to this one's —
+          // applies to every step in the chain (Start Pick has no previous
+          // step, so it's skipped there).
+          if (prevStep && d[`${prevStep}_timestamp`] && d[`${step}_timestamp`]) {
+            const gap = new Date(d[`${step}_timestamp`]) - new Date(d[`${prevStep}_timestamp`]);
+            if (gap >= 0) subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">⏱ ${this.fmtDuration(gap)}</div>`;
+          }
           if (step === 'pick') {
-            // Pick duration
-            if (d.pick_start_timestamp && d.pick_timestamp) {
-              const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
-              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">${this.fmtDuration(dur)}</div>`;
-            }
             // Picker names
             if (d.pick_assigned_names && d.pick_assigned_names.length) {
               const names = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names;
-              subHtml += `<div class="text-[10px] mt-0.5 leading-tight" style="color:#16a34a;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+              subHtml += `<div class="text-[10px] leading-tight" style="color:#16a34a;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
             }
-            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline mt-0.5 block">✎ edit</button>`;
+            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
           } else if (step === 'checking') {
             // Checker names
             if (d.checking_assigned_names && d.checking_assigned_names.length) {
               const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names.join(', ') : d.checking_assigned_names;
-              subHtml += `<div class="text-[10px] mt-0.5 leading-tight" style="color:#2563eb;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+              subHtml += `<div class="text-[10px] leading-tight" style="color:#2563eb;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
             }
             // Bay
             if (d.bay_location) {
-              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
+              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
             }
-            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline mt-0.5 block">✎ edit</button>`;
+            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
           }
         }
-        html += `<td class="p-3 text-center" title="${tip}">
-                    <input type="checkbox" class="w-5 h-5 cursor-pointer cb-${step} ${!clickable ? 'disabled-checkbox' : ''}"
-                           ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
-                           onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
-                    ${subHtml}
+        // vertical-align:top keeps every checkbox anchored to the same top
+        // edge of its cell — without it, cells with no sub-content get
+        // vertically centered by the browser's default td styling while
+        // cells with names/duration text below sit higher, so the row of
+        // checkboxes zig-zags instead of running straight across.
+        html += `<td class="p-3 text-center align-top" title="${tip}">
+                    <div class="flex flex-col items-center gap-0.5">
+                      <input type="checkbox" class="w-5 h-5 cursor-pointer cb-${step} ${!clickable ? 'disabled-checkbox' : ''}"
+                             ${isChecked ? 'checked' : ''} ${!clickable ? 'disabled' : ''}
+                             onclick="App.handleMilestoneClick(event,'${d.id}','${step}')">
+                      ${subHtml}
+                    </div>
                   </td>`;
       });
       const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
-      html += `<td class="p-3">
+      html += `<td class="p-3 align-top">
                   ${d.loaded_checked
                     ? `<div class="font-semibold">${loadedTruck ? `${loadedTruck.plate_number} <span class="text-slate-400 dark:text-slate-500 font-normal">(${loadedTruck.truck_type})</span>` : '<span class="text-slate-400 dark:text-slate-500 italic">No truck on record</span>'}</div>
                        <div class="text-[10px] text-slate-400 dark:text-slate-500">${d.loaded_timestamp ? new Date(d.loaded_timestamp).toLocaleString() : ''}</div>`
@@ -2092,7 +2104,7 @@ const App = {
       const remarkCount = d.remarks_count || 0;
       const remarkPreviewRaw = d.last_remark_text || '';
       const remarkPreview = this.escapeHtml(remarkPreviewRaw.length > 26 ? remarkPreviewRaw.slice(0, 26) + '…' : remarkPreviewRaw);
-      html += `<td class="p-3 max-w-[170px]">
+      html += `<td class="p-3 max-w-[170px] align-top">
                   <button type="button" onclick="App.openRemarksModal('${d.id}')" class="text-left w-full" title="${remarkCount} remark(s) — click to view or add">
                     ${remarkCount
                       ? `<span class="text-xs text-slate-700 dark:text-slate-300 hover:underline">${remarkPreview}</span>
@@ -2100,8 +2112,8 @@ const App = {
                       : `<span class="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add remark</span>`}
                   </button>
                 </td>`;
-      html += `<td class="p-3"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
-                <td class="p-3">
+      html += `<td class="p-3 align-top"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
+                <td class="p-3 align-top">
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
                   </div>
@@ -2109,7 +2121,7 @@ const App = {
       const canEditDispatch = this.hasPerm('edit_dispatch');
       const canDeleteDispatch = this.hasPerm('delete_dispatch');
       if (canEditDispatch || canDeleteDispatch) {
-        html += `<td class="p-3">
+        html += `<td class="p-3 align-top">
                     ${canEditDispatch ? `<button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>` : ''}
                     ${canDeleteDispatch ? `<button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>` : ''}
                   </td>`;
