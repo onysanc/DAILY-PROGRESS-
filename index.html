@@ -328,6 +328,7 @@
             <tr>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('truck_type')">Type <span id="sort-truck_type" class="sort-arrow"></span></th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('dispatch_number')">Dispatch No. <span id="sort-dispatch_number" class="sort-arrow"></span></th>
+              <th class="p-3 text-center" title="Live status from WOPS-Outbound (matched on Dispatch No. = Shipment No.)">Outbound Status</th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('priority')">⚑ <span id="sort-priority" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick_start')">Start Pick <span id="sort-pick_start" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pick')">End Pick <span id="sort-pick" class="sort-arrow"></span></th>
@@ -889,6 +890,19 @@
     </div>
   </div>
 </div>
+<div id="wops-detail-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-1">
+      <h2 id="wops-detail-title" class="text-base font-bold">Outbound Progress</h2>
+      <button onclick="App.closeModal('wops-detail-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl leading-none">&times;</button>
+    </div>
+    <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-3">Live from WOPS-Outbound — Picker → Staging Checker → Puller → Outbound Checker.</p>
+    <div id="wops-detail-body"></div>
+    <div class="flex justify-end mt-4">
+      <button onclick="App.closeModal('wops-detail-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Close</button>
+    </div>
+  </div>
+</div>
 <div id="remarks-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800 max-h-[85vh] flex flex-col">
     <h2 class="text-lg font-bold mb-1">Dispatch Remarks</h2>
@@ -1026,6 +1040,26 @@
 const SUPABASE_URL = 'https://kxvvpmkmpxbwonkfmsnm.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_X4L1aLxAZKCR-MGPxkcfsQ_-UQl9iHc';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- WOPS-Outbound integration (read-only lookup) ---
+// This app's "Dispatch Number" and WOPS-Outbound's "Shipment Number" are the
+// SAME physical reference number, just labeled differently in each system.
+// This second client points at WOPS-Outbound's own Supabase project (its
+// publishable anon key — already public in that app's client-side source,
+// same trust level as this app's own key) so we can read live outbound
+// pipeline status (Picker/Staging/Puller/Outbound Checker) and show it
+// inline here, without merging the two databases. Read-only: only .select()
+// calls are ever made on this client.
+const WOPS_URL = 'https://mdyiyemshupvcejxquyh.supabase.co';
+const WOPS_ANON_KEY = 'sb_publishable_NZ-61nnHkjLeIx1uQHZJ6A_hchytu0t';
+const wopsClient = supabase.createClient(WOPS_URL, WOPS_ANON_KEY);
+const WOPS_ROLE_STEPS = [
+  { role: 'Picker', label: 'Picked', dot: '#16a34a' },
+  { role: 'Staging Checker', label: 'Staged', dot: '#0891b2' },
+  { role: 'Puller', label: 'Pulled', dot: '#9333ea' },
+  { role: 'Outbound Checker', label: 'Checked', dot: '#2563eb' },
+];
+
 Chart.register(ChartDataLabels);
 // ROLE_PERMISSIONS and TRUCK_CANCEL_ROLES are now dynamic per user from DB
 // Kept as runtime state on App.state.currentUser
@@ -1048,6 +1082,7 @@ const App = {
     currentRddId: null,
     rdds: [],
     dispatches: [],
+    wopsStatusMap: {}, // dispatch_number -> live WOPS-Outbound status (see fetchWopsStatuses)
     trucks: [],
     personnel: [],
     appUsers: [],        // for User Management tab
@@ -1569,6 +1604,99 @@ const App = {
     this.renderRddSummary();
     this.refreshDashboardIfVisible();
     this.checkStuckAlerts();
+    this.fetchWopsStatuses(); // fire-and-forget: re-renders the table once live outbound status is in
+  },
+  // Batches a lookup to WOPS-Outbound for every dispatch currently loaded,
+  // matching on dispatch_number === shipment_no, and caches the result in
+  // this.state.wopsStatusMap so renderDispatches() can show it inline.
+  // Silently no-ops on failure (network/CORS/etc.) — the Outbound Status
+  // column just shows "—" for everything rather than breaking the page.
+  async fetchWopsStatuses() {
+    const numbers = [...new Set(this.state.dispatches.map(d => String(d.dispatch_number).trim()).filter(Boolean))];
+    if (!numbers.length) return;
+    try {
+      const { data: shipments, error: shipErr } = await wopsClient.from('shipments')
+        .select('so_number,shipment_no,status')
+        .in('shipment_no', numbers);
+      if (shipErr) { console.error('WOPS lookup failed:', shipErr); return; }
+
+      const soNumbers = (shipments || []).map(s => s.so_number).filter(Boolean);
+      let logs = [];
+      if (soNumbers.length) {
+        const { data: logData, error: logErr } = await wopsClient.from('activity_logs')
+          .select('so_number,role,personnel_name,start_time,end_time,status')
+          .in('so_number', soNumbers);
+        if (logErr) console.error('WOPS activity_logs lookup failed:', logErr);
+        else logs = logData || [];
+      }
+
+      // Most-recently-started log per so_number+role, Completed preferred over Ongoing/Paused.
+      const logMap = {};
+      logs.forEach(l => {
+        const key = `${l.so_number}||${l.role}`;
+        const existing = logMap[key];
+        if (!existing) { logMap[key] = l; return; }
+        const rank = s => (s === 'Completed' ? 2 : s === 'Ongoing' ? 1 : 0);
+        if (rank(l.status) > rank(existing.status) || (rank(l.status) === rank(existing.status) && new Date(l.start_time) > new Date(existing.start_time))) {
+          logMap[key] = l;
+        }
+      });
+
+      const map = {};
+      (shipments || []).forEach(s => {
+        const steps = WOPS_ROLE_STEPS.map(step => {
+          const log = logMap[`${s.so_number}||${step.role}`];
+          return { ...step, log: log || null };
+        });
+        map[s.shipment_no] = { so_number: s.so_number, shipment_status: s.status, steps };
+      });
+      this.state.wopsStatusMap = map;
+      this.renderDispatches();
+    } catch (err) {
+      console.error('WOPS lookup error:', err);
+    }
+  },
+  // Compact inline cell for the Outbound Status column — a row of dots, one
+  // per WOPS-Outbound stage, filled in as each stage completes.
+  wopsStatusCellHtml(dispatchNumber) {
+    const info = this.state.wopsStatusMap[String(dispatchNumber).trim()];
+    if (!info) return `<span class="text-slate-300 dark:text-slate-600 text-xs">—</span>`;
+    const dots = info.steps.map(step => {
+      const done = step.log && step.log.status === 'Completed';
+      const active = step.log && step.log.status && step.log.status !== 'Completed';
+      const bg = done ? step.dot : (active ? step.dot : '#cbd5e1');
+      const opacity = done ? '1' : (active ? '0.55' : '0.3');
+      return `<span title="${step.label}${step.log?.personnel_name ? ' — ' + this.escapeHtml(step.log.personnel_name) : ''}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${bg};opacity:${opacity}"></span>`;
+    }).join('');
+    return `<button type="button" onclick="App.openWopsDetailModal('${String(dispatchNumber).replace(/'/g, "\\'")}')" class="flex items-center gap-1 hover:opacity-75 transition" title="Click for outbound pipeline detail">${dots}</button>`;
+  },
+  // Read-only detail modal: full outbound pipeline (Picker/Staging/Puller/
+  // Outbound Checker — names + times) for the shipment matching this
+  // dispatch number, pulled live from WOPS-Outbound.
+  openWopsDetailModal(dispatchNumber) {
+    const info = this.state.wopsStatusMap[String(dispatchNumber).trim()];
+    document.getElementById('wops-detail-title').textContent = `Outbound Progress — ${dispatchNumber}`;
+    const body = document.getElementById('wops-detail-body');
+    if (!info) {
+      body.innerHTML = `<p class="text-sm text-slate-400 italic">No matching shipment found in WOPS-Outbound for this dispatch number yet.</p>`;
+    } else {
+      body.innerHTML = `
+        <div class="text-xs text-slate-500 dark:text-slate-400 mb-3">S.O. ${this.escapeHtml(info.so_number || '—')} · Status: <span class="font-semibold">${this.escapeHtml(info.shipment_status || '—')}</span></div>
+        <div class="space-y-2">
+          ${info.steps.map(step => {
+            const log = step.log;
+            const stateLabel = log ? (log.status === 'Completed' ? 'Completed' : log.status) : 'Not started';
+            return `<div class="flex items-start gap-3 p-2 rounded-lg border dark:border-slate-700">
+                      <span style="display:inline-block;margin-top:3px;width:10px;height:10px;border-radius:50%;background:${log ? step.dot : '#cbd5e1'}"></span>
+                      <div class="flex-1">
+                        <div class="text-sm font-semibold">${step.role} <span class="font-normal text-slate-400 text-xs">— ${stateLabel}</span></div>
+                        ${log ? `<div class="text-xs text-slate-500 dark:text-slate-400">${this.escapeHtml(log.personnel_name || '—')} · ${log.start_time ? new Date(log.start_time).toLocaleString() : '—'}${log.end_time ? ' → ' + new Date(log.end_time).toLocaleString() : ''}</div>` : ''}
+                      </div>
+                    </div>`;
+          }).join('')}
+        </div>`;
+    }
+    document.getElementById('wops-detail-modal').classList.remove('hidden');
   },
   async addSingleDispatch(e) {
     e.preventDefault();
@@ -1714,7 +1842,7 @@ const App = {
       const priorityCell = canSetPriority
         ? `<td class="p-3 text-center"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
         : `<td class="p-3 text-center">${this.priorityBadge(d.priority)}</td>`;
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td>${priorityCell}`;
+      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td><td class="p-3 text-center">${this.wopsStatusCellHtml(d.dispatch_number)}</td>${priorityCell}`;
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
