@@ -1619,7 +1619,7 @@ const App = {
     if (!numbers.length) return;
     try {
       const { data: shipments, error: shipErr } = await wopsClient.from('shipments')
-        .select('so_number,shipment_no,status')
+        .select('*')
         .in('shipment_no', numbers);
       if (shipErr) { console.error('WOPS lookup failed:', shipErr); return; }
 
@@ -1651,7 +1651,19 @@ const App = {
           const log = logMap[`${s.so_number}||${step.role}`];
           return { ...step, log: log || null };
         });
-        map[s.shipment_no] = { so_number: s.so_number, shipment_status: s.status, steps };
+        map[s.shipment_no] = {
+          so_number: s.so_number,
+          shipment_status: s.status,
+          // Field names below fall back across a few likely aliases since
+          // WOPS-Outbound's exact column names weren't confirmed from here —
+          // if a hover shows "—" for one of these, check the real column
+          // name in the WOPS-Outbound `shipments` table and add it to the
+          // matching fallback list.
+          customer: s.customer ?? s.ship_to_party_name ?? s.customer_name ?? null,
+          quantity: s.quantity ?? s.qty ?? null,
+          target_minutes: s.target_minutes ?? s.target_time ?? s.target ?? null,
+          steps
+        };
       });
       this.state.wopsStatusMap = map;
       this.computeWopsSyncQueue();
@@ -1666,8 +1678,11 @@ const App = {
   // this app. Nothing here writes to the database — it's a preview queue;
   // applyWopsSyncItem()/applyAllWopsSyncItems() are what actually apply it,
   // gated behind the 'apply_wops_sync' permission.
-  //   • Picker completed in WOPS  -> queue a 'pick' item (Start Pick / End
-  //     Pick, whichever isn't ticked yet here).
+  //   • Picker Ongoing in WOPS   -> queue Start Pick (timestamp only — the
+  //     picker has clocked in on WOPS-Outbound but hasn't finished yet).
+  //   • Picker Completed in WOPS -> queue Start Pick (timestamp only, if
+  //     somehow still missed) AND End Pick (timestamp + picker name),
+  //     whichever isn't ticked yet here.
   //   • Outbound Checker completed in WOPS -> queue a 'checking' item, but
   //     ONLY if this app's own chronology is already satisfied (DS Printed
   //     ticked). If not, it's surfaced as a highlight instead (see
@@ -1682,9 +1697,11 @@ const App = {
       const pickLog = (info.steps.find(s => s.role === 'Picker') || {}).log;
       const checkLog = (info.steps.find(s => s.role === 'Outbound Checker') || {}).log;
 
-      if (pickLog && pickLog.status === 'Completed') {
+      if (pickLog && (pickLog.status === 'Ongoing' || pickLog.status === 'Completed')) {
         const needsStart = !d.pick_start_checked;
-        const needsEnd = !d.pick_checked;
+        // Only queue End Pick once WOPS-Outbound itself shows the Picker
+        // stage Completed — Ongoing means the picker has started, not finished.
+        const needsEnd = pickLog.status === 'Completed' && !d.pick_checked;
         if (needsStart || needsEnd) {
           queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, log: pickLog });
         }
@@ -1788,6 +1805,15 @@ const App = {
       payload.checking_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
     }
     return payload;
+  },
+  // Mouse-hover tooltip text for the Dispatch Number cell — Customer, Total
+  // Qty, and Target Time pulled from the matching WOPS-Outbound shipment.
+  wopsHoverTitle(dispatchNumber) {
+    const info = this.state.wopsStatusMap[String(dispatchNumber).trim()];
+    if (!info) return 'No matching WOPS-Outbound record yet';
+    const lines = [`Customer: ${info.customer || '—'}`, `Total Qty: ${info.quantity != null ? info.quantity : '—'}`];
+    lines.push(`Target Time: ${info.target_minutes != null ? info.target_minutes + ' min' : '—'}`);
+    return lines.join('\n');
   },
   // Compact inline cell for the Outbound Status column — a row of dots, one
   // per WOPS-Outbound stage, filled in as each stage completes.
@@ -1975,7 +2001,7 @@ const App = {
       const priorityCell = canSetPriority
         ? `<td class="p-3 text-center"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
         : `<td class="p-3 text-center">${this.priorityBadge(d.priority)}</td>`;
-      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3">${d.dispatch_number}</td><td class="p-3 text-center">${this.wopsStatusCellHtml(d.dispatch_number)}</td>${priorityCell}`;
+      let html = `<td class="p-3 font-semibold">${d.truck_type}</td><td class="p-3 cursor-help" title="${this.escapeHtml(this.wopsHoverTitle(d.dispatch_number))}">${d.dispatch_number}</td><td class="p-3 text-center">${this.wopsStatusCellHtml(d.dispatch_number)}</td>${priorityCell}`;
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
