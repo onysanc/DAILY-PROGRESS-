@@ -1135,14 +1135,6 @@ const App = {
     sortCol: null,
     sortDir: 1,
     customBays: [],
-    bulletinMessages: [],
-    chatUsers: [],
-    bulletinFilter: 'all',
-    bulletinOpen: false,
-    bulletinUnread: 0,
-    bulletinReplyTo: null,
-    mentionActive: false,
-    mentionStart: -1,
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -1300,8 +1292,6 @@ const App = {
     await this.loadPersonnel();
     await this.loadCustomBays();
     if (isAdmin) await this.loadAppUsers();
-    await this.loadChatUsers();
-    await this.loadBulletinMessages();
     await this.loadAlertSettings();
     await this.loadWopsAutoApplySetting();
     this.setupRealtimeSubscriptions();
@@ -3852,36 +3842,8 @@ const App = {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); this.loadChatUsers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.renderAlertBanner(); })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bulletin_messages' }, (payload) => {
-        const row = payload.new;
-        if (!this.state.bulletinMessages.some(m => m.id === row.id)) {
-          this.state.bulletinMessages = [row, ...this.state.bulletinMessages];
-        }
-        this.renderBulletin();
-        const me = this.state.currentUser?.username;
-        const mentionsMe = Array.isArray(row.mentions) && me && row.mentions.includes(me);
-        if (row.created_by !== me) {
-          if (!this.state.bulletinOpen) { this.state.bulletinUnread++; this.updateBulletinBadge(); }
-          const preview = (row.message || '').slice(0, 60) + ((row.message || '').length > 60 ? '…' : '');
-          if (mentionsMe) {
-            this.showToast(`💬 ${row.created_by} mentioned you: "${preview}"`, row.is_concern ? 'alert' : 'info');
-          } else if (row.is_concern) {
-            this.showToast(`🚩 New concern from ${row.created_by}: "${preview}"`, 'warn');
-          }
-        }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bulletin_messages' }, (payload) => {
-        const idx = this.state.bulletinMessages.findIndex(m => m.id === payload.new.id);
-        if (idx !== -1) this.state.bulletinMessages[idx] = payload.new;
-        this.renderBulletin();
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'bulletin_messages' }, (payload) => {
-        const id = payload.old?.id;
-        this.state.bulletinMessages = this.state.bulletinMessages.filter(m => m.id !== id);
-        this.renderBulletin();
-      })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
