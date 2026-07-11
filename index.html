@@ -472,7 +472,7 @@
         </div>
 
         <!-- ══ RECENT ACTIVITY TICKER ══ -->
-        <div class="bg-slate-900 dark:bg-slate-950 rounded-xl shadow border border-slate-700 dark:border-slate-800 px-4 py-2.5 shrink-0 overflow-hidden">
+        <div data-capture-hide="true" class="bg-slate-900 dark:bg-slate-950 rounded-xl shadow border border-slate-700 dark:border-slate-800 px-4 py-2.5 shrink-0 overflow-hidden">
           <div class="flex items-center gap-3">
             <span class="text-[10px] font-extrabold text-slate-400 tracking-widest shrink-0 uppercase">Recent</span>
             <div class="flex-1 overflow-hidden relative">
@@ -483,7 +483,7 @@
           </div>
         </div>
 
-        <div class="flex flex-row gap-4 shrink-0 w-full items-stretch">
+        <div data-capture-hide="true" class="flex flex-row gap-4 shrink-0 w-full items-stretch">
           <div class="bg-white dark:bg-slate-900 shadow rounded-xl px-4 py-3 border dark:border-slate-800 flex-1">
             <div class="flex items-center justify-between mb-2">
               <div class="w-10"></div>
@@ -1163,15 +1163,15 @@ const App = {
         scale: 2,
         useCORS: true,
         allowTaint: false,
-        backgroundColor: isDark ? '#0f172a' : '#f8fafc',
-        windowWidth: target.scrollWidth,
-        windowHeight: target.scrollHeight,
-        width: target.scrollWidth,
-        height: target.scrollHeight,
-        scrollX: 0,
-        scrollY: 0
+        backgroundColor: isDark ? '#0f172a' : '#f8fafc'
+        // Deliberately NOT overriding windowWidth/windowHeight/width/height here.
+        // Doing so forces html2canvas to re-render the page at a different
+        // viewport size, which reflows the flex/grid layout (and the Chart.js
+        // canvas) differently than what's actually on screen — that's what
+        // caused the misaligned/stretched chart before. Capturing at the
+        // element's real current size keeps everything pixel-proportional.
       });
-      // canvas.width/height stay proportional to target.scrollWidth/scrollHeight * scale,
+      // canvas.width/height are target.offsetWidth/offsetHeight * scale,
       // so aspect ratio always matches what's on screen — no stretching.
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
