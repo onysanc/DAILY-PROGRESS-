@@ -1551,16 +1551,15 @@ const App = {
     const openKey = this.state.openAlertResponseKey;
     content.innerHTML = visibleAlerts.map((a, i) => {
       const c = a.color || '#d97706';
-      let row = `<div class="${i > 0 ? 'mt-1.5 pt-1.5 border-t border-amber-200 dark:border-amber-800' : ''}">`;
+      let row = `<div class="${i > 0 ? 'mt-1.5' : ''} rounded-lg px-2.5 py-1.5" style="border-left:3px solid ${c};background:${c}14">`;
       const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
       row += `<div class="flex flex-wrap items-center gap-2">
-        <span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:${c}"></span>
-        <span class="font-semibold" style="color:${c}">${this.escapeHtml(a.text)}</span>
+        <span>${this.escapeHtml(a.text)}</span>
         ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline font-semibold shrink-0" style="color:${c}">Dismiss…</button>` : ''}
         <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
         <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
       </div>
-      ${(this.state.alertLatestRemarks && this.state.alertLatestRemarks[a.key]) ? `<div class="mt-1 ml-4 text-[11px] flex items-start gap-1" style="color:${c}"><span class="shrink-0">📝</span><span class="italic">${this.escapeHtml(this.state.alertLatestRemarks[a.key].text)}</span><span class="opacity-70 shrink-0">— ${this.escapeHtml(this.state.alertLatestRemarks[a.key].username || '—')}</span></div>` : ''}`;
+      ${(this.state.alertLatestRemarks && this.state.alertLatestRemarks[a.key]) ? `<div class="mt-1 text-[11px] flex items-start gap-1" style="color:${c}"><span class="shrink-0">📝</span><span class="italic">${this.escapeHtml(this.state.alertLatestRemarks[a.key].text)}</span><span class="opacity-70 shrink-0">— ${this.escapeHtml(this.state.alertLatestRemarks[a.key].username || '—')}</span></div>` : ''}`;
       if (a.requireResponse && openKey === a.key) {
         const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
         row += `<div class="flex items-start gap-2 mb-1 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
@@ -1573,7 +1572,7 @@ const App = {
       }
       row += `</div>`;
       return row;
-    }).join('');
+    }).join('<div class="mt-1"></div>');
     banner.classList.remove('hidden');
   },
   toggleAlertResponseBox(key) {
