@@ -1570,15 +1570,17 @@ const App = {
     visibleAlerts.forEach(a => { this._alertTextByKey[a.key] = a.text; });
     const openKey = this.state.openAlertResponseKey;
     content.innerHTML = visibleAlerts.map((a, i) => {
-      let row = `<div class="${i > 0 ? 'mt-2 pt-2 border-t border-amber-200 dark:border-amber-800' : ''}">`;
-      row += `<div class="mb-1 flex flex-wrap items-center gap-2"><span>${this.escapeHtml(a.text)}</span>`;
-      if (a.requireResponse) {
-        row += `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline text-amber-700 dark:text-amber-300 font-semibold">Dismiss…</button>`;
-      }
-      row += `</div>`;
+      let row = `<div class="${i > 0 ? 'mt-1.5 pt-1.5 border-t border-amber-200 dark:border-amber-800' : ''}">`;
+      const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
+      row += `<div class="flex flex-wrap items-center gap-2">
+        <span>${this.escapeHtml(a.text)}</span>
+        ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline text-amber-700 dark:text-amber-300 font-semibold shrink-0">Dismiss…</button>` : ''}
+        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 border border-amber-200 dark:border-amber-800 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none">${remarkDraft}</textarea>
+        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/40 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-200 text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0">Save</button>
+      </div>`;
       if (a.requireResponse && openKey === a.key) {
         const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
-        row += `<div class="flex items-start gap-2 mb-2 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
+        row += `<div class="flex items-start gap-2 mb-1 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
           <textarea id="alert-response-${a.key}" oninput="App.alertResponseDraft('${a.key}', this.value)" rows="2" placeholder="Type a reason before this alert can be dismissed…" class="flex-1 text-xs p-1.5 border border-amber-300 dark:border-amber-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white">${draft}</textarea>
           <div class="flex flex-col gap-1">
             <button onclick="App.submitAlertResponse('${a.key}')" class="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold rounded-md">Submit</button>
@@ -1586,12 +1588,6 @@ const App = {
           </div>
         </div>`;
       }
-      // Always-visible remarks box — lets a user log a note against this alert without dismissing it
-      const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
-      row += `<div class="flex items-start gap-2">
-        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 text-xs p-1.5 border border-amber-200 dark:border-amber-800 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40">${remarkDraft}</textarea>
-        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/40 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-200 text-[11px] font-semibold rounded-md whitespace-nowrap self-stretch">Save</button>
-      </div>`;
       row += `</div>`;
       return row;
     }).join('');
