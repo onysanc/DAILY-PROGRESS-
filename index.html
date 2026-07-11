@@ -1156,6 +1156,26 @@ const App = {
     const restoreStyles = clipped.map(el => ({ el, maxHeight: el.style.maxHeight, overflowY: el.style.overflowY, height: el.style.height }));
     clipped.forEach(el => { el.style.maxHeight = 'none'; el.style.height = 'auto'; el.style.overflowY = 'visible'; });
 
+    // Alert rows: swap each remark textbox + its Save button for plain text
+    // (no input-box graphics, no buttons in the capture). Empty boxes show
+    // a small "No response" note instead of an empty-looking field.
+    const remarkBoxes = Array.from(target.querySelectorAll('textarea[id^="alert-remark-"]'));
+    const remarkSwap = remarkBoxes.map(ta => {
+      const key = ta.id.replace('alert-remark-', '');
+      const saveBtn = document.getElementById(`alert-save-${key}`);
+      const val = ta.value.trim();
+      const span = document.createElement('span');
+      span.className = 'text-xs' + (val ? ' font-semibold' : ' italic');
+      span.style.color = val ? getComputedStyle(ta).color : '#94a3b8';
+      span.textContent = val || 'No response';
+      ta.parentNode.insertBefore(span, ta);
+      const prevTaDisplay = ta.style.display;
+      const prevBtnDisplay = saveBtn ? saveBtn.style.display : null;
+      ta.style.display = 'none';
+      if (saveBtn) saveBtn.style.display = 'none';
+      return { ta, saveBtn, span, prevTaDisplay, prevBtnDisplay };
+    });
+
     try {
       await new Promise(r => setTimeout(r, 50)); // let layout settle after hiding elements
 
@@ -1187,6 +1207,11 @@ const App = {
     } finally {
       hiddenEls.forEach((el, i) => { el.style.display = prevDisplay[i]; });
       restoreStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.height = s.height; s.el.style.overflowY = s.overflowY; });
+      remarkSwap.forEach(r => {
+        r.span.remove();
+        r.ta.style.display = r.prevTaDisplay;
+        if (r.saveBtn) r.saveBtn.style.display = r.prevBtnDisplay;
+      });
       btn.disabled = false;
     }
   },
@@ -1628,7 +1653,7 @@ const App = {
         ${(this.state.alertLatestRemarks && this.state.alertLatestRemarks[a.key]) ? `<span class="italic inline-flex items-center gap-1" style="color:${c}"><span>📝 ${this.escapeHtml(this.state.alertLatestRemarks[a.key].text)}</span><span class="opacity-70 not-italic">— ${this.escapeHtml(this.state.alertLatestRemarks[a.key].username || '—')}</span></span>` : ''}
         ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline font-semibold shrink-0" style="color:${c}">Dismiss…</button>` : ''}
         <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark…" class="w-28 sm:w-36 shrink-0 text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
-        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
+        <button id="alert-save-${a.key}" onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
       </div>`;
       if (a.requireResponse && openKey === a.key) {
         const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
