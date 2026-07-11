@@ -1297,6 +1297,27 @@ const App = {
     const custom = this.state.customBays || [];
     return [...standard, ...custom.filter(b => !standard.includes(b))];
   },
+  // WOPS-Outbound stores bays as "Bay 1A" / "Extended"; this app's own list
+  // uses bare labels ("1A", "Extended"). Strips the prefix + normalizes
+  // whitespace/case so the two always line up regardless of formatting.
+  normalizeBay(v) {
+    return String(v || '').replace(/^bay\s*/i, '').trim().toUpperCase();
+  },
+  // A dispatch can have multiple SO rows pulled to different bays, so
+  // wopsInfo.pullerBay may be a single value OR a comma-joined list (see
+  // fetchWopsStatuses). This always returns an array of normalized codes
+  // that are actually valid options in this app's bay list — anything the
+  // Puller used that doesn't exist here (a typo'd custom bay, etc.) is
+  // dropped rather than silently mismatching.
+  parsePullerBays(pullerBayStr) {
+    if (!pullerBayStr) return [];
+    const options = this.getAllBayOptions();
+    const optionsByNorm = {};
+    options.forEach(o => { optionsByNorm[this.normalizeBay(o)] = o; });
+    return pullerBayStr.split(',')
+      .map(b => optionsByNorm[this.normalizeBay(b)])
+      .filter(Boolean);
+  },
   async addCustomBay() {
     const input = document.getElementById('checking-new-bay-input');
     const val = input.value.trim().toUpperCase();
@@ -2131,12 +2152,15 @@ const App = {
             // WOPS-Outbound (see handleMilestoneClick), so in the normal case
             // Bay: above already reflects it — no need to repeat it. Only
             // flag it here as a mismatch warning if a checker overrode it to
-            // something different from what the Puller actually used.
+            // something different from what the Puller actually used (a
+            // dispatch can have multiple SO rows/bays, so this compares the
+            // full sets rather than a single joined string).
             const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
             if (wopsInfo && wopsInfo.pullerBay) {
-              const normalize = v => String(v || '').replace(/^bay\s*/i, '').trim().toUpperCase();
-              const assignedBays = (d.bay_location || '').split(',').map(normalize).filter(Boolean);
-              if (!assignedBays.includes(normalize(wopsInfo.pullerBay))) {
+              const assignedBays = (d.bay_location || '').split(',').map(b => this.normalizeBay(b)).filter(Boolean);
+              const pullerBaysNorm = this.parsePullerBays(wopsInfo.pullerBay).map(b => this.normalizeBay(b));
+              const allMatch = pullerBaysNorm.length > 0 && pullerBaysNorm.every(b => assignedBays.includes(b));
+              if (!allMatch) {
                 subHtml += `<div class="text-[10px] leading-tight" style="color:#d97706" title="Puller confirmed a different bay in WOPS-Outbound">⚠️ Puller used: ${this.escapeHtml(wopsInfo.pullerBay)}</div>`;
               }
             }
@@ -2324,17 +2348,17 @@ const App = {
       // Default the bay selection to whatever the Puller already confirmed
       // in WOPS-Outbound for this same shipment (dispatch_number ===
       // shipment_no), so Checking's assigned bay reflects the Puller's
-      // choice instead of starting blank. This app's own bay list uses bare
-      // labels ("1A", "Extended") while WOPS-Outbound stores them prefixed
-      // ("Bay 1A") — strip the prefix before matching. Still editable: the
-      // checker can untick/add bays before confirming.
+      // choice instead of starting blank. A dispatch can have multiple SO
+      // rows pulled to different bays, so this ticks every matching bay,
+      // not just one. Still editable, but the checker doesn't need to
+      // re-identify or re-confirm which bay(s) were used — it's already
+      // pulled straight from the Puller's own data.
       const wopsInfo = this.state.wopsStatusMap[String(dispatch.dispatch_number).trim()];
-      const pullerBay = wopsInfo && wopsInfo.pullerBay ? wopsInfo.pullerBay.replace(/^bay\s*/i, '').trim() : null;
-      const preselect = (pullerBay && this.getAllBayOptions().includes(pullerBay)) ? [pullerBay] : [];
+      const preselect = this.parsePullerBays(wopsInfo && wopsInfo.pullerBay);
       this.renderCheckingBayList(preselect);
       if (preselect.length) {
         const note = document.getElementById('checking-bay-count-note');
-        if (note) note.textContent += ' — pre-filled from Puller\'s bay in WOPS-Outbound';
+        if (note) note.textContent += ` — pre-filled from Puller's bay${preselect.length > 1 ? 's' : ''} in WOPS-Outbound`;
       }
       this.openModal('checking-modal');
     } else if (step === 'loaded') {
