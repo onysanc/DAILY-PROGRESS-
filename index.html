@@ -368,10 +368,10 @@
           <span id="dashboard-heading-time" class="text-blue-700 dark:text-blue-400"></span>
         </h1>
         <div class="flex items-center gap-2 shrink-0">
-          <button id="dashboard-capture-btn" onclick="App.captureDashboard()" title="Capture full dashboard as PNG" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
+          <button id="dashboard-capture-btn" data-capture-hide="true" onclick="App.captureDashboard()" title="Copy dashboard as image" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
           </button>
-          <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
+          <button onclick="App.toggleSidebar()" data-capture-hide="true" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
           </button>
         </div>
@@ -451,11 +451,11 @@
           <div class="flex justify-between items-center mb-2 shrink-0">
             <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Activity Timeline</h2>
             <div class="flex items-center gap-3">
-              <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Click a bar to add a colored note</span>
-              <button onclick="App.openChartRemarkModal()" title="Add remark" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
+              <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline" data-capture-hide="true">Click a bar to add a colored note</span>
+              <button onclick="App.openChartRemarkModal()" data-capture-hide="true" title="Add remark" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
-              <select id="chart-ystep-select" onchange="App.setChartYStep(this.value)" title="Y-axis interval" class="text-xs p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border-0 text-slate-600 dark:text-slate-300 font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+              <select id="chart-ystep-select" data-capture-hide="true" onchange="App.setChartYStep(this.value)" title="Y-axis interval" class="text-xs p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border-0 text-slate-600 dark:text-slate-300 font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
                 <option value="1">Y-Axis: by 1</option>
                 <option value="2">Y-Axis: by 2</option>
                 <option value="3">Y-Axis: by 3</option>
@@ -1133,21 +1133,31 @@ const App = {
     const btn = document.getElementById('dashboard-capture-btn');
     const target = document.getElementById('tab-analytics');
     if (!target) return;
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      alert('Copy-to-clipboard isn\'t supported in this browser. Try Chrome or Edge.');
+      return;
+    }
     const isDark = document.documentElement.classList.contains('dark');
     const originalIcon = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>';
-    try {
-      // Temporarily neutralize scroll clipping on any inner scroll containers
-      // so nothing inside the dashboard (tables, chart wrapper) gets cut off.
-      const clipped = Array.from(target.querySelectorAll('*')).filter(el => {
-        const style = getComputedStyle(el);
-        return (style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
-      });
-      const restoreStyles = clipped.map(el => ({ el, maxHeight: el.style.maxHeight, overflowY: el.style.overflowY, height: el.style.height }));
-      clipped.forEach(el => { el.style.maxHeight = 'none'; el.style.height = 'auto'; el.style.overflowY = 'visible'; });
 
-      await new Promise(r => setTimeout(r, 50)); // let layout settle
+    // Hide chrome (capture button, sidebar toggle, chart pencil icon, Y-axis dropdown, hint text)
+    // so only the header, alerts, progress tile, bay grid, and chart are captured.
+    const hiddenEls = Array.from(target.querySelectorAll('[data-capture-hide="true"]'));
+    const prevDisplay = hiddenEls.map(el => el.style.display);
+    hiddenEls.forEach(el => { el.style.display = 'none'; });
+
+    // Also neutralize any inner scroll clipping so nothing gets cut off.
+    const clipped = Array.from(target.querySelectorAll('*')).filter(el => {
+      const style = getComputedStyle(el);
+      return (style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
+    });
+    const restoreStyles = clipped.map(el => ({ el, maxHeight: el.style.maxHeight, overflowY: el.style.overflowY, height: el.style.height }));
+    clipped.forEach(el => { el.style.maxHeight = 'none'; el.style.height = 'auto'; el.style.overflowY = 'visible'; });
+
+    try {
+      await new Promise(r => setTimeout(r, 50)); // let layout settle after hiding elements
 
       const canvas = await html2canvas(target, {
         scale: 2,
@@ -1161,21 +1171,23 @@ const App = {
         scrollX: 0,
         scrollY: 0
       });
+      // canvas.width/height stay proportional to target.scrollWidth/scrollHeight * scale,
+      // so aspect ratio always matches what's on screen — no stretching.
 
-      restoreStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.height = s.height; s.el.style.overflowY = s.overflowY; });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Could not generate image');
+      await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
 
-      const link = document.createElement('a');
-      const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
-      const rdd = document.getElementById('dashboard-heading-rdd')?.textContent?.replace(/[^\w-]+/g, '') || 'dashboard';
-      link.download = `dashboard-${rdd}-${ts}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      btn.innerHTML = '<svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+      setTimeout(() => { btn.innerHTML = originalIcon; }, 1500);
     } catch (err) {
       console.error('Dashboard capture failed:', err);
-      alert('Capture failed: ' + err.message);
-    } finally {
-      btn.disabled = false;
+      alert('Copy failed: ' + err.message);
       btn.innerHTML = originalIcon;
+    } finally {
+      hiddenEls.forEach((el, i) => { el.style.display = prevDisplay[i]; });
+      restoreStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.height = s.height; s.el.style.overflowY = s.overflowY; });
+      btn.disabled = false;
     }
   },
   async login(e) {
