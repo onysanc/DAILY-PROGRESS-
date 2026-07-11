@@ -2448,7 +2448,16 @@ const App = {
     } else if (step === 'checking') {
       checkerSec.classList.remove('hidden');
       const assignedCheckers = Array.isArray(dispatch.checking_assigned_names) ? dispatch.checking_assigned_names : [];
-      const assignedBays = dispatch.bay_location ? dispatch.bay_location.split(',').map(b => b.trim()).filter(Boolean) : [];
+      let assignedBays = dispatch.bay_location ? dispatch.bay_location.split(',').map(b => b.trim()).filter(Boolean) : [];
+      // If this row was completed without a bay ever being saved (e.g. via
+      // WOPS auto-sync before that carried the bay through), fall back to
+      // the Puller's confirmed bay from WOPS-Outbound so the admin doesn't
+      // have to look it up and tick it by hand — it's already right there
+      // in the warning line on the row.
+      if (!assignedBays.length) {
+        const wopsInfo = this.state.wopsStatusMap[String(dispatch.dispatch_number).trim()];
+        assignedBays = this.parsePullerBays(wopsInfo && wopsInfo.pullerBay);
+      }
       const checkers = this.state.personnel.filter(p => p.pool === 'checker');
       const allCheckerNames = [...new Set([...checkers.map(p => p.name), ...assignedCheckers])];
       document.getElementById('admin-edit-checker-list').innerHTML = allCheckerNames.map(n =>
