@@ -254,7 +254,6 @@
           <button onclick="App.openCreateRddModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
-      <div id="rdd-summary" class="hidden mb-5 grid grid-cols-5 gap-3"></div>
       <!-- Quick Filter Pills -->
       <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
         <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Show All</button>
@@ -534,7 +533,7 @@
         <div class="flex gap-2 mt-2" id="rdd-funnel-labels"></div>
       </div>
       <!-- Step duration breakdown -->
-      <div class="grid grid-cols-2 gap-5 mb-5">
+      <div class="mb-5">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
           <div class="flex justify-between items-center mb-3">
             <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">STEP DURATION BREAKDOWN — CURRENT RDD</div>
@@ -550,49 +549,6 @@
               </tr>
             </thead>
             <tbody id="step-duration-tbody"></tbody>
-          </table>
-        </div>
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="flex justify-between items-center mb-3">
-            <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">PICKER LEADERBOARD — CURRENT RDD</div>
-            <button onclick="App.exportTableToCSV('picker-leaderboard-table','picker-leaderboard.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
-          </div>
-          <table class="w-full text-xs border-collapse" id="picker-leaderboard-table">
-            <thead>
-              <tr class="bg-slate-50 dark:bg-slate-800">
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">#</th>
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Picker</th>
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Picked</th>
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Share</th>
-              </tr>
-            </thead>
-            <tbody id="picker-leaderboard-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-      <!-- Pending dispatches + checker throughput -->
-      <div class="grid grid-cols-2 gap-5 mb-5">
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="flex justify-between items-center mb-3">
-            <div class="text-xs font-extrabold text-amber-600 dark:text-amber-400 tracking-widest">⚠ PENDING DISPATCHES — CURRENT RDD</div>
-            <button onclick="App.exportStuckDispatchesCSV()" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
-          </div>
-          <div id="stuck-dispatches-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
-        </div>
-        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
-          <div class="flex justify-between items-center mb-3">
-            <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">CHECKER THROUGHPUT — CURRENT RDD</div>
-            <button onclick="App.exportTableToCSV('checker-throughput-table','checker-throughput.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
-          </div>
-          <table class="w-full text-xs border-collapse" id="checker-throughput-table">
-            <thead>
-              <tr class="bg-slate-50 dark:bg-slate-800">
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-left font-bold text-slate-600 dark:text-slate-300">Checker</th>
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Assigned</th>
-                <th class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center font-bold text-slate-600 dark:text-slate-300">Avg Duration</th>
-              </tr>
-            </thead>
-            <tbody id="checker-throughput-tbody"></tbody>
           </table>
         </div>
       </div>
@@ -1475,7 +1431,6 @@ const App = {
     this.state.sortCol = null;
     this.state.sortDir = 1;
     document.getElementById('add-dispatch-panel').classList.toggle('hidden', !id);
-    document.getElementById('rdd-summary').classList.toggle('hidden', !id);
     const filterBar = document.getElementById('dispatch-filter-bar');
     if (filterBar) filterBar.classList.toggle('hidden', !id);
     if (!id) {
@@ -1494,7 +1449,7 @@ const App = {
   renderRddSummary() {
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const box = document.getElementById('rdd-summary');
-    if (!rdd) { box.innerHTML = ''; return; }
+    if (!rdd) { if (box) box.innerHTML = ''; return; }
     const total = this.state.dispatches.length;
     const loaded = this.state.dispatches.filter(d => d.loaded_checked).length;
     const pending = total - loaded;
@@ -1518,11 +1473,13 @@ const App = {
       { label: 'Pending', value: pending, color: pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
       { label: 'Est. Completion', value: etaStr, color: 'text-blue-600 dark:text-blue-400', small: typeof etaStr === 'string' && etaStr.length > 5 },
     ];
-    box.innerHTML = cards.map(c => `
+    if (box) {
+      box.innerHTML = cards.map(c => `
       <div class="bg-white dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow p-4 transition-colors">
         <div class="text-xs text-slate-500 dark:text-slate-400">${c.label}</div>
         <div class="${c.small ? 'text-lg' : 'text-2xl'} font-bold ${c.color || ''}">${c.value}</div>
       </div>`).join('');
+    }
     // Smart alert banner
     this.renderAlertBanner();
   },
