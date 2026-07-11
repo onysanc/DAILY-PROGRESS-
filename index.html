@@ -68,6 +68,36 @@
     --font-body:'Inter',ui-sans-serif,sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,monospace;
   }
+  /* ============================================================
+     ACCENT COLOR THEMES — swap via html[data-accent="..."].
+     Sidebar navy (--ink-*) stays constant across accents; only the
+     brand/highlight color changes. "teal" (default) matches :root above.
+     ============================================================ */
+  html[data-accent="blue"]{
+    --brand-50:#eff6ff; --brand-100:#dbeafe; --brand-200:#bfdbfe;
+    --brand-300:#93c5fd; --brand-400:#60a5fa; --brand-500:#3b82f6;
+    --brand-600:#2563eb; --brand-700:#1d4ed8; --brand-800:#1e40af; --brand-900:#1e3a8a;
+  }
+  html[data-accent="violet"]{
+    --brand-50:#f5f3ff; --brand-100:#ede9fe; --brand-200:#ddd6fe;
+    --brand-300:#c4b5fd; --brand-400:#a78bfa; --brand-500:#8b5cf6;
+    --brand-600:#7c3aed; --brand-700:#6d28d9; --brand-800:#5b21b6; --brand-900:#4c1d95;
+  }
+  html[data-accent="emerald"]{
+    --brand-50:#ecfdf5; --brand-100:#d1fae5; --brand-200:#a7f3d0;
+    --brand-300:#6ee7b7; --brand-400:#34d399; --brand-500:#10b981;
+    --brand-600:#059669; --brand-700:#047857; --brand-800:#065f46; --brand-900:#064e3b;
+  }
+  html[data-accent="amber"]{
+    --brand-50:#fffbeb; --brand-100:#fef3c7; --brand-200:#fde68a;
+    --brand-300:#fcd34d; --brand-400:#fbbf24; --brand-500:#f59e0b;
+    --brand-600:#d97706; --brand-700:#b45309; --brand-800:#92400e; --brand-900:#78350f;
+  }
+  html[data-accent="rose"]{
+    --brand-50:#fff1f2; --brand-100:#ffe4e6; --brand-200:#fecdd3;
+    --brand-300:#fda4af; --brand-400:#fb7185; --brand-500:#f43f5e;
+    --brand-600:#e11d48; --brand-700:#be123c; --brand-800:#9f1239; --brand-900:#881337;
+  }
   body{font-family:var(--font-body)}
   h1,h2{font-family:var(--font-display);letter-spacing:-0.01em}
   #display-username, .nav-btn span, .text-lg.font-bold{font-family:var(--font-display)}
@@ -177,6 +207,15 @@
       <div class="flex justify-between items-center mt-2">
         <button onclick="App.logout()" class="text-xs text-red-400 hover:text-red-300 underline">Log out</button>
         <button onclick="App.toggleTheme()" id="theme-toggle-btn" class="text-xs hover:underline underline" style="color:var(--brand-400)">Dark Mode</button>
+      </div>
+      <div class="flex items-center gap-1.5 mt-3" id="accent-swatches">
+        <span class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mr-0.5">Theme</span>
+        <button onclick="App.setAccent('teal')" data-accent-btn="teal" title="Signal Teal" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#06b6d4"></button>
+        <button onclick="App.setAccent('blue')" data-accent-btn="blue" title="Ocean Blue" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#3b82f6"></button>
+        <button onclick="App.setAccent('violet')" data-accent-btn="violet" title="Violet" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#8b5cf6"></button>
+        <button onclick="App.setAccent('emerald')" data-accent-btn="emerald" title="Emerald" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#10b981"></button>
+        <button onclick="App.setAccent('amber')" data-accent-btn="amber" title="Amber" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#f59e0b"></button>
+        <button onclick="App.setAccent('rose')" data-accent-btn="rose" title="Rose" class="w-4 h-4 rounded-full border-2 border-transparent transition-transform" style="background:#f43f5e"></button>
       </div>
     </div>
     <nav class="flex-1 p-3 space-y-1 min-w-[15rem] overflow-y-auto">
@@ -1105,6 +1144,27 @@ const App = {
       document.documentElement.classList.remove('dark');
       document.getElementById('theme-toggle-btn').textContent = 'Dark Mode';
     }
+    this.initAccent();
+  },
+  ACCENT_COLORS: ['teal','blue','violet','emerald','amber','rose'],
+  initAccent() {
+    const saved = localStorage.accent && this.ACCENT_COLORS.includes(localStorage.accent) ? localStorage.accent : 'teal';
+    this.setAccent(saved, true);
+  },
+  setAccent(color, skipSave) {
+    if (!this.ACCENT_COLORS.includes(color)) return;
+    if (color === 'teal') {
+      document.documentElement.removeAttribute('data-accent');
+    } else {
+      document.documentElement.setAttribute('data-accent', color);
+    }
+    if (!skipSave) localStorage.accent = color;
+    document.querySelectorAll('[data-accent-btn]').forEach(btn => {
+      const active = btn.getAttribute('data-accent-btn') === color;
+      btn.style.borderColor = active ? '#fff' : 'transparent';
+      btn.style.transform = active ? 'scale(1.15)' : 'scale(1)';
+    });
+    this.refreshDashboardIfVisible();
   },
   toggleTheme() {
     if (document.documentElement.classList.contains('dark')) {
