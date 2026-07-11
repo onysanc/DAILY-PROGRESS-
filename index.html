@@ -4049,7 +4049,7 @@ const App = {
           const endT = new Date(d[`${step}_timestamp`]).getTime();
           const startT = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
           return startT ? endT - startT : null;
-        }).filter(v => v !== null && v > 0);
+        }).filter(v => v !== null && v >= 300000);
         if (!durations.length) return `<tr><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 font-semibold flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full flex-shrink-0" style="background:${col}"></span>${names2[i]}</td><td class="border border-slate-200 dark:border-slate-700 px-2 py-1.5 text-center text-slate-400" colspan="3">—</td></tr>`;
         const avg = durations.reduce((s, v) => s + v, 0) / durations.length;
         const min = Math.min(...durations);
@@ -4094,7 +4094,7 @@ const App = {
           if (this.isVirtualPersonnelName(n)) return;
           if (!checkerMap[n]) checkerMap[n] = { count: 0, durs: [] };
           checkerMap[n].count++;
-          if (dur && dur > 0) checkerMap[n].durs.push(dur);
+          if (dur && dur >= 300000) checkerMap[n].durs.push(dur);
         });
       });
       const sorted = Object.entries(checkerMap).sort((a, b) => b[1].count - a[1].count);
@@ -4456,7 +4456,7 @@ const App = {
     // Pick duration stats (Start Pick → End Pick)
     const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
       .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
-      .filter(v => v > 0);
+      .filter(v => v >= 300000);
     const avgPickDur = pickDurs.length ? pickDurs.reduce((a,b)=>a+b,0)/pickDurs.length : null;
     const minPickDur = pickDurs.length ? Math.min(...pickDurs) : null;
     const maxPickDur = pickDurs.length ? Math.max(...pickDurs) : null;
@@ -4686,7 +4686,7 @@ const App = {
         const e = new Date(d[`${step}_timestamp`]).getTime();
         const s = prev ? new Date(d[`${prev}_timestamp`]).getTime() : null;
         return s ? e - s : null;
-      }).filter(v => v !== null && v > 0);
+      }).filter(v => v !== null && v >= 300000);
       if (!durs.length) return null;
       return durs.reduce((a,b) => a+b, 0) / durs.length;
     };
@@ -4771,13 +4771,13 @@ const App = {
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#16a34a"></span>Fastest Pick</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#c46262"></span>Slowest Pick</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>0); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
             </tr>
           </tbody>
         </table>
@@ -4862,7 +4862,7 @@ const App = {
     const plan = rdd ? (rdd.initial_planning_count || 0) : 0;
     const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
     const pickDurs = list.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
-      .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v > 0);
+      .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v >= 300000);
     const avgPick = pickDurs.length ? pickDurs.reduce((a, b) => a + b, 0) / pickDurs.length : null;
     const trucksUsed = truckList.filter(t => t.status === 'Dispatched').length;
     const cards = [
@@ -5089,7 +5089,7 @@ const App = {
           if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {}, pickDurs: [] };
           if (!personMap[n].rdds[d.rdd_id]) personMap[n].rdds[d.rdd_id] = [];
           personMap[n].rdds[d.rdd_id].push(`${d.truck_type} ${d.dispatch_number}`);
-          if (dur && dur > 0) personMap[n].pickDurs.push(dur);
+          if (dur && dur >= 300000) personMap[n].pickDurs.push(dur);
         });
       }
       if (d.checking_checked && d.checking_assigned_names) {
