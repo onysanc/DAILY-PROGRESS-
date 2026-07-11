@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -366,9 +367,14 @@
           &nbsp;<span class="text-slate-500 font-semibold dark:text-slate-400">AS OF</span>
           <span id="dashboard-heading-time" class="text-blue-700 dark:text-blue-400"></span>
         </h1>
-        <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800 shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="dashboard-capture-btn" onclick="App.captureDashboard()" title="Capture full dashboard as PNG" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
+          </button>
+          <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          </button>
+        </div>
       </div>
       <!-- Smart Alert Banner -->
       <div id="dispatch-alert-banner" class="hidden mb-1 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3">
@@ -1122,6 +1128,55 @@ const App = {
       sidebar.classList.add('w-60');
     }
     setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
+  },
+  async captureDashboard() {
+    const btn = document.getElementById('dashboard-capture-btn');
+    const target = document.getElementById('tab-analytics');
+    if (!target) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const originalIcon = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>';
+    try {
+      // Temporarily neutralize scroll clipping on any inner scroll containers
+      // so nothing inside the dashboard (tables, chart wrapper) gets cut off.
+      const clipped = Array.from(target.querySelectorAll('*')).filter(el => {
+        const style = getComputedStyle(el);
+        return (style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
+      });
+      const restoreStyles = clipped.map(el => ({ el, maxHeight: el.style.maxHeight, overflowY: el.style.overflowY, height: el.style.height }));
+      clipped.forEach(el => { el.style.maxHeight = 'none'; el.style.height = 'auto'; el.style.overflowY = 'visible'; });
+
+      await new Promise(r => setTimeout(r, 50)); // let layout settle
+
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+        windowWidth: target.scrollWidth,
+        windowHeight: target.scrollHeight,
+        width: target.scrollWidth,
+        height: target.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      restoreStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.height = s.height; s.el.style.overflowY = s.overflowY; });
+
+      const link = document.createElement('a');
+      const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+      const rdd = document.getElementById('dashboard-heading-rdd')?.textContent?.replace(/[^\w-]+/g, '') || 'dashboard';
+      link.download = `dashboard-${rdd}-${ts}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Dashboard capture failed:', err);
+      alert('Capture failed: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalIcon;
+    }
   },
   async login(e) {
     e.preventDefault();
