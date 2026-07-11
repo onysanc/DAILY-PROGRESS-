@@ -250,6 +250,7 @@
             <option value="">Select RDD…</option>
           </select>
           <button onclick="App.exportDispatchesCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
+          <button id="sync-bays-btn" onclick="App.backfillMissingCheckingBays()" class="hidden bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 text-sm font-semibold" title="Fill in Bay for already-Checked dispatches that are missing it or don't match what the Puller used in WOPS-Outbound">🅱 Sync Bays</button>
           <button onclick="App.openCreateRddModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
       </div>
@@ -1852,6 +1853,39 @@ const App = {
     this.showToast(`Applied ${items.length} WOPS-Outbound sync update(s).`, 'info', 3500);
     await this.loadDispatches();
   },
+  // One-click cleanup for dispatches that were already marked Checked before
+  // the bay was reliably carried over from the Puller (or completed through
+  // a path that skipped it) — rather than editing each row by hand, this
+  // scans every already-Checked dispatch in the currently loaded RDD, finds
+  // ones where bay_location is blank or doesn't match what the Puller
+  // actually used in WOPS-Outbound, and writes the correct bay straight in.
+  // Does not touch checker names, timestamps, or anything else — bay only.
+  async backfillMissingCheckingBays() {
+    if (!this.hasPerm('apply_wops_sync') && !this.hasPerm('admin_override')) {
+      return alert('You do not have permission to run this. Ask an admin to grant WOPS Sync Apply or Admin Override.');
+    }
+    const fixes = [];
+    this.state.dispatches.forEach(d => {
+      if (!d.checking_checked) return;
+      const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+      const matchedBays = this.parsePullerBays(wopsInfo && wopsInfo.pullerBay);
+      if (!matchedBays.length) return; // nothing to backfill from
+      const currentBays = (d.bay_location || '').split(',').map(b => this.normalizeBay(b)).filter(Boolean);
+      const matchedNorm = matchedBays.map(b => this.normalizeBay(b));
+      const alreadyCorrect = matchedNorm.length === currentBays.length && matchedNorm.every(b => currentBays.includes(b));
+      if (!alreadyCorrect) fixes.push({ id: d.id, dispatch_number: d.dispatch_number, bay_location: matchedBays.join(', ') });
+    });
+    if (!fixes.length) return this.showToast('Nothing to fix — every Checked dispatch already matches its Puller bay.', 'info', 4000);
+    if (!confirm(`Fix Bay for ${fixes.length} Checked dispatch(es) using the Puller's confirmed bay from WOPS-Outbound? This only changes the Bay field — checker names/timestamps are untouched.`)) return;
+    let okCount = 0;
+    for (const f of fixes) {
+      const { error } = await supabaseClient.from('dispatches').update({ bay_location: f.bay_location }).eq('id', f.id);
+      if (error) console.error(`Bay backfill failed for ${f.dispatch_number}:`, error.message);
+      else okCount++;
+    }
+    this.showToast(`✓ Fixed Bay for ${okCount} of ${fixes.length} dispatch(es).`, 'info', 4500);
+    await this.loadDispatches();
+  },
   buildWopsSyncPayload(item) {
     const payload = {};
     if (item.kind === 'pick') {
@@ -2057,6 +2091,8 @@ const App = {
     return false;
   },
   renderDispatches() {
+    const syncBaysBtn = document.getElementById('sync-bays-btn');
+    if (syncBaysBtn) syncBaysBtn.classList.toggle('hidden', !(this.hasPerm('apply_wops_sync') || this.hasPerm('admin_override')));
     const tbody = document.getElementById('dispatch-tbody');
     const emptyEl = document.getElementById('dispatch-empty');
     const countEl = document.getElementById('dispatch-filter-count');
