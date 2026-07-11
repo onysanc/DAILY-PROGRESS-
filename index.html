@@ -3247,6 +3247,16 @@ const App = {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // The chart's available space shifts whenever nearby content changes height
+        // (e.g. the alert banner growing/shrinking with live data, sidebar toggle,
+        // window resize). Chart.js resizes itself automatically via ResizeObserver
+        // in all of these cases — hook into that directly so the remark tags always
+        // recompute against the chart's real, current pixel geometry instead of
+        // stale coordinates from before the resize.
+        onResize: () => {
+          clearTimeout(this._chartRemarkResizeT);
+          this._chartRemarkResizeT = setTimeout(() => this.positionChartRemark(), 60);
+        },
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { top: 18 } },
         categoryPercentage: 0.65,
