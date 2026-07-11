@@ -575,7 +575,7 @@
 
     <section id="tab-personnel" class="tab-content hidden">
       <h1 class="text-2xl font-bold mb-1">Personnel</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span></p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">Names available for the Pick and Checking steps. <span id="personnel-admin-note" class="hidden">Only admins can add or remove names.</span> Admins can also exclude a person from all time-based computations (leaderboards, throughput, avg/fastest/slowest durations) without removing them from the pool.</p>
       <div class="grid grid-cols-2 gap-6">
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow p-5 border dark:border-slate-800">
           <h2 class="font-bold mb-3">Picker Pool</h2>
@@ -1083,6 +1083,7 @@ const App = {
     alertResponseDrafts: {}, // alertKey -> in-progress typed text
     alertRemarkDrafts: {}, // alertKey -> in-progress typed remark (always-visible remarks box, independent of dismiss flow)
     alertLatestRemarks: {}, // alertKey -> { text, username, created_at } — most recently saved remark, shown inline; new saves replace it
+    excludedPersonnelNames: new Set(), // names an admin has excluded from all time-based computations (speed/duration/leaderboards)
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1247,6 +1248,7 @@ const App = {
     if (isAdmin) await this.loadAppUsers();
     await this.loadAlertSettings();
     await this.loadWopsAutoApplySetting();
+    await this.loadExcludedPersonnel();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
     this.startAutoRefresh();
@@ -2796,14 +2798,23 @@ const App = {
   },
   renderPersonnel() {
     const isAdmin = this.state.currentUser.role === 'admin';
+    const excluded = this.state.excludedPersonnelNames || new Set();
     ['picker', 'checker'].forEach(pool => {
       const list = document.getElementById(`${pool}-list`);
       const people = this.state.personnel.filter(p => p.pool === pool);
-      list.innerHTML = people.map(p => `
-        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-          <span>${p.name}</span>
-          ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
-        </li>`).join('') || `<li class="text-slate-400 dark:text-slate-500 italic px-2">No names added yet</li>`;
+      list.innerHTML = people.map(p => {
+        const isExcluded = excluded.has(String(p.name).trim().toUpperCase());
+        return `
+        <li class="flex justify-between items-center px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors gap-2">
+          <span class="${isExcluded ? 'text-slate-400 dark:text-slate-500' : ''}">${p.name}${isExcluded ? ' <span class="text-[10px] uppercase font-bold tracking-wide">(excluded from stats)</span>' : ''}</span>
+          <span class="flex items-center gap-3 shrink-0">
+            ${isAdmin ? `<label class="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 cursor-pointer select-none" title="Exclude this person from all time-based computations (leaderboards, throughput, avg/fastest/slowest durations)">
+              <input type="checkbox" class="accent-amber-600" ${isExcluded ? 'checked' : ''} onchange="App.toggleExcludePersonnel('${p.name.replace(/'/g, "\\'")}')"> Exclude from stats
+            </label>` : ''}
+            ${isAdmin ? `<button onclick="App.deletePersonnel('${p.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>` : ''}
+          </span>
+        </li>`;
+      }).join('') || `<li class="text-slate-400 dark:text-slate-500 italic px-2">No names added yet</li>`;
     });
   },
   async addPersonnel(e, pool) {
@@ -4040,7 +4051,7 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.loadExcludedPersonnel(); this.renderAlertBanner(); })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
@@ -4082,7 +4093,39 @@ const App = {
   VIRTUAL_PERSONNEL_NAMES: ['ADVANCED'],
   isVirtualPersonnelName(name) {
     if (!name) return false;
-    return this.VIRTUAL_PERSONNEL_NAMES.includes(String(name).trim().toUpperCase());
+    const n = String(name).trim().toUpperCase();
+    if (this.VIRTUAL_PERSONNEL_NAMES.includes(n)) return true;
+    return !!(this.state.excludedPersonnelNames && this.state.excludedPersonnelNames.has(n));
+  },
+  // ── Admin: exclude a person from all time-based computations (leaderboards, throughput, avg/fastest/slowest durations) ──
+  // Reuses the alert_settings key-value table (key = 'excluded_personnel'); the name list is JSON-encoded into the
+  // 'template' column so no schema change is needed. Matching is by uppercased name, same as VIRTUAL_PERSONNEL_NAMES.
+  async loadExcludedPersonnel() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'excluded_personnel').maybeSingle();
+      if (error) { console.error('loadExcludedPersonnel error:', error); return; }
+      let names = [];
+      if (data && data.template) { try { names = JSON.parse(data.template); } catch { names = []; } }
+      this.state.excludedPersonnelNames = new Set((names || []).map(n => String(n).trim().toUpperCase()));
+    } catch (e) { console.error('loadExcludedPersonnel error:', e); }
+    this.renderPersonnel();
+  },
+  async toggleExcludePersonnel(name) {
+    if (!this.hasPerm('tab_personnel') && this.state.currentUser.role !== 'admin') return;
+    const key = String(name).trim().toUpperCase();
+    if (!this.state.excludedPersonnelNames) this.state.excludedPersonnelNames = new Set();
+    if (this.state.excludedPersonnelNames.has(key)) this.state.excludedPersonnelNames.delete(key);
+    else this.state.excludedPersonnelNames.add(key);
+    const payload = {
+      key: 'excluded_personnel',
+      enabled: true,
+      template: JSON.stringify([...this.state.excludedPersonnelNames]),
+      require_response: false,
+    };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) { alert('Failed to save: ' + error.message); return; }
+    this.showToast(this.state.excludedPersonnelNames.has(key) ? `✓ ${name} excluded from time-based stats` : `✓ ${name} re-included in time-based stats`, 'info', 3000);
+    this.renderPersonnel();
   },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
