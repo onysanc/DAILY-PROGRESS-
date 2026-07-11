@@ -2083,15 +2083,18 @@ const App = {
             if (d.bay_location) {
               subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
             }
-            // Bay selected by the Puller in WOPS-Outbound for this same
-            // shipment (matched dispatch_number === shipment_no). Shown as a
-            // separate reference line so Checking staff can confirm the
-            // truck is at the bay the Puller actually staged it to, even if
-            // it differs from (or wasn't yet set in) this app's own
-            // bay_location field above.
+            // Checking's bay now defaults to whatever the Puller confirmed in
+            // WOPS-Outbound (see handleMilestoneClick), so in the normal case
+            // Bay: above already reflects it — no need to repeat it. Only
+            // flag it here as a mismatch warning if a checker overrode it to
+            // something different from what the Puller actually used.
             const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
             if (wopsInfo && wopsInfo.pullerBay) {
-              subHtml += `<div class="text-[10px] leading-tight" style="color:#9333ea" title="Bay confirmed by the Puller in WOPS-Outbound">🅱 ${this.escapeHtml(wopsInfo.pullerBay)}</div>`;
+              const normalize = v => String(v || '').replace(/^bay\s*/i, '').trim().toUpperCase();
+              const assignedBays = (d.bay_location || '').split(',').map(normalize).filter(Boolean);
+              if (!assignedBays.includes(normalize(wopsInfo.pullerBay))) {
+                subHtml += `<div class="text-[10px] leading-tight" style="color:#d97706" title="Puller confirmed a different bay in WOPS-Outbound">⚠️ Puller used: ${this.escapeHtml(wopsInfo.pullerBay)}</div>`;
+              }
             }
             if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
           }
@@ -2274,7 +2277,21 @@ const App = {
           <span>${p.name}</span>
         </label>`).join('');
       document.getElementById('checking-count-note').textContent = '0 of 6 selected (pick at least 1)';
-      this.renderCheckingBayList();
+      // Default the bay selection to whatever the Puller already confirmed
+      // in WOPS-Outbound for this same shipment (dispatch_number ===
+      // shipment_no), so Checking's assigned bay reflects the Puller's
+      // choice instead of starting blank. This app's own bay list uses bare
+      // labels ("1A", "Extended") while WOPS-Outbound stores them prefixed
+      // ("Bay 1A") — strip the prefix before matching. Still editable: the
+      // checker can untick/add bays before confirming.
+      const wopsInfo = this.state.wopsStatusMap[String(dispatch.dispatch_number).trim()];
+      const pullerBay = wopsInfo && wopsInfo.pullerBay ? wopsInfo.pullerBay.replace(/^bay\s*/i, '').trim() : null;
+      const preselect = (pullerBay && this.getAllBayOptions().includes(pullerBay)) ? [pullerBay] : [];
+      this.renderCheckingBayList(preselect);
+      if (preselect.length) {
+        const note = document.getElementById('checking-bay-count-note');
+        if (note) note.textContent += ' — pre-filled from Puller\'s bay in WOPS-Outbound';
+      }
       this.openModal('checking-modal');
     } else if (step === 'loaded') {
       this.openLoadedModal(dispatch);
