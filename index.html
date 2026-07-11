@@ -1619,15 +1619,15 @@ const App = {
     this._alertTextByKey = {};
     visibleAlerts.forEach(a => { this._alertTextByKey[a.key] = a.text; });
     const openKey = this.state.openAlertResponseKey;
-    content.innerHTML = visibleAlerts.map((a, i) => {
+    content.innerHTML = `<div class="grid grid-flow-col grid-rows-4 gap-x-4 gap-y-1.5 overflow-x-auto">` + visibleAlerts.map((a, i) => {
       const c = a.color || '#d97706';
-      let row = `<div class="${i > 0 ? 'mt-1.5' : ''} rounded-lg px-2.5 py-1.5" style="border-left:3px solid ${c};background:${c}14">`;
+      let row = `<div class="rounded-lg px-2.5 py-1.5" style="border-left:3px solid ${c};background:${c}14">`;
       const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
       row += `<div class="flex flex-wrap items-center gap-2">
         <span>${this.escapeHtml(a.text)}</span>
         ${(this.state.alertLatestRemarks && this.state.alertLatestRemarks[a.key]) ? `<span class="italic inline-flex items-center gap-1" style="color:${c}"><span>📝 ${this.escapeHtml(this.state.alertLatestRemarks[a.key].text)}</span><span class="opacity-70 not-italic">— ${this.escapeHtml(this.state.alertLatestRemarks[a.key].username || '—')}</span></span>` : ''}
         ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline font-semibold shrink-0" style="color:${c}">Dismiss…</button>` : ''}
-        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
+        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark…" class="w-28 sm:w-36 shrink-0 text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
         <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
       </div>`;
       if (a.requireResponse && openKey === a.key) {
@@ -1642,7 +1642,7 @@ const App = {
       }
       row += `</div>`;
       return row;
-    }).join('<div class="mt-1"></div>');
+    }).join('') + `</div>`;
     banner.classList.remove('hidden');
   },
   toggleAlertResponseBox(key) {
