@@ -1082,6 +1082,7 @@ const App = {
     openAlertResponseKey: null, // which banner alert row currently has its response box open
     alertResponseDrafts: {}, // alertKey -> in-progress typed text
     alertRemarkDrafts: {}, // alertKey -> in-progress typed remark (always-visible remarks box, independent of dismiss flow)
+    alertLatestRemarks: {}, // alertKey -> { text, username, created_at } — most recently saved remark, shown inline; new saves replace it
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1436,6 +1437,7 @@ const App = {
     if (!id) {
       this.state.dispatches = [];
       this.state.trucks = [];
+      this.state.alertLatestRemarks = {};
       this.renderDispatches();
       this.renderTrucks();
       const banner = document.getElementById('dispatch-alert-banner');
@@ -1445,6 +1447,7 @@ const App = {
     await this.loadDispatches();
     await this.loadTrucks();
     await this.loadChartRemarks(id);
+    await this.loadAlertRemarks();
   },
   renderRddSummary() {
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
@@ -1556,7 +1559,8 @@ const App = {
         ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline font-semibold shrink-0" style="color:${c}">Dismiss…</button>` : ''}
         <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
         <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
-      </div>`;
+      </div>
+      ${(this.state.alertLatestRemarks && this.state.alertLatestRemarks[a.key]) ? `<div class="mt-1 ml-4 text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-1"><span class="shrink-0">📝</span><span class="italic">${this.escapeHtml(this.state.alertLatestRemarks[a.key].text)}</span><span class="text-amber-600/70 dark:text-amber-400/70 shrink-0">— ${this.escapeHtml(this.state.alertLatestRemarks[a.key].username || '—')}</span></div>` : ''}`;
       if (a.requireResponse && openKey === a.key) {
         const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
         row += `<div class="flex items-start gap-2 mb-1 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
@@ -1631,9 +1635,27 @@ const App = {
     if (error) { alert('Failed to save remark: ' + error.message); return; }
     delete this.state.alertRemarkDrafts[key];
     if (ta) ta.value = '';
+    if (!this.state.alertLatestRemarks) this.state.alertLatestRemarks = {};
+    this.state.alertLatestRemarks[key] = { text, username: payload.username, created_at: new Date().toISOString() };
     this.showToast('✓ Remark saved', 'info', 2500);
+    this.renderAlertBanner();
     const usersTab2 = document.getElementById('tab-users');
     if (usersTab2 && !usersTab2.classList.contains('hidden')) this.loadAlertResponseLog();
+  },
+  async loadAlertRemarks() {
+    // Fetches the most recent logged entry per alert (remark or dismiss reason) for the current RDD,
+    // so it stays visible inline under the alert — a newer save always replaces the one shown.
+    const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
+    if (!rdd) { this.state.alertLatestRemarks = {}; return; }
+    const { data, error } = await supabaseClient.from('alert_acknowledgments')
+      .select('*').eq('rdd_label', rdd.rdd_date).order('created_at', { ascending: false }).limit(200);
+    if (error) { console.error(error); return; }
+    const map = {};
+    (data || []).forEach(r => {
+      if (!map[r.alert_key]) map[r.alert_key] = { text: r.response, username: r.username, created_at: r.created_at };
+    });
+    this.state.alertLatestRemarks = map;
+    this.renderAlertBanner();
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
