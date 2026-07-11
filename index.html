@@ -1769,7 +1769,7 @@ const App = {
       }
       if (checkLog && checkStep.allDone && !d.checking_checked) {
         if (d.ds_printed_checked) {
-          queue.push({ id: `${d.id}-checking`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'checking', log: checkLog });
+          queue.push({ id: `${d.id}-checking`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'checking', log: checkLog, pullerBay: info.pullerBay });
         } else {
           chronoFlags[d.id] = true;
         }
@@ -1868,6 +1868,13 @@ const App = {
       payload.checking_checked = true;
       payload.checking_timestamp = item.log.end_time || new Date().toISOString();
       payload.checking_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
+      // Auto-sync used to skip bay entirely, leaving bay_location blank even
+      // though the Puller already confirmed one in WOPS-Outbound — that's
+      // what caused the "⚠️ Puller used: Bay 1C" warning with no actual Bay:
+      // line ever being set. Write it straight through here, same matching
+      // used by the manual Check modal (handles multi-bay dispatches too).
+      const matchedBays = this.parsePullerBays(item.pullerBay);
+      if (matchedBays.length) payload.bay_location = matchedBays.join(', ');
     }
     return payload;
   },
