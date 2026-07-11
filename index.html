@@ -703,7 +703,7 @@
           <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">📝 Alert Response Log</h2>
           <button onclick="App.loadAlertResponseLog()" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Refresh</button>
         </div>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Written reasons users typed when dismissing an alert marked "require a written reason" above.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Remarks and written reasons users typed in the alert banner (including required dismiss reasons).</p>
         <div id="alert-response-log" class="overflow-x-auto max-h-72 overflow-y-auto rounded-lg border dark:border-slate-800"></div>
       </div>
 
@@ -1115,6 +1115,7 @@ const App = {
     dismissedAlertKeys: {},   // { [rddId]: Set(alertKey) } — alerts dismissed after a written response
     openAlertResponseKey: null, // which banner alert row currently has its response box open
     alertResponseDrafts: {}, // alertKey -> in-progress typed text
+    alertRemarkDrafts: {}, // alertKey -> in-progress typed remark (always-visible remarks box, independent of dismiss flow)
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1568,8 +1569,9 @@ const App = {
     this._alertTextByKey = {};
     visibleAlerts.forEach(a => { this._alertTextByKey[a.key] = a.text; });
     const openKey = this.state.openAlertResponseKey;
-    content.innerHTML = visibleAlerts.map(a => {
-      let row = `<div class="mb-1 flex flex-wrap items-center gap-2"><span>${this.escapeHtml(a.text)}</span>`;
+    content.innerHTML = visibleAlerts.map((a, i) => {
+      let row = `<div class="${i > 0 ? 'mt-2 pt-2 border-t border-amber-200 dark:border-amber-800' : ''}">`;
+      row += `<div class="mb-1 flex flex-wrap items-center gap-2"><span>${this.escapeHtml(a.text)}</span>`;
       if (a.requireResponse) {
         row += `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline text-amber-700 dark:text-amber-300 font-semibold">Dismiss…</button>`;
       }
@@ -1584,6 +1586,13 @@ const App = {
           </div>
         </div>`;
       }
+      // Always-visible remarks box — lets a user log a note against this alert without dismissing it
+      const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
+      row += `<div class="flex items-start gap-2">
+        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 text-xs p-1.5 border border-amber-200 dark:border-amber-800 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40">${remarkDraft}</textarea>
+        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/40 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-200 text-[11px] font-semibold rounded-md whitespace-nowrap self-stretch">Save</button>
+      </div>`;
+      row += `</div>`;
       return row;
     }).join('');
     banner.classList.remove('hidden');
@@ -1625,6 +1634,33 @@ const App = {
     this.renderAlertBanner();
     const usersTab = document.getElementById('tab-users');
     if (usersTab && !usersTab.classList.contains('hidden')) this.loadAlertResponseLog();
+  },
+  alertRemarkDraft(key, val) {
+    if (!this.state.alertRemarkDrafts) this.state.alertRemarkDrafts = {};
+    this.state.alertRemarkDrafts[key] = val;
+  },
+  async saveAlertRemark(key) {
+    const ta = document.getElementById(`alert-remark-${key}`);
+    const text = ((ta ? ta.value : this.state.alertRemarkDrafts[key]) || '').trim();
+    if (!text) { alert('Please type a remark before saving.'); return; }
+    const rddId = this.state.currentRddId;
+    const rdd = this.state.rdds.find(r => r.id === rddId);
+    const alertText = (this._alertTextByKey && this._alertTextByKey[key]) || key;
+    const payload = {
+      rdd_id: rddId,
+      rdd_label: rdd ? rdd.rdd_date : null,
+      alert_key: key,
+      alert_message: alertText,
+      response: text,
+      username: this.state.currentUser ? this.state.currentUser.username : null,
+    };
+    const { error } = await supabaseClient.from('alert_acknowledgments').insert(payload);
+    if (error) { alert('Failed to save remark: ' + error.message); return; }
+    delete this.state.alertRemarkDrafts[key];
+    if (ta) ta.value = '';
+    this.showToast('✓ Remark saved', 'info', 2500);
+    const usersTab2 = document.getElementById('tab-users');
+    if (usersTab2 && !usersTab2.classList.contains('hidden')) this.loadAlertResponseLog();
   },
   async loadDispatches() {
     const { data, error } = await supabaseClient.from('dispatches').select('*')
@@ -3712,10 +3748,10 @@ const App = {
     const { data, error } = await supabaseClient.from('alert_acknowledgments')
       .select('*').order('created_at', { ascending: false }).limit(100);
     if (error) { box.innerHTML = `<div class="text-xs text-red-500 p-3">${this.escapeHtml(error.message)}</div>`; return; }
-    if (!data || data.length === 0) { box.innerHTML = `<div class="text-xs text-slate-400 p-3">No dismiss responses logged yet.</div>`; return; }
+    if (!data || data.length === 0) { box.innerHTML = `<div class="text-xs text-slate-400 p-3">No remarks or dismiss responses logged yet.</div>`; return; }
     box.innerHTML = `<table class="w-full text-xs text-left">
       <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase">
-        <tr><th class="p-2">Time</th><th class="p-2">RDD</th><th class="p-2">Alert</th><th class="p-2">Response</th><th class="p-2">By</th></tr>
+        <tr><th class="p-2">Time</th><th class="p-2">RDD</th><th class="p-2">Alert</th><th class="p-2">Remark / Response</th><th class="p-2">By</th></tr>
       </thead>
       <tbody>
         ${data.map(r => `<tr class="border-b dark:border-slate-800">
