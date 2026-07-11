@@ -1633,7 +1633,7 @@ const App = {
       let logs = [];
       if (soNumbers.length) {
         const { data: logData, error: logErr } = await wopsClient.from('activity_logs')
-          .select('so_number,role,personnel_name,start_time,end_time,status')
+          .select('so_number,role,personnel_name,start_time,end_time,status,bay')
           .in('so_number', soNumbers);
         if (logErr) console.error('WOPS activity_logs lookup failed:', logErr);
         else logs = logData || [];
@@ -1660,6 +1660,10 @@ const App = {
           const log = logMap[`${s.so_number}||${step.role}`];
           return { ...step, log: log || null };
         });
+        // Bay selected by the Puller in WOPS-Outbound, matched on
+        // dispatch_number === shipment_no (via s.so_number above). Only set
+        // once the Puller has actually completed that shipment.
+        const pullerLog = logMap[`${s.so_number}||Puller`];
         map[s.shipment_no] = {
           so_number: s.so_number,
           shipment_status: s.status,
@@ -1669,6 +1673,7 @@ const App = {
           customer: s.sold_to_party_name ?? s.customer ?? s.ship_to_party_name ?? s.customer_name ?? null,
           quantity: s.quantity ?? s.qty ?? null,
           target_minutes: s.target_minutes ?? s.target_time ?? s.target ?? null,
+          pullerBay: (pullerLog && pullerLog.status === 'Completed') ? (pullerLog.bay || null) : null,
           steps
         };
       });
@@ -1883,6 +1888,7 @@ const App = {
                       <div class="flex-1">
                         <div class="text-sm font-semibold">${step.role} <span class="font-normal text-slate-400 text-xs">— ${stateLabel}</span></div>
                         ${log ? `<div class="text-xs text-slate-500 dark:text-slate-400">${this.escapeHtml(log.personnel_name || '—')} · ${log.start_time ? new Date(log.start_time).toLocaleString() : '—'}${log.end_time ? ' → ' + new Date(log.end_time).toLocaleString() : ''}</div>` : ''}
+                        ${step.role === 'Puller' && log && log.bay ? `<div class="text-xs font-semibold" style="color:#9333ea">🅱 Bay: ${this.escapeHtml(log.bay)}</div>` : ''}
                       </div>
                     </div>`;
           }).join('')}
@@ -2076,6 +2082,16 @@ const App = {
             // Bay
             if (d.bay_location) {
               subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
+            }
+            // Bay selected by the Puller in WOPS-Outbound for this same
+            // shipment (matched dispatch_number === shipment_no). Shown as a
+            // separate reference line so Checking staff can confirm the
+            // truck is at the bay the Puller actually staged it to, even if
+            // it differs from (or wasn't yet set in) this app's own
+            // bay_location field above.
+            const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+            if (wopsInfo && wopsInfo.pullerBay) {
+              subHtml += `<div class="text-[10px] leading-tight" style="color:#9333ea" title="Bay confirmed by the Puller in WOPS-Outbound">🅱 ${this.escapeHtml(wopsInfo.pullerBay)}</div>`;
             }
             if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
           }
