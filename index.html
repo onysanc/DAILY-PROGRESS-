@@ -2826,7 +2826,7 @@ const App = {
           const key = `${bay}${letter}`;
           const occupied = bayMap[key];
           html += occupied
-            ? `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-700 dark:text-blue-400 font-semibold text-[11px]">${occupied}</td>`
+            ? `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-800 dark:text-blue-300 font-bold text-[11px] bg-blue-100 dark:bg-blue-900/40">${occupied}</td>`
             : `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-slate-300 dark:text-slate-600 text-[10px]">VACANT</td>`;
         }
         tr.innerHTML = html;
