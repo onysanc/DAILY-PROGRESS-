@@ -1728,6 +1728,12 @@ const App = {
       this.computeWopsSyncQueue();
       this.renderDispatches();
       this.renderWopsSyncFab();
+      // Keep Checked dispatches' Bay in sync with the Puller's data
+      // automatically — no button click required. Runs quietly (no confirm
+      // prompt, no "nothing to fix" noise) and only touches rows that are
+      // actually wrong. The 🅱 Sync Bays button still exists for a manual
+      // re-check on demand, but nothing depends on someone clicking it.
+      this.backfillMissingCheckingBays(true);
     } catch (err) {
       console.error('WOPS lookup error:', err);
     }
@@ -1860,8 +1866,9 @@ const App = {
   // ones where bay_location is blank or doesn't match what the Puller
   // actually used in WOPS-Outbound, and writes the correct bay straight in.
   // Does not touch checker names, timestamps, or anything else — bay only.
-  async backfillMissingCheckingBays() {
+  async backfillMissingCheckingBays(silent = false) {
     if (!this.hasPerm('apply_wops_sync') && !this.hasPerm('admin_override')) {
+      if (silent) return; // auto-run just skips quietly for users without permission
       return alert('You do not have permission to run this. Ask an admin to grant WOPS Sync Apply or Admin Override.');
     }
     const fixes = [];
@@ -1875,16 +1882,27 @@ const App = {
       const alreadyCorrect = matchedNorm.length === currentBays.length && matchedNorm.every(b => currentBays.includes(b));
       if (!alreadyCorrect) fixes.push({ id: d.id, dispatch_number: d.dispatch_number, bay_location: matchedBays.join(', ') });
     });
-    if (!fixes.length) return this.showToast('Nothing to fix — every Checked dispatch already matches its Puller bay.', 'info', 4000);
-    if (!confirm(`Fix Bay for ${fixes.length} Checked dispatch(es) using the Puller's confirmed bay from WOPS-Outbound? This only changes the Bay field — checker names/timestamps are untouched.`)) return;
+    if (!fixes.length) {
+      if (!silent) this.showToast('Nothing to fix — every Checked dispatch already matches its Puller bay.', 'info', 4000);
+      return;
+    }
+    // Silent (automatic) runs skip the confirm prompt entirely — this is
+    // just filling in a field from a source of truth (WOPS-Outbound) the
+    // person already trusts, not an action that needs a manual go-ahead
+    // every time it happens.
+    if (!silent && !confirm(`Fix Bay for ${fixes.length} Checked dispatch(es) using the Puller's confirmed bay from WOPS-Outbound? This only changes the Bay field — checker names/timestamps are untouched.`)) return;
     let okCount = 0;
     for (const f of fixes) {
       const { error } = await supabaseClient.from('dispatches').update({ bay_location: f.bay_location }).eq('id', f.id);
       if (error) console.error(`Bay backfill failed for ${f.dispatch_number}:`, error.message);
       else okCount++;
     }
-    this.showToast(`✓ Fixed Bay for ${okCount} of ${fixes.length} dispatch(es).`, 'info', 4500);
-    await this.loadDispatches();
+    if (okCount) this.showToast(`✓ Bay auto-filled for ${okCount} dispatch(es) from Puller data.`, 'info', 4500);
+    // Re-pull dispatches so the row display picks up the corrected bay
+    // immediately, without needing a manual page refresh.
+    const { data, error: reloadErr } = await supabaseClient.from('dispatches').select('*')
+      .eq('rdd_id', this.state.currentRddId).order('seq', { ascending: true });
+    if (!reloadErr && data) { this.state.dispatches = data; this.renderDispatches(); this.renderRddSummary(); }
   },
   buildWopsSyncPayload(item) {
     const payload = {};
