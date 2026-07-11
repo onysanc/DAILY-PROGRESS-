@@ -346,7 +346,8 @@
       <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-6 flex space-x-4 items-end flex-wrap gap-3 border dark:border-slate-800">
         <div>
           <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Truck Type</label>
-          <select id="truck-type-input" class="p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+          <select id="truck-type-input" class="p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" required>
+            <option value="">Type</option>
             <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
           </select>
         </div>
@@ -2711,6 +2712,7 @@ const App = {
     if (!this.state.currentRddId) return alert('Please select an RDD Plan first.');
     const truck_type = document.getElementById('truck-type-input').value;
     const plate_number = document.getElementById('truck-plate-input').value.trim().toUpperCase();
+    if (!truck_type) return alert('Please select a truck type.');
     if (!plate_number) return alert('Enter a plate number.');
 
     // Same truck (same type + plate) already logged today? Only Transport, Outbound, and Admin
@@ -2728,6 +2730,7 @@ const App = {
     const { error } = await supabaseClient.from('available_trucks').insert({ rdd_id: this.state.currentRddId, truck_type, plate_number, created_at: new Date().toISOString() });
     if (error) return alert(error.message);
     document.getElementById('truck-plate-input').value = '';
+    document.getElementById('truck-type-input').value = '';
     await this.loadTrucks();
   },
   renderTrucks() {
