@@ -1654,26 +1654,51 @@ const App = {
       if (shipments && shipments.length) {
         console.log('[WOPS DEBUG] Sample raw shipment record — check this for the real Customer/Quantity/Target field names:', shipments[0]);
       }
-      const map = {};
+      // Group by shipment_no: a single Dispatch/Shipment Number can have
+      // several SO line items in WOPS-Outbound. A stage (Pick, Staging,
+      // Pull, Check) only counts as actually done for that dispatch once
+      // EVERY row in the group has a Completed log for that role — one row
+      // still Pending/Ongoing means the dispatch as a whole is NOT done yet,
+      // even if every other row already finished.
+      const groups = {};
       (shipments || []).forEach(s => {
+        (groups[s.shipment_no] = groups[s.shipment_no] || []).push(s);
+      });
+      const map = {};
+      Object.keys(groups).forEach(shipmentNo => {
+        const rows = groups[shipmentNo];
+        const soNumbersInGroup = rows.map(r => r.so_number).filter(Boolean);
         const steps = WOPS_ROLE_STEPS.map(step => {
-          const log = logMap[`${s.so_number}||${step.role}`];
-          return { ...step, log: log || null };
+          const logsForStep = soNumbersInGroup.map(so => logMap[`${so}||${step.role}`] || null);
+          const completedLogs = logsForStep.filter(l => l && l.status === 'Completed');
+          const anyLog = logsForStep.find(l => l);
+          const allDone = soNumbersInGroup.length > 0 && completedLogs.length === soNumbersInGroup.length;
+          // Representative log for the dot tooltip / names display: once
+          // every row is done, show a completed one; otherwise show
+          // whichever log is in progress so the dot can read "Ongoing"
+          // rather than silently claiming completion.
+          const repLog = allDone ? completedLogs[0] : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
+          return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
         });
-        // Bay selected by the Puller in WOPS-Outbound, matched on
-        // dispatch_number === shipment_no (via s.so_number above). Only set
-        // once the Puller has actually completed that shipment.
-        const pullerLog = logMap[`${s.so_number}||Puller`];
-        map[s.shipment_no] = {
-          so_number: s.so_number,
-          shipment_status: s.status,
+        // Bay is only trusted once every row under this dispatch has
+        // actually been pulled — otherwise a bay shown here could belong to
+        // a line that finished early while others are still pending, which
+        // isn't the bay Checking should rely on yet.
+        const pullerDone = steps.find(s => s.role === 'Puller').allDone;
+        const pullerBays = pullerDone
+          ? [...new Set(soNumbersInGroup.map(so => (logMap[`${so}||Puller`] || {}).bay).filter(Boolean))]
+          : [];
+        map[shipmentNo] = {
+          so_number: soNumbersInGroup.join(', '),
+          shipment_status: [...new Set(rows.map(r => r.status).filter(Boolean))].join(', '),
           // Customer name confirmed as the `sold_to_party_name` column on
           // WOPS-Outbound's `shipments` table. Older aliases kept as a
           // fallback only in case a given row has that field blank.
-          customer: s.sold_to_party_name ?? s.customer ?? s.ship_to_party_name ?? s.customer_name ?? null,
-          quantity: s.quantity ?? s.qty ?? null,
-          target_minutes: s.target_minutes ?? s.target_time ?? s.target ?? null,
-          pullerBay: (pullerLog && pullerLog.status === 'Completed') ? (pullerLog.bay || null) : null,
+          customer: rows[0].sold_to_party_name ?? rows[0].customer ?? rows[0].ship_to_party_name ?? rows[0].customer_name ?? null,
+          quantity: rows.reduce((sum, r) => sum + (Number(r.quantity ?? r.qty) || 0), 0) || null,
+          target_minutes: rows[0].target_minutes ?? rows[0].target_time ?? rows[0].target ?? null,
+          pullerBay: pullerBays.length === 1 ? pullerBays[0] : (pullerBays.length > 1 ? pullerBays.join(', ') : null),
+          rowCount: rows.length,
           steps
         };
       });
@@ -1706,19 +1731,22 @@ const App = {
     this.state.dispatches.forEach(d => {
       const info = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
       if (!info) return;
-      const pickLog = (info.steps.find(s => s.role === 'Picker') || {}).log;
-      const checkLog = (info.steps.find(s => s.role === 'Outbound Checker') || {}).log;
+      const pickStep = info.steps.find(s => s.role === 'Picker');
+      const checkStep = info.steps.find(s => s.role === 'Outbound Checker');
+      const pickLog = pickStep?.log;
+      const checkLog = checkStep?.log;
 
-      if (pickLog && (pickLog.status === 'Ongoing' || pickLog.status === 'Completed')) {
+      if (pickLog && (pickLog.status === 'Ongoing' || pickStep.allDone)) {
         const needsStart = !d.pick_start_checked;
-        // Only queue End Pick once WOPS-Outbound itself shows the Picker
-        // stage Completed — Ongoing means the picker has started, not finished.
-        const needsEnd = pickLog.status === 'Completed' && !d.pick_checked;
+        // Only queue End Pick once EVERY SO row under this dispatch shows
+        // Picker Completed in WOPS-Outbound — one row still Ongoing/Pending
+        // means picking for the dispatch as a whole isn't done yet.
+        const needsEnd = pickStep.allDone && !d.pick_checked;
         if (needsStart || needsEnd) {
           queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, log: pickLog });
         }
       }
-      if (checkLog && checkLog.status === 'Completed' && !d.checking_checked) {
+      if (checkLog && checkStep.allDone && !d.checking_checked) {
         if (d.ds_printed_checked) {
           queue.push({ id: `${d.id}-checking`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'checking', log: checkLog });
         } else {
@@ -1863,7 +1891,7 @@ const App = {
       const active = step.log && step.log.status && step.log.status !== 'Completed';
       const bg = done ? step.dot : (active ? step.dot : '#cbd5e1');
       const opacity = done ? '1' : (active ? '0.55' : '0.3');
-      return `<span title="${step.label}${step.log?.personnel_name ? ' — ' + this.escapeHtml(step.log.personnel_name) : ''}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${bg};opacity:${opacity}"></span>`;
+      return `<span title="${step.label}${step.log?.personnel_name ? ' — ' + this.escapeHtml(step.log.personnel_name) : ''}${info.rowCount > 1 ? ` (${step.completedCount}/${step.totalCount} rows done)` : ''}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${bg};opacity:${opacity}"></span>`;
     }).join('');
     return `<button type="button" onclick="App.openWopsDetailModal('${String(dispatchNumber).replace(/'/g, "\\'")}')" class="flex items-center gap-1 hover:opacity-75 transition" title="Click for outbound pipeline detail">${dots}</button>`;
   },
@@ -1882,11 +1910,12 @@ const App = {
         <div class="space-y-2">
           ${info.steps.map(step => {
             const log = step.log;
-            const stateLabel = log ? (log.status === 'Completed' ? 'Completed' : log.status) : 'Not started';
+            const stateLabel = step.allDone ? 'Completed' : (log ? log.status : 'Not started');
+            const fraction = info.rowCount > 1 ? ` <span class="font-normal text-slate-400 text-xs">(${step.completedCount}/${step.totalCount} rows)</span>` : '';
             return `<div class="flex items-start gap-3 p-2 rounded-lg border dark:border-slate-700">
                       <span style="display:inline-block;margin-top:3px;width:10px;height:10px;border-radius:50%;background:${log ? step.dot : '#cbd5e1'}"></span>
                       <div class="flex-1">
-                        <div class="text-sm font-semibold">${step.role} <span class="font-normal text-slate-400 text-xs">— ${stateLabel}</span></div>
+                        <div class="text-sm font-semibold">${step.role} <span class="font-normal text-slate-400 text-xs">— ${stateLabel}</span>${fraction}</div>
                         ${log ? `<div class="text-xs text-slate-500 dark:text-slate-400">${this.escapeHtml(log.personnel_name || '—')} · ${log.start_time ? new Date(log.start_time).toLocaleString() : '—'}${log.end_time ? ' → ' + new Date(log.end_time).toLocaleString() : ''}</div>` : ''}
                         ${step.role === 'Puller' && log && log.bay ? `<div class="text-xs font-semibold" style="color:#9333ea">🅱 Bay: ${this.escapeHtml(log.bay)}</div>` : ''}
                       </div>
@@ -2047,10 +2076,25 @@ const App = {
         const chronologyMet = prevStep === null ? true : !!d[`${prevStep}_checked`];
         // pick_start shares the 'pick' permission so anyone who can pick can also start picking
         const hasPermission = step === 'pick_start' ? allowed.includes('pick') : allowed.includes(step);
-        const clickable = isChecked ? isAdmin : (chronologyMet && hasPermission);
+        // End Pick specifically also requires every SO line under this
+        // dispatch/shipment number to show Picker Completed in
+        // WOPS-Outbound — one row still Pending/Ongoing means picking for
+        // the dispatch as a whole isn't actually done yet, even if this app
+        // hasn't heard otherwise. Skipped when there's no WOPS match at all
+        // (nothing to check against, so it falls back to normal behavior).
+        let wopsPickGateOk = true, wopsPickGateReason = '';
+        if (step === 'pick') {
+          const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+          const pickStep = wopsInfo ? wopsInfo.steps.find(s => s.role === 'Picker') : null;
+          if (pickStep && !pickStep.allDone) {
+            wopsPickGateOk = false;
+            wopsPickGateReason = `Picking not complete for all rows in WOPS-Outbound (${pickStep.completedCount}/${pickStep.totalCount} done)`;
+          }
+        }
+        const clickable = isChecked ? isAdmin : (chronologyMet && hasPermission && wopsPickGateOk);
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
-          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : ''));
+          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : (!wopsPickGateOk ? wopsPickGateReason : '')));
         // Sub-content shown below the checkbox when checked: gap time from the
         // previous milestone (every step), plus picker/checker names + bay
         // for pick/checking specifically. Everything below the checkbox lives
