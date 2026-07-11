@@ -1537,10 +1537,12 @@ const App = {
     if (stuckCfg.enabled) {
       Object.entries(stepStuckCounts).forEach(([step, count]) => {
         if (count >= (stuckCfg.threshold_count || 3)) {
+          const nextStep = STEPS_FLOW[STEPS_FLOW.indexOf(step) + 1]; // the milestone dispatches are pending on
           alerts.push({
             key: `stuck-${step}`,
             text: this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }),
             requireResponse: !!stuckCfg.require_response,
+            color: MILESTONE_COLORS[nextStep] || '#d97706',
           });
         }
       });
@@ -1556,6 +1558,7 @@ const App = {
             key: `no_truck-${type}`,
             text: this.formatAlertTemplate(noTruckCfg.template, { type }),
             requireResponse: !!noTruckCfg.require_response,
+            color: MILESTONE_COLORS.checking, // trucks are waited on at the Checking step
           });
         }
       });
@@ -1570,20 +1573,22 @@ const App = {
     visibleAlerts.forEach(a => { this._alertTextByKey[a.key] = a.text; });
     const openKey = this.state.openAlertResponseKey;
     content.innerHTML = visibleAlerts.map((a, i) => {
+      const c = a.color || '#d97706';
       let row = `<div class="${i > 0 ? 'mt-1.5 pt-1.5 border-t border-amber-200 dark:border-amber-800' : ''}">`;
       const remarkDraft = this.escapeHtml(this.state.alertRemarkDrafts[a.key] || '');
       row += `<div class="flex flex-wrap items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full shrink-0" style="background:${c}"></span>
         <span>${this.escapeHtml(a.text)}</span>
-        ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline text-amber-700 dark:text-amber-300 font-semibold shrink-0">Dismiss…</button>` : ''}
-        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 border border-amber-200 dark:border-amber-800 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none">${remarkDraft}</textarea>
-        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/40 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-200 text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0">Save</button>
+        ${a.requireResponse ? `<button onclick="App.toggleAlertResponseBox('${a.key}')" class="text-[11px] underline font-semibold shrink-0" style="color:${c}">Dismiss…</button>` : ''}
+        <textarea id="alert-remark-${a.key}" oninput="App.alertRemarkDraft('${a.key}', this.value)" rows="1" placeholder="Add a remark or reason…" class="flex-1 min-w-[140px] text-xs px-2 py-1 rounded-md bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white placeholder-amber-700/50 dark:placeholder-amber-300/40 resize-none" style="border:1px solid ${c}66">${remarkDraft}</textarea>
+        <button onclick="App.saveAlertRemark('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0" style="background:${c}">Save</button>
       </div>`;
       if (a.requireResponse && openKey === a.key) {
         const draft = this.escapeHtml(this.state.alertResponseDrafts[a.key] || '');
         row += `<div class="flex items-start gap-2 mb-1 mt-1 bg-white/60 dark:bg-black/20 p-2 rounded-lg">
           <textarea id="alert-response-${a.key}" oninput="App.alertResponseDraft('${a.key}', this.value)" rows="2" placeholder="Type a reason before this alert can be dismissed…" class="flex-1 text-xs p-1.5 border border-amber-300 dark:border-amber-700 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white">${draft}</textarea>
           <div class="flex flex-col gap-1">
-            <button onclick="App.submitAlertResponse('${a.key}')" class="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-semibold rounded-md">Submit</button>
+            <button onclick="App.submitAlertResponse('${a.key}')" class="px-2 py-1 text-white text-[11px] font-semibold rounded-md" style="background:${c}">Submit</button>
             <button onclick="App.toggleAlertResponseBox('${a.key}')" class="px-2 py-1 text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Cancel</button>
           </div>
         </div>`;
