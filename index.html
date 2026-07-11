@@ -1591,7 +1591,6 @@ const App = {
     const rdd = this.state.rdds.find(r => r.id === rddId);
     const alertText = (this._alertTextByKey && this._alertTextByKey[key]) || key;
     const payload = {
-      rdd_id: rddId,
       rdd_label: rdd ? rdd.rdd_date : null,
       alert_key: key,
       alert_message: alertText,
@@ -1622,7 +1621,6 @@ const App = {
     const rdd = this.state.rdds.find(r => r.id === rddId);
     const alertText = (this._alertTextByKey && this._alertTextByKey[key]) || key;
     const payload = {
-      rdd_id: rddId,
       rdd_label: rdd ? rdd.rdd_date : null,
       alert_key: key,
       alert_message: alertText,
