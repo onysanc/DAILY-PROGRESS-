@@ -156,6 +156,16 @@
   .nav-btn.bg-blue-600::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--brand-400);box-shadow:0 0 8px var(--brand-400)}
   .nav-btn svg{opacity:.85}
   .nav-btn.bg-blue-600 svg{opacity:1}
+
+  /* Universal "Copy" buttons injected above every table and onto every chart */
+  .copy-btn-row{min-height:26px}
+  .copy-btn{cursor:pointer;border:1px solid transparent;transition:background-color .12s ease,color .12s ease,border-color .12s ease}
+  .copy-btn:hover{background:#f1f5f9;border-color:#e2e8f0}
+  .dark .copy-btn:hover{background:#1e293b;border-color:#334155}
+  .copy-btn:disabled{cursor:default;opacity:.85}
+  .copy-btn.copy-btn-ok{color:#16a34a!important}
+  .copy-btn.copy-btn-err{color:#dc2626!important}
+  canvas + .copy-btn, .copy-btn.chart-copy-btn{backdrop-filter:blur(2px)}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
@@ -1531,6 +1541,7 @@ const App = {
     document.getElementById('display-username').textContent = user.username.toUpperCase();
     document.getElementById('display-role').textContent = user.role.toUpperCase();
     this.init();
+    this.observeForCopyButtons();
   },
   logout() {
     localStorage.removeItem('dispatch_session');
@@ -2747,6 +2758,121 @@ const App = {
     const rdd = this.state.rdds.find(r => r.id === (rddIdOverride || this.state.currentRddId));
     const rddLabel = rdd ? rdd.rdd_date : 'export';
     this.downloadCSV(csvRows.join('\r\n'), `${rddLabel}-${filename}`);
+  },
+  // ═══════════════════════════════════════════════════════
+  // UNIVERSAL COPY BUTTONS — every <table> and every chart <canvas> in the app
+  // automatically gets a small "Copy" control, so any table can be pasted straight
+  // into Excel/Sheets/Word (as a real table) or a plain-text editor (as TSV), and any
+  // chart can be pasted as an image. No per-table wiring needed: a MutationObserver
+  // watches the whole app and attaches a button to anything new that shows up
+  // (modals, freshly-rendered tabs, tooltip tables, etc.).
+  // ═══════════════════════════════════════════════════════
+  observeForCopyButtons() {
+    if (this._copyBtnObserver) { this.initUniversalCopyButtons(); return; }
+    let debounce = null;
+    this._copyBtnObserver = new MutationObserver(() => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => this.initUniversalCopyButtons(), 200);
+    });
+    this._copyBtnObserver.observe(document.body, { childList: true, subtree: true });
+    this.initUniversalCopyButtons();
+  },
+  initUniversalCopyButtons() {
+    // Tables: a small right-aligned "Copy" toolbar row inserted directly above each table.
+    document.querySelectorAll('table').forEach(table => {
+      if (table.dataset.copyAttached) return;
+      if (!table.closest('body')) return;
+      table.dataset.copyAttached = '1';
+      const bar = document.createElement('div');
+      bar.className = 'copy-btn-row flex justify-end no-print';
+      bar.setAttribute('data-capture-hide', 'true');
+      bar.innerHTML = `<button type="button" class="copy-btn text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1 px-1.5 py-0.5 rounded mr-1 mt-1" title="Copy table — paste into Excel/Sheets/Word"><span class="copy-btn-icon">📋</span><span class="copy-btn-label">Copy</span></button>`;
+      const btn = bar.querySelector('button');
+      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyTableToClipboard(table, btn); });
+      table.parentNode.insertBefore(bar, table);
+    });
+    // Charts: a small floating "Copy" button pinned to the top-right corner of each chart's canvas.
+    document.querySelectorAll('canvas').forEach(canvas => {
+      if (canvas.dataset.copyAttached) return;
+      if (!canvas.closest('body')) return;
+      canvas.dataset.copyAttached = '1';
+      const holder = canvas.parentElement;
+      if (!holder) return;
+      if (getComputedStyle(holder).position === 'static') holder.style.position = 'relative';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'copy-btn chart-copy-btn absolute top-1 right-1 z-10 text-[11px] font-semibold bg-white/90 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 flex items-center gap-1 px-2 py-1 rounded-md border dark:border-slate-700 shadow-sm no-print';
+      btn.setAttribute('data-capture-hide', 'true');
+      btn.title = 'Copy chart as image';
+      btn.innerHTML = `<span class="copy-btn-icon">📋</span><span class="copy-btn-label">Copy</span>`;
+      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyChartToClipboard(canvas, btn); });
+      holder.appendChild(btn);
+    });
+  },
+  // Puts a real HTML table (rich paste into Excel/Sheets/Word) AND a tab-separated plain-text
+  // version (safe paste anywhere else) on the clipboard in one write, with legacy fallbacks.
+  async copyTableToClipboard(table, btnEl) {
+    if (!table) return;
+    try {
+      const bodyRows = [...table.querySelectorAll('tr')].filter(tr => tr.children.length);
+      if (!bodyRows.length) return this.flashCopyButton(btnEl, 'Empty', true);
+      const tsv = bodyRows.map(tr => [...tr.children]
+        .map(cell => (cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim())
+        .join('\t')).join('\n');
+      const htmlTable = `<table>${table.innerHTML}</table>`;
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([htmlTable], { type: 'text/html' }),
+          'text/plain': new Blob([tsv], { type: 'text/plain' }),
+        })]);
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(tsv);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = tsv; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      this.flashCopyButton(btnEl, 'Copied');
+    } catch (e) {
+      console.error('copyTableToClipboard error:', e);
+      this.flashCopyButton(btnEl, 'Failed', true);
+    }
+  },
+  // Renders the chart canvas to a PNG blob and puts it on the clipboard as an image, ready to
+  // paste into Excel/Slack/Word/etc. Falls back to opening the image in a new tab on browsers
+  // that don't support writing images to the clipboard.
+  async copyChartToClipboard(canvas, btnEl) {
+    if (!canvas) return;
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Chart has no content to copy yet.');
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        this.flashCopyButton(btnEl, 'Copied');
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        this.flashCopyButton(btnEl, 'Opened');
+      }
+    } catch (e) {
+      console.error('copyChartToClipboard error:', e);
+      this.flashCopyButton(btnEl, 'Failed', true);
+    }
+  },
+  flashCopyButton(btnEl, label, isError) {
+    if (!btnEl) return;
+    if (!btnEl.dataset.originalHtml) btnEl.dataset.originalHtml = btnEl.innerHTML;
+    btnEl.innerHTML = `<span class="copy-btn-icon">${isError ? '✗' : '✓'}</span><span class="copy-btn-label">${label}</span>`;
+    btnEl.classList.toggle('copy-btn-ok', !isError);
+    btnEl.classList.toggle('copy-btn-err', !!isError);
+    btnEl.disabled = true;
+    clearTimeout(btnEl._copyFlashTimer);
+    btnEl._copyFlashTimer = setTimeout(() => {
+      btnEl.innerHTML = btnEl.dataset.originalHtml;
+      btnEl.classList.remove('copy-btn-ok', 'copy-btn-err');
+      btnEl.disabled = false;
+    }, 1500);
   },
   exportStuckDispatchesCSV() {
     const now = Date.now();
