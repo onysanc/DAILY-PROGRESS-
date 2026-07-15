@@ -905,6 +905,17 @@
       <!-- Summary cards -->
       <div id="gap-log-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
 
+      <!-- Incidents by Hour chart (mirrors the Dashboard Activity Timeline styling) -->
+      <div id="gap-chart-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col mb-5 relative" style="height:420px;">
+        <div class="flex justify-between items-center mb-2 shrink-0">
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">⏱ Incidents by Hour</h2>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Stacked by step-gap · bucketed by the hour each gap was flagged · excluded dispatches not counted</span>
+        </div>
+        <div class="relative flex-1 min-h-0">
+          <canvas id="gapIncidentChart"></canvas>
+        </div>
+      </div>
+
       <!-- Incident count per step-gap -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
         <table class="w-full text-sm text-left" id="gap-log-breakdown-table">
@@ -5260,6 +5271,8 @@ const App = {
       }).join('');
     }
 
+    this.renderGapIncidentChart(rows);
+
     // Gap list table (per step-gap, one row each)
     const tbody = document.getElementById('gap-log-tbody');
     const empty = document.getElementById('gap-log-empty');
@@ -5303,6 +5316,93 @@ const App = {
         </tr>`;
       }).join('');
       if (fullEmpty) fullEmpty.classList.toggle('hidden', visibleFullRecords.length > 0);
+    }
+  },
+  // Stacked bar chart: incidents per hour, one series per step-gap — same 5:00→4:59 shift-hour
+  // buckets and visual language as the Dashboard's Activity Timeline. Bucketed by the hour of the
+  // "to" milestone timestamp (i.e. the moment the gap/incident actually landed). Excluded
+  // dispatches are left out, matching every other Delay/Gap Log stat.
+  renderGapIncidentChart(rows) {
+    const canvas = document.getElementById('gapIncidentChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
+    if (this.state.gapIncidentChartInstance) this.state.gapIncidentChartInstance.destroy();
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#f1f5f9' : '#334155';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const labels = this.getChartHourLabels();
+    const bucketOf = (isoString) => {
+      if (!isoString) return null;
+      const h = new Date(isoString).getHours();
+      return (h - 5 + 24) % 24;
+    };
+    const buckets = {};
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => { buckets[`${a}__${b}`] = Array(24).fill(0); });
+    (rows || []).forEach(r => {
+      if (r.isExcluded || !r.isIncident) return;
+      const d = this.state.gapLogDispatchesById?.[r.dispatchId];
+      const toStep = r.pairKey.split('__')[1];
+      const ts = d ? d[`${toStep}_timestamp`] : null;
+      const b = bucketOf(ts);
+      if (b !== null) buckets[r.pairKey][b]++;
+    });
+    const datasets = this.GAP_STEP_PAIRS.map(([a, b]) => {
+      const key = `${a}__${b}`;
+      return {
+        type: 'bar',
+        label: `${this.GAP_STEP_NAMES[a]} → ${this.GAP_STEP_NAMES[b]}`,
+        data: buckets[key],
+        backgroundColor: MILESTONE_COLORS[b] || '#64748b',
+      };
+    });
+    const totalIncidents = Object.values(buckets).reduce((sum, arr) => sum + arr.reduce((s, v) => s + v, 0), 0);
+    this.state.gapIncidentChartInstance = new Chart(ctx, {
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        categoryPercentage: 0.65,
+        barPercentage: 0.85,
+        scales: {
+          x: {
+            stacked: true,
+            title: { display: true, text: 'Hour', color: textColor, font: { size: 14, weight: 'bold' } },
+            ticks: { color: textColor, font: { size: 12 } },
+            grid: { color: gridColor },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { precision: 0, color: textColor, font: { size: 13 } },
+            title: { display: true, text: 'Incidents', color: textColor, font: { size: 14, weight: 'bold' } },
+            grid: { color: gridColor },
+          },
+        },
+        plugins: {
+          legend: {
+            align: 'start',
+            labels: { color: textColor, font: { size: 12, weight: 'bold' }, boxWidth: 14, boxHeight: 14, padding: 12 },
+          },
+          tooltip: {
+            callbacks: {
+              footer: (items) => {
+                const total = items.reduce((s, it) => s + (it.raw || 0), 0);
+                return total ? `Total: ${total} incident${total === 1 ? '' : 's'}` : '';
+              },
+            },
+          },
+          datalabels: { display: false },
+        },
+      },
+    });
+    const emptyNote = document.getElementById('gap-chart-empty-note');
+    if (!totalIncidents) {
+      if (!emptyNote) {
+        const card = document.getElementById('gap-chart-card');
+        if (card) card.insertAdjacentHTML('beforeend', '<div id="gap-chart-empty-note" class="absolute inset-0 flex items-center justify-center text-sm text-slate-400 dark:text-slate-500 pointer-events-none">No incidents for this selection.</div>');
+      }
+    } else if (emptyNote) {
+      emptyNote.remove();
     }
   },
   openGapRecordDetail(dispatchId) {
