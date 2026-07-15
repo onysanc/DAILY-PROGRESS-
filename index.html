@@ -920,7 +920,7 @@
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
         <div class="flex justify-between items-center p-4 pb-2">
           <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">📋 Delay Matrix — Incidents by Hour</h2>
-          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Threshold is admin-set · counts are incidents only · MTD/QTD/YTD run through today · excluded dispatches not counted</span>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Threshold is admin-set · counts are incidents only · "Total" column follows the RDD filter above · MTD/QTD/YTD always include every RDD · excluded dispatches not counted</span>
         </div>
         <table class="w-full text-sm text-left" id="gap-delay-matrix-table">
           <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
@@ -5230,6 +5230,21 @@ const App = {
     this.state.gapLogComputedById = {};
     fullRecords.forEach(fr => { this.state.gapLogComputedById[fr.dispatchId] = fr; });
 
+    // MTD/QTD/YTD in the Delay Matrix must always reflect EVERY RDD, even while a single RDD is
+    // selected above — so when the filter narrows `disps`, fetch the full unfiltered dispatch set
+    // separately just for those three columns. When "All RDDs" is already selected, reuse `rows`.
+    let allRddRows = rows;
+    let allRddDispatchesById = this.state.gapLogDispatchesById;
+    if (rddId !== 'all') {
+      const { data: allData, error: allErr } = await supabaseClient.from('dispatches').select('*');
+      if (allErr) { console.error('renderGapLogTab (all-RDD fetch) error:', allErr); }
+      else {
+        const built = this.buildIncidentPairRows(allData || [], t);
+        allRddRows = built.rows;
+        allRddDispatchesById = built.dispatchesById;
+      }
+    }
+
     let filteredRows = milestoneFilter === 'all' ? rows : rows.filter(r => r.pairKey === milestoneFilter);
     filteredRows.sort(this.gapRowComparator(sortMode));
     const visibleRows = onlyIncidents ? filteredRows.filter(r => r.isIncident) : filteredRows;
@@ -5293,7 +5308,7 @@ const App = {
     }
 
     this.renderGapIncidentChart(rows);
-    this.renderGapDelayMatrix(rows);
+    this.renderGapDelayMatrix(rows, allRddRows, allRddDispatchesById);
 
     // Gap list table (per step-gap, one row each)
     const tbody = document.getElementById('gap-log-tbody');
@@ -5350,16 +5365,42 @@ const App = {
     'ds_printed__checking': { activity: 'CHECKING', milestone: 'ds print to Checking' },
     'checking__loaded': { activity: 'LOADING', milestone: 'checking to loading' },
   },
+  // Lightweight version of the gap-computation loop in renderGapLogTab — used only to build an
+  // all-RDD incident list (pairKey/isIncident/isExcluded per dispatch) for the Delay Matrix's
+  // MTD/QTD/YTD columns, independent of whatever RDD filter is currently selected on-screen.
+  buildIncidentPairRows(disps, thresholds) {
+    const t = thresholds || this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+    const rows = [];
+    const dispatchesById = {};
+    (disps || []).forEach(d => {
+      dispatchesById[d.id] = d;
+      const isExcluded = !!(this.state.excludedDispatches?.[d.id]);
+      this.GAP_STEP_PAIRS.forEach(([a, b]) => {
+        const key = `${a}__${b}`;
+        const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+        const tsA = d[`${a}_timestamp`];
+        const tsB = d[`${b}_timestamp`];
+        if (!tsA || !tsB) return;
+        const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+        if (!Number.isFinite(gapMs) || gapMs < 0) return;
+        rows.push({ dispatchId: d.id, pairKey: key, isIncident: gapMs > thresholdMin * 60000, isExcluded });
+      });
+    });
+    return { rows, dispatchesById };
+  },
   // Tallies incidents per step-gap into: (a) the same 5AM→4:59AM hour buckets used by the
-  // Incidents chart, and (b) month-to-date / quarter-to-date / year-to-date counts, based on the
-  // calendar date of the "to" milestone timestamp (i.e. when the gap actually landed). Excluded
-  // dispatches are left out, matching every other Delay/Gap Log stat.
-  computeGapDelayMatrix(rows) {
+  // Incidents chart (scoped to whatever RDD is currently selected), and (b) month-to-date /
+  // quarter-to-date / year-to-date counts, which always span every RDD regardless of the filter.
+  // Both are based on the calendar date/hour of the "to" milestone timestamp (i.e. when the gap
+  // actually landed). Excluded dispatches are left out, matching every other Delay/Gap Log stat.
+  computeGapDelayMatrix(selectedRows, allRows, allDispatchesById) {
     const hourBuckets = {};
+    const selectedTotal = {};
     const mtd = {}, qtd = {}, ytd = {};
     this.GAP_STEP_PAIRS.forEach(([a, b]) => {
       const key = `${a}__${b}`;
       hourBuckets[key] = Array(24).fill(0);
+      selectedTotal[key] = 0;
       mtd[key] = 0; qtd[key] = 0; ytd[key] = 0;
     });
     const bucketOf = (isoString) => {
@@ -5367,33 +5408,44 @@ const App = {
       const h = new Date(isoString).getHours();
       return (h - 5 + 24) % 24;
     };
-    const now = new Date();
-    const curQuarter = Math.floor(now.getMonth() / 3);
-    (rows || []).forEach(r => {
+    // Hour buckets + "Selected RDD Total" — scoped to the RDD filter currently on screen.
+    (selectedRows || []).forEach(r => {
       if (r.isExcluded || !r.isIncident) return;
       const d = this.state.gapLogDispatchesById?.[r.dispatchId];
       const toStep = r.pairKey.split('__')[1];
       const tsStr = d ? d[`${toStep}_timestamp`] : null;
+      const b = bucketOf(tsStr);
+      if (b === null) return;
+      hourBuckets[r.pairKey][b]++;
+      selectedTotal[r.pairKey]++;
+    });
+    // MTD/QTD/YTD — always computed from every RDD, ignoring the RDD filter above.
+    const now = new Date();
+    const curQuarter = Math.floor(now.getMonth() / 3);
+    (allRows || []).forEach(r => {
+      if (r.isExcluded || !r.isIncident) return;
+      const d = (allDispatchesById || this.state.gapLogDispatchesById)?.[r.dispatchId];
+      const toStep = r.pairKey.split('__')[1];
+      const tsStr = d ? d[`${toStep}_timestamp`] : null;
       if (!tsStr) return;
       const ts = new Date(tsStr);
-      const b = bucketOf(tsStr);
-      if (b !== null) hourBuckets[r.pairKey][b]++;
-      if (ts.getFullYear() === now.getFullYear()) {
-        ytd[r.pairKey]++;
-        if (Math.floor(ts.getMonth() / 3) === curQuarter) qtd[r.pairKey]++;
-        if (ts.getMonth() === now.getMonth()) mtd[r.pairKey]++;
-      }
+      if (ts.getFullYear() !== now.getFullYear()) return;
+      ytd[r.pairKey]++;
+      if (Math.floor(ts.getMonth() / 3) === curQuarter) qtd[r.pairKey]++;
+      if (ts.getMonth() === now.getMonth()) mtd[r.pairKey]++;
     });
-    return { hourBuckets, mtd, qtd, ytd };
+    return { hourBuckets, selectedTotal, mtd, qtd, ytd };
   },
   // Spreadsheet-style Delay Matrix: one row per activity/milestone step-gap, one column per hour
-  // of day plus MTD/QTD/YTD, with a SUB-TOTAL row — mirrors the admin's existing tracker sheet.
-  renderGapDelayMatrix(rows) {
+  // of day, plus Selected RDD Total and MTD/QTD/YTD, with a SUB-TOTAL row — mirrors the admin's
+  // existing tracker sheet. `selectedRows` respects the RDD filter above the tab; `allRows` /
+  // `allDispatchesById` always cover every RDD, so MTD/QTD/YTD never shrink when filtering.
+  renderGapDelayMatrix(selectedRows, allRows, allDispatchesById) {
     const headerRow = document.getElementById('gap-delay-matrix-header-row');
     const tbody = document.getElementById('gap-delay-matrix-tbody');
     if (!headerRow || !tbody) return;
     const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
-    const { hourBuckets, mtd, qtd, ytd } = this.computeGapDelayMatrix(rows);
+    const { hourBuckets, selectedTotal, mtd, qtd, ytd } = this.computeGapDelayMatrix(selectedRows, allRows, allDispatchesById);
     const hourLabels = this.getChartHourLabels().map(l => {
       const h = parseInt(l, 10);
       const ampm = h >= 12 ? 'PM' : 'AM';
@@ -5401,16 +5453,19 @@ const App = {
       return `${hh}${ampm}`;
     });
     const hourHeaderHtml = hourLabels.map(l => `<th class="p-2 text-center whitespace-nowrap">${l}</th>`).join('');
+    const rddId = this.state.currentGapLogRddId;
+    const rddLabel = rddId ? (this.state.gapLogRddMap?.[rddId] || 'Selected RDD') : 'All RDDs';
     headerRow.innerHTML = `
       <th class="p-2 whitespace-nowrap">Activity</th>
       <th class="p-2 whitespace-nowrap">Milestone</th>
       <th class="p-2 text-center whitespace-nowrap">Dispatch Delayed</th>
       ${hourHeaderHtml}
+      <th class="p-2 text-center whitespace-nowrap bg-amber-50 dark:bg-amber-900/20" title="Totals for the RDD filter selected above (${rddLabel})">${rddId ? rddLabel : 'Selected'} Total</th>
       <th class="p-2 text-center whitespace-nowrap">MTD</th>
       <th class="p-2 text-center whitespace-nowrap">QTD</th>
       <th class="p-2 text-center whitespace-nowrap">YTD</th>`;
     const colTotals = Array(24).fill(0);
-    let mtdTotal = 0, qtdTotal = 0, ytdTotal = 0;
+    let selectedGrandTotal = 0, mtdTotal = 0, qtdTotal = 0, ytdTotal = 0;
     const bodyRows = this.GAP_STEP_PAIRS.map(([a, b]) => {
       const key = `${a}__${b}`;
       const meta = this.GAP_MATRIX_LABELS[key] || { activity: key, milestone: '' };
@@ -5419,12 +5474,14 @@ const App = {
         colTotals[i] += v;
         return `<td class="p-2 text-center ${v > 0 ? 'font-bold text-red-500' : 'text-slate-300 dark:text-slate-600'}">${v || 0}</td>`;
       }).join('');
+      selectedGrandTotal += selectedTotal[key];
       mtdTotal += mtd[key]; qtdTotal += qtd[key]; ytdTotal += ytd[key];
       return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
         <td class="p-2 font-bold">${meta.activity}</td>
         <td class="p-2 text-slate-500">${meta.milestone}</td>
         <td class="p-2 text-center text-slate-500">&gt;${thresholdMin}m</td>
         ${hourCells}
+        <td class="p-2 text-center font-bold bg-amber-50/60 dark:bg-amber-900/10">${selectedTotal[key] || 0}</td>
         <td class="p-2 text-center font-semibold">${mtd[key] || 0}</td>
         <td class="p-2 text-center font-semibold">${qtd[key] || 0}</td>
         <td class="p-2 text-center font-semibold">${ytd[key] || 0}</td>
@@ -5434,6 +5491,7 @@ const App = {
     const subtotalRow = `<tr class="bg-slate-50 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700">
       <td class="p-2" colspan="3">SUB-TOTAL</td>
       ${subtotalCells}
+      <td class="p-2 text-center bg-amber-50 dark:bg-amber-900/20">${selectedGrandTotal}</td>
       <td class="p-2 text-center">${mtdTotal}</td>
       <td class="p-2 text-center">${qtdTotal}</td>
       <td class="p-2 text-center">${ytdTotal}</td>
