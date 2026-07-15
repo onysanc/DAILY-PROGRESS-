@@ -1884,7 +1884,13 @@ const App = {
           // every row is done, show a completed one; otherwise show
           // whichever log is in progress so the dot can read "Ongoing"
           // rather than silently claiming completion.
-          const repLog = allDone ? completedLogs[0] : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
+          // When every SO row is done, use the one that finished LAST (max
+          // end_time), not just the first completed row in array order —
+          // otherwise an earlier end (e.g. 9am, or Jul 7) could win over a
+          // later one (10am, or Jul 8) purely by array position.
+          const repLog = allDone
+            ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
+            : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
           return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
         });
         // Bay is only trusted once every row under this dispatch has
