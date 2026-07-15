@@ -888,7 +888,7 @@
       <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
         <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
         <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
-          <span class="font-semibold">Measures the time gap between every consecutive milestone</span> (Start Pick → End Pick → PGI → Invoiced → DS Printed → Checking → Loaded) for each dispatch. A gap is flagged as an <b>incident</b> when it exceeds the threshold set below. Thresholds are admin-adjustable and saved for everyone. Use <b>Full Records</b> to view/extract every timestamp and step duration for each dispatch in one row, or click <b>Details</b> on any row for the complete record.
+          <span class="font-semibold">Measures the time gap between every consecutive milestone</span> (Start Pick → End Pick → PGI → Invoiced → DS Printed → Checking → Loaded) for each dispatch. A gap is flagged as an <b>incident</b> when it exceeds the threshold set below. Thresholds are admin-adjustable and saved for everyone. Use <b>Full Records</b> to view/extract every timestamp and step duration for each dispatch in one row, or click <b>Details</b> on any row for the complete record. Admins can <b>exclude a specific dispatch</b> from all Delay/Gap stats (Comp. column, or from the Details view) — a written reason is required, and the dispatch stays visible in the log tagged <b>Excluded</b>.
         </div>
       </div>
 
@@ -936,6 +936,7 @@
               <th class="p-3 text-center">Gap</th>
               <th class="p-3 text-center">Threshold</th>
               <th class="p-3 text-center">Status</th>
+              <th class="p-3 text-center">Comp.</th>
               <th class="p-3 text-center no-print">Details</th>
             </tr>
           </thead>
@@ -961,6 +962,7 @@
               <th class="p-3">Loaded</th>
               <th class="p-3 text-center">Total Duration</th>
               <th class="p-3 text-center">Incidents</th>
+              <th class="p-3 text-center">Comp.</th>
               <th class="p-3 text-center no-print">Details</th>
             </tr>
           </thead>
@@ -981,6 +983,7 @@
           <button onclick="App.closeModal('gap-record-detail-modal')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl leading-none">×</button>
         </div>
         <div id="grd-meta" class="grid grid-cols-2 gap-2 text-sm mb-4"></div>
+        <div id="grd-exclusion-box" class="mb-4"></div>
         <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Milestone Timestamps</h3>
         <div class="bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-800 overflow-x-auto mb-4">
           <table class="w-full text-sm text-left">
@@ -998,6 +1001,23 @@
             </thead>
             <tbody id="grd-gaps-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ EXCLUDE DISPATCH FROM DELAY/GAP COMPUTATION MODAL (admin-only, remark required) ══ -->
+    <div id="exclude-dispatch-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800">
+        <div class="flex justify-between items-start mb-1">
+          <h2 class="text-lg font-bold text-amber-600 dark:text-amber-400">🚫 Exclude from Delay/Gap Computation</h2>
+          <button onclick="App.closeModal('exclude-dispatch-modal')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl leading-none">×</button>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Dispatch <span id="excl-dispatch-label" class="font-semibold"></span> will be left out of all Delay/Gap Log stats — incident counts, averages, worst-gap, and the breakdown table. It stays visible in the log, tagged <b>Excluded</b>, and can be re-included anytime.</p>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Reason for exclusion (required)</label>
+        <textarea id="excl-dispatch-remark" rows="3" placeholder="e.g. Forklift breakdown outside our control, customer-caused hold, data entry error…" class="w-full p-2.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm mb-4"></textarea>
+        <div class="flex justify-end gap-2">
+          <button onclick="App.closeModal('exclude-dispatch-modal')" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+          <button onclick="App.confirmExcludeDispatch()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-700">Confirm Exclusion</button>
         </div>
       </div>
     </div>
@@ -1283,6 +1303,8 @@ const App = {
     alertRemarkDrafts: {}, // alertKey -> in-progress typed remark (always-visible remarks box, independent of dismiss flow)
     alertLatestRemarks: {}, // alertKey -> { text, username, created_at } — most recently saved remark, shown inline; new saves replace it
     excludedPersonnelNames: new Set(), // names an admin has excluded from all time-based computations (speed/duration/leaderboards)
+    excludedDispatches: {}, // dispatchId -> { remark, username, created_at } — dispatches an admin has excluded from Delay/Gap computation
+    pendingExcludeDispatchId: null,
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -4453,6 +4475,92 @@ const App = {
     this.showToast(this.state.excludedPersonnelNames.has(key) ? `✓ ${name} excluded from time-based stats` : `✓ ${name} re-included in time-based stats`, 'info', 3000);
     this.renderPersonnel();
   },
+  // ── Admin: exclude a specific dispatch/shipment from all Delay/Gap Log computations ──
+  // (incident counts, averages, worst-gap, breakdown table). The dispatch stays visible in the
+  // log, tagged "Excluded", and can be re-included anytime. Reuses the alert_settings key-value
+  // table (key = 'excluded_dispatches'); a map of dispatchId -> {remark, username, created_at} is
+  // JSON-encoded into the 'template' column, same pattern used for excluded_personnel/gap_thresholds.
+  // A written reason is required to exclude (not required to re-include).
+  async loadExcludedDispatches() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'excluded_dispatches').maybeSingle();
+      if (error) { console.error('loadExcludedDispatches error:', error); return; }
+      let map = {};
+      if (data && data.template) { try { map = JSON.parse(data.template) || {}; } catch { map = {}; } }
+      this.state.excludedDispatches = map;
+    } catch (e) { console.error('loadExcludedDispatches error:', e); }
+  },
+  async saveExcludedDispatches() {
+    const payload = {
+      key: 'excluded_dispatches',
+      enabled: true,
+      template: JSON.stringify(this.state.excludedDispatches || {}),
+      require_response: false,
+    };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) { alert('Failed to save: ' + error.message); return false; }
+    return true;
+  },
+  isDispatchGapExcluded(dispatchId) {
+    return !!(this.state.excludedDispatches && this.state.excludedDispatches[dispatchId]);
+  },
+  openExcludeDispatchModal(dispatchId) {
+    if (!this.hasPerm('admin_override')) return alert('You do not have permission to run this. Ask an admin to grant Admin Override.');
+    const d = this.state.gapLogDispatchesById?.[dispatchId] || this.state.dispatches.find(x => x.id === dispatchId);
+    this.state.pendingExcludeDispatchId = dispatchId;
+    const label = document.getElementById('excl-dispatch-label');
+    if (label) label.textContent = d ? `${d.truck_type} · ${d.dispatch_number}` : '';
+    const ta = document.getElementById('excl-dispatch-remark');
+    if (ta) ta.value = '';
+    this.openModal('exclude-dispatch-modal');
+  },
+  async confirmExcludeDispatch() {
+    const dispatchId = this.state.pendingExcludeDispatchId;
+    if (!dispatchId) return;
+    const remark = (document.getElementById('excl-dispatch-remark')?.value || '').trim();
+    if (!remark) return alert('A reason is required before this dispatch can be excluded from Delay/Gap computation.');
+    if (!this.state.excludedDispatches) this.state.excludedDispatches = {};
+    this.state.excludedDispatches[dispatchId] = {
+      remark,
+      username: this.state.currentUser?.username || 'Unknown',
+      created_at: new Date().toISOString(),
+    };
+    const ok = await this.saveExcludedDispatches();
+    if (!ok) return;
+    // Also log to the dispatch's own remarks history so there's a single audit trail for reporting.
+    try {
+      await supabaseClient.from('dispatch_remarks').insert({
+        dispatch_id: dispatchId,
+        remark_text: `[Delay/Gap Exclusion] Excluded from computation — ${remark}`,
+        created_by: this.state.currentUser.username,
+      });
+    } catch (e) { console.error('log exclusion remark error:', e); }
+    this.state.pendingExcludeDispatchId = null;
+    this.closeModal('exclude-dispatch-modal');
+    this.showToast('🚫 Dispatch excluded from Delay/Gap computation', 'info', 3500);
+    await this.renderGapLogTab();
+    await this.loadDispatches();
+    if (!document.getElementById('gap-record-detail-modal')?.classList.contains('hidden')) this.openGapRecordDetail(dispatchId);
+  },
+  async includeDispatchBack(dispatchId) {
+    if (!this.hasPerm('admin_override')) return alert('You do not have permission to run this. Ask an admin to grant Admin Override.');
+    if (!this.state.excludedDispatches || !this.state.excludedDispatches[dispatchId]) return;
+    if (!confirm('Re-include this dispatch in Delay/Gap computation?')) return;
+    delete this.state.excludedDispatches[dispatchId];
+    const ok = await this.saveExcludedDispatches();
+    if (!ok) return;
+    try {
+      await supabaseClient.from('dispatch_remarks').insert({
+        dispatch_id: dispatchId,
+        remark_text: `[Delay/Gap Exclusion] Re-included in computation`,
+        created_by: this.state.currentUser.username,
+      });
+    } catch (e) { console.error('log re-inclusion remark error:', e); }
+    this.showToast('✓ Dispatch re-included in Delay/Gap computation', 'info', 3000);
+    await this.renderGapLogTab();
+    await this.loadDispatches();
+    if (!document.getElementById('gap-record-detail-modal')?.classList.contains('hidden')) this.openGapRecordDetail(dispatchId);
+  },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   },
@@ -4940,6 +5048,7 @@ const App = {
   },
   async initGapLogTab() {
     if (!this.state.gapThresholds) await this.loadGapThresholds();
+    await this.loadExcludedDispatches();
     this.renderGapThresholdInputs();
     this.populateGapLogMilestoneFilter();
     this.state.gapLogViewMode = this.state.gapLogViewMode || 'list';
@@ -4992,6 +5101,16 @@ const App = {
       default: return (x, y) => (y.incidentCount - x.incidentCount) || (y.totalMs - x.totalMs);
     }
   },
+  gapCompCellHtml(dispatchId, isExcluded) {
+    const canAdmin = this.hasPerm('admin_override');
+    if (isExcluded) {
+      const badge = '<span class="px-2 py-0.5 text-xs font-bold rounded bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">🚫 Excluded</span>';
+      if (!canAdmin) return badge;
+      return `${badge}<br><button onclick="App.includeDispatchBack('${dispatchId}')" class="text-blue-600 dark:text-blue-400 hover:underline text-[11px] font-semibold mt-0.5">Re-include</button>`;
+    }
+    if (!canAdmin) return '<span class="text-slate-300 dark:text-slate-600 text-xs">Included</span>';
+    return `<button onclick="App.openExcludeDispatchModal('${dispatchId}')" class="text-amber-600 dark:text-amber-400 hover:underline text-[11px] font-semibold">Exclude…</button>`;
+  },
   async renderGapLogTab() {
     const sel = document.getElementById('gap-log-rdd-select');
     const rddId = sel ? sel.value : 'all';
@@ -5026,6 +5145,8 @@ const App = {
       this.state.gapLogDispatchesById[d.id] = d;
       const rddDateRaw = rddMap[d.rdd_id] || '';
       const mmdd = rddDateRaw ? rddDateRaw.slice(5) : '—';
+      const excludedInfo = this.state.excludedDispatches?.[d.id] || null;
+      const isExcluded = !!excludedInfo;
       const recordGaps = [];
       let incidentCount = 0;
       this.GAP_STEP_PAIRS.forEach(([a, b]) => {
@@ -5037,22 +5158,28 @@ const App = {
         const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
         if (!Number.isFinite(gapMs) || gapMs < 0) { recordGaps.push({ key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
         const isIncident = gapMs > thresholdMin * 60000;
-        const bd = breakdown[key];
-        bd.evaluated++;
-        bd.totalMs += gapMs;
-        if (gapMs > bd.worstMs) bd.worstMs = gapMs;
-        if (isIncident) { bd.incidents++; incidentCount++; }
+        // Excluded dispatches are still computed/shown (so admins can see what they excluded),
+        // but they do NOT feed into the breakdown table, summary cards, or incident counts.
+        if (!isExcluded) {
+          const bd = breakdown[key];
+          bd.evaluated++;
+          bd.totalMs += gapMs;
+          if (gapMs > bd.worstMs) bd.worstMs = gapMs;
+          if (isIncident) { bd.incidents++; incidentCount++; }
+        } else if (isIncident) {
+          incidentCount++; // shown on the row's own record, just not rolled into aggregate stats
+        }
         recordGaps.push({ key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b], gapMs, thresholdMin, isIncident });
         rows.push({
           dispatchId: d.id, rddLabel: mmdd, rddDateRaw, truck_type: d.truck_type, dispatch_number: d.dispatch_number,
           pairKey: key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b],
-          gapMs, thresholdMin, isIncident,
+          gapMs, thresholdMin, isIncident, isExcluded, excludedInfo,
         });
       });
       const totalMs = (d.pick_start_timestamp && d.loaded_timestamp)
         ? Math.max(0, new Date(d.loaded_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
         : null;
-      fullRecords.push({ dispatchId: d.id, rddLabel: mmdd, rddDateRaw, truck_type: d.truck_type, dispatch_number: d.dispatch_number, gaps: recordGaps, totalMs, incidentCount });
+      fullRecords.push({ dispatchId: d.id, rddLabel: mmdd, rddDateRaw, truck_type: d.truck_type, dispatch_number: d.dispatch_number, gaps: recordGaps, totalMs, incidentCount, isExcluded, excludedInfo });
     });
     this.state.gapLogComputedById = {};
     fullRecords.forEach(fr => { this.state.gapLogComputedById[fr.dispatchId] = fr; });
@@ -5065,10 +5192,13 @@ const App = {
     const visibleFullRecords = onlyIncidents ? fullRecords.filter(r => r.incidentCount > 0) : fullRecords;
 
     // Summary cards (always reflect ALL milestones + current RDD/incidents-only scope, independent of milestone filter, so cards give the full picture)
-    const totalIncidents = rows.filter(r => r.isIncident).length;
-    const totalEvaluated = rows.length;
+    // Excluded dispatches are left out of these totals — that's the point of the exclusion.
+    const statsRows = rows.filter(r => !r.isExcluded);
+    const excludedCount = new Set(rows.filter(r => r.isExcluded).map(r => r.dispatchId)).size;
+    const totalIncidents = statsRows.filter(r => r.isIncident).length;
+    const totalEvaluated = statsRows.length;
     const rate = totalEvaluated ? Math.round((totalIncidents / totalEvaluated) * 100) : 0;
-    const worstRow = rows.reduce((worst, r) => (!worst || r.gapMs > worst.gapMs) ? r : worst, null);
+    const worstRow = statsRows.reduce((worst, r) => (!worst || r.gapMs > worst.gapMs) ? r : worst, null);
     const summaryEl = document.getElementById('gap-log-summary');
     if (summaryEl) {
       summaryEl.innerHTML = `
@@ -5088,7 +5218,9 @@ const App = {
           <div class="text-xs text-slate-400 mb-1">Worst Gap</div>
           <div class="text-xl font-bold text-amber-600">${worstRow ? this.fmtDuration(worstRow.gapMs) : '—'}</div>
           <div class="text-[11px] text-slate-400 truncate">${worstRow ? `${worstRow.dispatch_number} · ${worstRow.fromLabel} → ${worstRow.toLabel}` : ''}</div>
-        </div>`;
+        </div>`
+        + (excludedCount > 0 ? `
+        <div class="col-span-2 md:col-span-4 -mt-1 text-[11px] text-slate-400 dark:text-slate-500">🚫 ${excludedCount} dispatch${excludedCount === 1 ? '' : 'es'} excluded from these stats by an admin — see the <b>Comp.</b> column below.</div>` : '');
     }
 
     // Breakdown table (highlights the milestone currently selected in the filter, if any)
@@ -5119,7 +5251,7 @@ const App = {
     const empty = document.getElementById('gap-log-empty');
     if (tbody) {
       tbody.innerHTML = visibleRows.map(r => `
-        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${r.isIncident ? 'bg-red-50/60 dark:bg-red-900/10' : ''}">
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${r.isExcluded ? 'opacity-50' : (r.isIncident ? 'bg-red-50/60 dark:bg-red-900/10' : '')}">
           <td class="p-3">${r.rddLabel}</td>
           <td class="p-3">${r.truck_type}</td>
           <td class="p-3 font-semibold">${r.dispatch_number}</td>
@@ -5128,6 +5260,7 @@ const App = {
           <td class="p-3 text-center font-semibold ${r.isIncident ? 'text-red-500' : ''}">${this.fmtDuration(r.gapMs)}</td>
           <td class="p-3 text-center text-slate-500">${r.thresholdMin}m</td>
           <td class="p-3 text-center">${r.isIncident ? '<span class="px-2 py-0.5 text-xs font-bold rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">⚠ Incident</span>' : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">OK</span>'}</td>
+          <td class="p-3 text-center">${this.gapCompCellHtml(r.dispatchId, r.isExcluded)}</td>
           <td class="p-3 text-center no-print"><button onclick="App.openGapRecordDetail('${r.dispatchId}')" class="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold">View</button></td>
         </tr>`).join('');
       if (empty) empty.classList.toggle('hidden', visibleRows.length > 0);
@@ -5144,13 +5277,14 @@ const App = {
           const ts = d[`${step}_timestamp`];
           return `<td class="p-3 text-xs whitespace-nowrap">${ts ? new Date(ts).toLocaleString() : '—'}</td>`;
         }).join('');
-        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${fr.incidentCount ? 'bg-red-50/60 dark:bg-red-900/10' : ''}">
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${fr.isExcluded ? 'opacity-50' : (fr.incidentCount ? 'bg-red-50/60 dark:bg-red-900/10' : '')}">
           <td class="p-3">${fr.rddLabel}</td>
           <td class="p-3">${fr.truck_type}</td>
           <td class="p-3 font-semibold">${fr.dispatch_number}</td>
           ${tsCells}
           <td class="p-3 text-center font-semibold">${fr.totalMs !== null ? this.fmtDuration(fr.totalMs) : '—'}</td>
           <td class="p-3 text-center font-bold ${fr.incidentCount ? 'text-red-500' : 'text-slate-400'}">${fr.incidentCount}</td>
+          <td class="p-3 text-center">${this.gapCompCellHtml(fr.dispatchId, fr.isExcluded)}</td>
           <td class="p-3 text-center no-print"><button onclick="App.openGapRecordDetail('${fr.dispatchId}')" class="text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold">View</button></td>
         </tr>`;
       }).join('');
@@ -5177,6 +5311,26 @@ const App = {
       <div><span class="text-slate-400">Total (Start Pick → Loaded):</span> <span class="font-semibold">${fr.totalMs !== null ? this.fmtDuration(fr.totalMs) : '—'}</span></div>
       ${d.last_remark_text ? `<div class="col-span-2"><span class="text-slate-400">Remark:</span> <span class="font-semibold">${this.escapeHtml(d.last_remark_text)}</span> <span class="text-slate-400">— ${this.escapeHtml(d.last_remark_by || '')}</span></div>` : ''}
     `;
+
+    // Delay/Gap computation exclusion status
+    const exclBox = document.getElementById('grd-exclusion-box');
+    if (exclBox) {
+      const info = this.state.excludedDispatches?.[dispatchId];
+      const canAdmin = this.hasPerm('admin_override');
+      if (info) {
+        exclBox.innerHTML = `
+          <div class="p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 text-sm">
+            <div class="font-bold text-amber-700 dark:text-amber-300 mb-1">🚫 Excluded from Delay/Gap computation</div>
+            <div class="text-slate-600 dark:text-slate-300 mb-1">${this.escapeHtml(info.remark)}</div>
+            <div class="text-[11px] text-slate-400">— ${this.escapeHtml(info.username || '—')}, ${info.created_at ? new Date(info.created_at).toLocaleString() : ''}</div>
+            ${canAdmin ? `<button onclick="App.includeDispatchBack('${dispatchId}')" class="mt-2 text-blue-600 dark:text-blue-400 hover:underline text-xs font-semibold">Re-include in computation</button>` : ''}
+          </div>`;
+      } else if (canAdmin) {
+        exclBox.innerHTML = `<button onclick="App.openExcludeDispatchModal('${dispatchId}')" class="text-amber-600 dark:text-amber-400 hover:underline text-xs font-semibold">🚫 Exclude this dispatch from Delay/Gap computation…</button>`;
+      } else {
+        exclBox.innerHTML = '';
+      }
+    }
 
     const stepOrder = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
     document.getElementById('grd-timestamps-tbody').innerHTML = stepOrder.map(step => {
