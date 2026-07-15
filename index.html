@@ -22,7 +22,19 @@
   .scrollbar-none::-webkit-scrollbar{display:none}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
   input[type=checkbox]{accent-color:#2563eb}
-  /* Per-step checkbox accent colors matching the graph */
+  /* Sidebar: fixed width on desktop, collapses to 0; becomes a fixed overlay drawer on
+     narrow/mobile viewports so it doesn't push the page content around. Toggled purely via
+     the .sidebar-closed class from App.toggleSidebar() — see JS "Sidebar / hamburger" section. */
+  #sidebar{width:15rem;transition:width .3s ease,transform .3s ease;}
+  #sidebar.sidebar-closed{width:0;}
+  #sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:30;}
+  #sidebar-backdrop.show{display:block;}
+  @media (max-width:767px){
+    #sidebar{position:fixed;top:0;bottom:0;left:0;z-index:40;width:15rem;transform:translateX(0);}
+    #sidebar.sidebar-closed{width:15rem;transform:translateX(-100%);}
+  }
+  /* Keeps the hamburger / toggle bar reachable no matter how far the page has scrolled. */
+  #global-toggle-bar{position:sticky;top:0;z-index:20;padding-top:.5rem;margin-top:-.5rem;background:inherit;}
   .cb-pick_start{accent-color:#0284c7}
   .cb-pick      {accent-color:#16a34a}
   .cb-pgi       {accent-color:#ec4899}
@@ -203,7 +215,7 @@
   </div>
 </div>
 <div id="app-wrapper" class="hidden flex h-full">
-  <aside id="sidebar" class="w-60 text-white flex flex-col shrink-0 transition-all duration-300 overflow-hidden" style="background:linear-gradient(180deg, var(--ink-900) 0%, var(--ink-950) 100%); box-shadow:1px 0 0 rgba(34,211,238,.08)">
+  <aside id="sidebar" class="text-white flex flex-col shrink-0 overflow-hidden" style="background:linear-gradient(180deg, var(--ink-900) 0%, var(--ink-950) 100%); box-shadow:1px 0 0 rgba(34,211,238,.08)">
     <div class="p-5 border-b border-white/[0.06] min-w-[15rem]">
       <div class="flex items-center gap-2 mb-4">
         <div class="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style="background:linear-gradient(135deg, var(--brand-400), var(--brand-700))">
@@ -290,6 +302,7 @@
     </div>
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]" id="connection-status">●  connecting…</div>
   </aside>
+  <div id="sidebar-backdrop" onclick="App.toggleSidebar()"></div>
   <main class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
     <div id="global-toggle-bar" class="flex items-center gap-2 mb-3">
       <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
@@ -1459,16 +1472,47 @@ const App = {
     }
     this.refreshDashboardIfVisible();
   },
+  // ── Sidebar / hamburger ──────────────────────────────────────────────────
+  // Desktop (≥768px): sidebar is part of the normal layout, width toggles between 15rem and 0.
+  // State is remembered per-browser via localStorage so it doesn't reset on refresh.
+  // Mobile (<768px): sidebar becomes a fixed overlay drawer (see CSS). It starts closed, opens
+  // via the hamburger, and auto-closes the moment a nav item is used or the backdrop is tapped —
+  // so it never eats into the limited screen space once the user has picked where they're going.
+  isMobileViewport() {
+    return window.innerWidth < 768;
+  },
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    if (sidebar.classList.contains('w-60')) {
-      sidebar.classList.remove('w-60');
-      sidebar.classList.add('w-0');
-    } else {
-      sidebar.classList.remove('w-0');
-      sidebar.classList.add('w-60');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (!sidebar) return;
+    const closed = sidebar.classList.toggle('sidebar-closed');
+    if (backdrop) backdrop.classList.toggle('show', !closed && this.isMobileViewport());
+    if (!this.isMobileViewport()) {
+      try { localStorage.setItem('sidebarClosed', closed ? '1' : '0'); } catch {}
     }
     setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
+  },
+  // Called once after login so the sidebar starts in the right state for the current device:
+  // remembered collapsed/expanded state on desktop, always closed-by-default on mobile.
+  initSidebarState() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (this.isMobileViewport()) {
+      sidebar.classList.add('sidebar-closed');
+    } else {
+      let wasClosed = false;
+      try { wasClosed = localStorage.getItem('sidebarClosed') === '1'; } catch {}
+      sidebar.classList.toggle('sidebar-closed', wasClosed);
+    }
+  },
+  // Auto-collapses the mobile drawer after a nav selection; no-op on desktop where the sidebar
+  // is meant to stay put between tab switches.
+  closeMobileSidebarIfNeeded() {
+    if (!this.isMobileViewport()) return;
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (sidebar && !sidebar.classList.contains('sidebar-closed')) sidebar.classList.add('sidebar-closed');
+    if (backdrop) backdrop.classList.remove('show');
   },
   async captureDashboard() {
     const btn = document.getElementById('dashboard-capture-btn');
@@ -1603,6 +1647,7 @@ const App = {
     document.getElementById('app-wrapper').classList.remove('hidden');
     document.getElementById('display-username').textContent = user.username.toUpperCase();
     document.getElementById('display-role').textContent = user.role.toUpperCase();
+    this.initSidebarState();
     this.init();
     this.observeForCopyButtons();
   },
@@ -1772,6 +1817,7 @@ const App = {
     if (tabId === 'tab-graph-recap') { this.initGraphRecapTab(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
     if (tabId === 'tab-gap-log') { this.initGapLogTab(); }
+    this.closeMobileSidebarIfNeeded();
   },
   tryTab(tabId, permKey) {
     if (!this.hasPerm(permKey)) {
@@ -6685,6 +6731,16 @@ if (!App.checkRememberedSession()) {
 window.addEventListener('resize', () => {
   clearTimeout(window._chartRemarkResizeT);
   window._chartRemarkResizeT = setTimeout(() => App.positionChartRemark(), 200);
+  clearTimeout(window._sidebarResizeT);
+  window._sidebarResizeT = setTimeout(() => {
+    // Crossing the mobile breakpoint (e.g. rotating a tablet, resizing a browser window) —
+    // drop any leftover mobile backdrop and re-apply the correct remembered/default state.
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (!App.isMobileViewport() && backdrop) backdrop.classList.remove('show');
+    if (document.getElementById('app-wrapper') && !document.getElementById('app-wrapper').classList.contains('hidden')) {
+      App.initSidebarState();
+    }
+  }, 200);
 });
 </script>
 
