@@ -934,9 +934,18 @@
       <div id="gap-threshold-panel" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4 mb-5 hidden">
         <h2 class="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">⚙ Delay Thresholds (minutes) — Admin</h2>
         <div id="gap-threshold-inputs" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3"></div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
           <button onclick="App.saveGapThresholds()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save Thresholds</button>
           <button onclick="App.resetGapThresholds()" class="text-xs text-slate-500 hover:underline">Reset to defaults</button>
+        </div>
+        <div class="border-t dark:border-slate-700 mt-4 pt-4">
+          <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">📋 Delay Matrix — minimum dispatches in an hour to flag it as an incident</label>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">By default any single delayed dispatch lights up an hour cell in the Delay Matrix below. Set this higher (e.g. <b>3</b>) so an hour only gets flagged once it has at least that many delayed dispatches — filters out one-off noise.</p>
+          <div class="flex items-center gap-2">
+            <input type="number" min="1" id="gap-min-incidents-per-hour" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
+            <span class="text-xs text-slate-400">dispatches / hour</span>
+            <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
+          </div>
         </div>
       </div>
 
@@ -958,7 +967,7 @@
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
         <div class="flex justify-between items-center p-4 pb-2">
           <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">📋 Delay Matrix — Incidents by Hour</h2>
-          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Threshold is admin-set · counts are incidents only · "Total" column follows the RDD filter above · MTD/QTD/YTD always include every RDD · excluded dispatches not counted</span>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Threshold is admin-set · an hour is flagged once it reaches the min. dispatches/hour set above (default 1) · "Total" column follows the RDD filter above · MTD/QTD/YTD always include every RDD · excluded dispatches not counted</span>
         </div>
         <table class="w-full text-sm text-left" id="gap-delay-matrix-table">
           <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
@@ -5426,16 +5435,29 @@ const App = {
     'ds_printed__checking': 30,
     'checking__loaded': 30,
   },
+  // Delay Matrix — how many delayed dispatches must land in the same hour cell before that hour
+  // is flagged (bold/red) in the "Delay Matrix — Incidents by Hour" grid. Default of 1 preserves
+  // the original behavior (any single incident lights up the cell); an admin can raise it (e.g. 3)
+  // to only flag hours with a meaningful cluster of delays. Stored alongside the per-step minute
+  // thresholds in the same 'gap_thresholds' alert_settings row — no schema change needed.
+  DEFAULT_MIN_INCIDENTS_PER_HOUR: 1,
   async loadGapThresholds() {
     let thresholds = { ...this.DEFAULT_GAP_THRESHOLDS };
+    let minIncidentsPerHour = this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
     try {
       const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'gap_thresholds').maybeSingle();
       if (error) { console.error('loadGapThresholds error:', error); }
       else if (data && data.template) {
-        try { thresholds = { ...thresholds, ...JSON.parse(data.template) }; } catch { /* keep defaults */ }
+        try {
+          const parsed = JSON.parse(data.template);
+          const { minIncidentsPerHour: mip, ...pairThresholds } = parsed || {};
+          thresholds = { ...thresholds, ...pairThresholds };
+          if (Number.isFinite(mip) && mip >= 1) minIncidentsPerHour = mip;
+        } catch { /* keep defaults */ }
       }
     } catch (e) { console.error('loadGapThresholds error:', e); }
     this.state.gapThresholds = thresholds;
+    this.state.minIncidentsPerHour = minIncidentsPerHour;
   },
   async saveGapThresholds() {
     const thresholds = {};
@@ -5445,10 +5467,14 @@ const App = {
       const val = el ? parseInt(el.value, 10) : NaN;
       thresholds[key] = Number.isFinite(val) && val >= 0 ? val : this.DEFAULT_GAP_THRESHOLDS[key];
     });
-    const payload = { key: 'gap_thresholds', enabled: true, template: JSON.stringify(thresholds), require_response: false };
+    const mipEl = document.getElementById('gap-min-incidents-per-hour');
+    const mipVal = mipEl ? parseInt(mipEl.value, 10) : NaN;
+    const minIncidentsPerHour = Number.isFinite(mipVal) && mipVal >= 1 ? mipVal : this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
+    const payload = { key: 'gap_thresholds', enabled: true, template: JSON.stringify({ ...thresholds, minIncidentsPerHour }), require_response: false };
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save thresholds: ' + error.message);
     this.state.gapThresholds = thresholds;
+    this.state.minIncidentsPerHour = minIncidentsPerHour;
     this.showToast('✓ Delay thresholds updated', 'info', 3000);
     this.renderGapLogTab();
   },
@@ -5458,6 +5484,8 @@ const App = {
       const el = document.getElementById(`gap-threshold-${key}`);
       if (el) el.value = this.DEFAULT_GAP_THRESHOLDS[key];
     });
+    const mipEl = document.getElementById('gap-min-incidents-per-hour');
+    if (mipEl) mipEl.value = this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
   },
   renderGapThresholdInputs() {
     const wrap = document.getElementById('gap-threshold-inputs');
@@ -5473,6 +5501,8 @@ const App = {
         </div>
       </div>`;
     }).join('');
+    const mipEl = document.getElementById('gap-min-incidents-per-hour');
+    if (mipEl) mipEl.value = this.state.minIncidentsPerHour ?? this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
     const panel = document.getElementById('gap-threshold-panel');
     if (panel) panel.classList.toggle('hidden', !this.hasPerm('tab_users') && !this.isTrueAdmin());
   },
@@ -5850,6 +5880,7 @@ const App = {
     const tbody = document.getElementById('gap-delay-matrix-tbody');
     if (!headerRow || !tbody) return;
     const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+    const minPerHour = this.state.minIncidentsPerHour ?? this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
     const { hourBuckets, selectedTotal, mtd, qtd, ytd } = this.computeGapDelayMatrix(selectedRows, allRows, allDispatchesById);
     const hourLabels = this.getChartHourLabels().map(l => {
       const h = parseInt(l, 10);
@@ -5877,7 +5908,7 @@ const App = {
       const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
       const hourCells = hourBuckets[key].map((v, i) => {
         colTotals[i] += v;
-        return `<td class="p-2 text-center ${v > 0 ? 'font-bold text-red-500' : 'text-slate-300 dark:text-slate-600'}">${v || 0}</td>`;
+        return `<td class="p-2 text-center ${v >= minPerHour ? 'font-bold text-red-500' : 'text-slate-300 dark:text-slate-600'}">${v || 0}</td>`;
       }).join('');
       selectedGrandTotal += selectedTotal[key];
       mtdTotal += mtd[key]; qtdTotal += qtd[key]; ytdTotal += ytd[key];
@@ -5892,7 +5923,7 @@ const App = {
         <td class="p-2 text-center font-semibold">${ytd[key] || 0}</td>
       </tr>`;
     }).join('');
-    const subtotalCells = colTotals.map(v => `<td class="p-2 text-center ${v > 0 ? 'text-red-500' : ''}">${v || 0}</td>`).join('');
+    const subtotalCells = colTotals.map(v => `<td class="p-2 text-center ${v >= minPerHour ? 'text-red-500' : ''}">${v || 0}</td>`).join('');
     const subtotalRow = `<tr class="bg-slate-50 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700">
       <td class="p-2" colspan="3">SUB-TOTAL</td>
       ${subtotalCells}
