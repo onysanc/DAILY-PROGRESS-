@@ -916,6 +916,27 @@
         </div>
       </div>
 
+      <!-- Delay Matrix — spreadsheet-style hourly incident grid, one row per activity/milestone -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
+        <div class="flex justify-between items-center p-4 pb-2">
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">📋 Delay Matrix — Incidents by Hour</h2>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic hidden sm:inline">Threshold is admin-set · counts are incidents only · MTD/QTD/YTD run through today · excluded dispatches not counted</span>
+        </div>
+        <table class="w-full text-sm text-left" id="gap-delay-matrix-table">
+          <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
+            <tr id="gap-delay-matrix-header-row">
+              <th class="p-2 whitespace-nowrap">Activity</th>
+              <th class="p-2 whitespace-nowrap">Milestone</th>
+              <th class="p-2 text-center whitespace-nowrap">Dispatch Delayed</th>
+              <th class="p-2 text-center whitespace-nowrap">MTD</th>
+              <th class="p-2 text-center whitespace-nowrap">QTD</th>
+              <th class="p-2 text-center whitespace-nowrap">YTD</th>
+            </tr>
+          </thead>
+          <tbody id="gap-delay-matrix-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+      </div>
+
       <!-- Incident count per step-gap -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
         <table class="w-full text-sm text-left" id="gap-log-breakdown-table">
@@ -5272,6 +5293,7 @@ const App = {
     }
 
     this.renderGapIncidentChart(rows);
+    this.renderGapDelayMatrix(rows);
 
     // Gap list table (per step-gap, one row each)
     const tbody = document.getElementById('gap-log-tbody');
@@ -5317,6 +5339,106 @@ const App = {
       }).join('');
       if (fullEmpty) fullEmpty.classList.toggle('hidden', visibleFullRecords.length > 0);
     }
+  },
+  // Activity/milestone labels for the Delay Matrix table, keyed by "from__to" step pair —
+  // mirrors the admin's spreadsheet wording (Activity in caps, Milestone in lowercase).
+  GAP_MATRIX_LABELS: {
+    'pick_start__pick': { activity: 'PICKING', milestone: 'start to end picking' },
+    'pick__pgi': { activity: 'PGI', milestone: 'pick to PGI' },
+    'pgi__invoiced': { activity: 'INVOICING', milestone: 'pgi to invoice' },
+    'invoiced__ds_printed': { activity: 'DS PRINTING', milestone: 'invoice to DS print' },
+    'ds_printed__checking': { activity: 'CHECKING', milestone: 'ds print to Checking' },
+    'checking__loaded': { activity: 'LOADING', milestone: 'checking to loading' },
+  },
+  // Tallies incidents per step-gap into: (a) the same 5AM→4:59AM hour buckets used by the
+  // Incidents chart, and (b) month-to-date / quarter-to-date / year-to-date counts, based on the
+  // calendar date of the "to" milestone timestamp (i.e. when the gap actually landed). Excluded
+  // dispatches are left out, matching every other Delay/Gap Log stat.
+  computeGapDelayMatrix(rows) {
+    const hourBuckets = {};
+    const mtd = {}, qtd = {}, ytd = {};
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => {
+      const key = `${a}__${b}`;
+      hourBuckets[key] = Array(24).fill(0);
+      mtd[key] = 0; qtd[key] = 0; ytd[key] = 0;
+    });
+    const bucketOf = (isoString) => {
+      if (!isoString) return null;
+      const h = new Date(isoString).getHours();
+      return (h - 5 + 24) % 24;
+    };
+    const now = new Date();
+    const curQuarter = Math.floor(now.getMonth() / 3);
+    (rows || []).forEach(r => {
+      if (r.isExcluded || !r.isIncident) return;
+      const d = this.state.gapLogDispatchesById?.[r.dispatchId];
+      const toStep = r.pairKey.split('__')[1];
+      const tsStr = d ? d[`${toStep}_timestamp`] : null;
+      if (!tsStr) return;
+      const ts = new Date(tsStr);
+      const b = bucketOf(tsStr);
+      if (b !== null) hourBuckets[r.pairKey][b]++;
+      if (ts.getFullYear() === now.getFullYear()) {
+        ytd[r.pairKey]++;
+        if (Math.floor(ts.getMonth() / 3) === curQuarter) qtd[r.pairKey]++;
+        if (ts.getMonth() === now.getMonth()) mtd[r.pairKey]++;
+      }
+    });
+    return { hourBuckets, mtd, qtd, ytd };
+  },
+  // Spreadsheet-style Delay Matrix: one row per activity/milestone step-gap, one column per hour
+  // of day plus MTD/QTD/YTD, with a SUB-TOTAL row — mirrors the admin's existing tracker sheet.
+  renderGapDelayMatrix(rows) {
+    const headerRow = document.getElementById('gap-delay-matrix-header-row');
+    const tbody = document.getElementById('gap-delay-matrix-tbody');
+    if (!headerRow || !tbody) return;
+    const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+    const { hourBuckets, mtd, qtd, ytd } = this.computeGapDelayMatrix(rows);
+    const hourLabels = this.getChartHourLabels().map(l => {
+      const h = parseInt(l, 10);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      let hh = h % 12; if (hh === 0) hh = 12;
+      return `${hh}${ampm}`;
+    });
+    const hourHeaderHtml = hourLabels.map(l => `<th class="p-2 text-center whitespace-nowrap">${l}</th>`).join('');
+    headerRow.innerHTML = `
+      <th class="p-2 whitespace-nowrap">Activity</th>
+      <th class="p-2 whitespace-nowrap">Milestone</th>
+      <th class="p-2 text-center whitespace-nowrap">Dispatch Delayed</th>
+      ${hourHeaderHtml}
+      <th class="p-2 text-center whitespace-nowrap">MTD</th>
+      <th class="p-2 text-center whitespace-nowrap">QTD</th>
+      <th class="p-2 text-center whitespace-nowrap">YTD</th>`;
+    const colTotals = Array(24).fill(0);
+    let mtdTotal = 0, qtdTotal = 0, ytdTotal = 0;
+    const bodyRows = this.GAP_STEP_PAIRS.map(([a, b]) => {
+      const key = `${a}__${b}`;
+      const meta = this.GAP_MATRIX_LABELS[key] || { activity: key, milestone: '' };
+      const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+      const hourCells = hourBuckets[key].map((v, i) => {
+        colTotals[i] += v;
+        return `<td class="p-2 text-center ${v > 0 ? 'font-bold text-red-500' : 'text-slate-300 dark:text-slate-600'}">${v || 0}</td>`;
+      }).join('');
+      mtdTotal += mtd[key]; qtdTotal += qtd[key]; ytdTotal += ytd[key];
+      return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+        <td class="p-2 font-bold">${meta.activity}</td>
+        <td class="p-2 text-slate-500">${meta.milestone}</td>
+        <td class="p-2 text-center text-slate-500">&gt;${thresholdMin}m</td>
+        ${hourCells}
+        <td class="p-2 text-center font-semibold">${mtd[key] || 0}</td>
+        <td class="p-2 text-center font-semibold">${qtd[key] || 0}</td>
+        <td class="p-2 text-center font-semibold">${ytd[key] || 0}</td>
+      </tr>`;
+    }).join('');
+    const subtotalCells = colTotals.map(v => `<td class="p-2 text-center ${v > 0 ? 'text-red-500' : ''}">${v || 0}</td>`).join('');
+    const subtotalRow = `<tr class="bg-slate-50 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700">
+      <td class="p-2" colspan="3">SUB-TOTAL</td>
+      ${subtotalCells}
+      <td class="p-2 text-center">${mtdTotal}</td>
+      <td class="p-2 text-center">${qtdTotal}</td>
+      <td class="p-2 text-center">${ytdTotal}</td>
+    </tr>`;
+    tbody.innerHTML = bodyRows + subtotalRow;
   },
   // Stacked bar chart: incidents per hour, one series per step-gap — same 5:00→4:59 shift-hour
   // buckets and visual language as the Dashboard's Activity Timeline. Bucketed by the hour of the
