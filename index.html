@@ -264,6 +264,11 @@
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Assignment History</span>
       </button>
+      <!-- 8b. Delay / Gap Log -->
+      <button onclick="App.tryTab('tab-gap-log','tab_gap_log')" id="btn-tab-gap-log" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Delay / Gap Log</span>
+      </button>
       <!-- User Management -->
       <button onclick="App.tryTab('tab-users','tab_users')" id="btn-tab-users" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/></svg>
@@ -849,6 +854,80 @@
       </div>
     </section>
 
+    <!-- ══ DELAY / GAP LOG TAB (admin-configurable step-to-step delay tracking) ══ -->
+    <section id="tab-gap-log" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 class="text-2xl font-bold">⏱ Delay / Gap Log</h1>
+        <div class="flex gap-2 flex-wrap items-center">
+          <select id="gap-log-rdd-select" onchange="App.renderGapLogTab()" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            <option value="all">All RDDs</option>
+          </select>
+          <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 px-2 py-2 border dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900">
+            <input type="checkbox" id="gap-log-only-incidents" checked onchange="App.renderGapLogTab()" class="accent-blue-600"> Incidents only
+          </label>
+          <button onclick="App.exportTableToCSV('gap-log-table','gap-log.csv', App.state.currentGapLogRddId)" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
+          <button onclick="App.printGapLog()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">🖨 Print / Save PDF</button>
+        </div>
+      </div>
+      <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
+        <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+        <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
+          <span class="font-semibold">Measures the time gap between every consecutive milestone</span> (Start Pick → End Pick → PGI → Invoiced → DS Printed → Checking → Loaded) for each dispatch. A gap is flagged as an <b>incident</b> when it exceeds the threshold set below. Thresholds are admin-adjustable and saved for everyone.
+        </div>
+      </div>
+
+      <!-- Admin-adjustable thresholds -->
+      <div id="gap-threshold-panel" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4 mb-5 hidden">
+        <h2 class="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">⚙ Delay Thresholds (minutes) — Admin</h2>
+        <div id="gap-threshold-inputs" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3"></div>
+        <div class="flex items-center gap-3">
+          <button onclick="App.saveGapThresholds()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save Thresholds</button>
+          <button onclick="App.resetGapThresholds()" class="text-xs text-slate-500 hover:underline">Reset to defaults</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div id="gap-log-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+
+      <!-- Incident count per step-gap -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
+        <table class="w-full text-sm text-left" id="gap-log-breakdown-table">
+          <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
+            <tr>
+              <th class="p-3">Step Gap</th>
+              <th class="p-3 text-center">Threshold</th>
+              <th class="p-3 text-center">Evaluated</th>
+              <th class="p-3 text-center">Incidents</th>
+              <th class="p-3 text-center">Incident Rate</th>
+              <th class="p-3 text-center">Avg Gap</th>
+              <th class="p-3 text-center">Worst Gap</th>
+            </tr>
+          </thead>
+          <tbody id="gap-log-breakdown-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+      </div>
+
+      <!-- Full incident/gap log -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
+        <table class="w-full text-sm text-left" id="gap-log-table">
+          <thead class="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs uppercase">
+            <tr>
+              <th class="p-3">RDD</th>
+              <th class="p-3">Type</th>
+              <th class="p-3">Dispatch No.</th>
+              <th class="p-3">From Step</th>
+              <th class="p-3">To Step</th>
+              <th class="p-3 text-center">Gap</th>
+              <th class="p-3 text-center">Threshold</th>
+              <th class="p-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="gap-log-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+        <div id="gap-log-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No gap data for this selection.</div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -1353,6 +1432,7 @@ const App = {
     tab_rdd_summary: ['admin','outbound'],
     tab_graph_recap: ['admin','outbound'],
     tab_assignment_history: ['admin','outbound'],
+    tab_gap_log: ['admin','outbound'],
     tab_users: ['admin'],
   },
   ACTION_ROLE_DEFAULTS: {
@@ -1487,6 +1567,7 @@ const App = {
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
     if (tabId === 'tab-graph-recap') { this.initGraphRecapTab(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
+    if (tabId === 'tab-gap-log') { this.initGapLogTab(); }
   },
   tryTab(tabId, permKey) {
     if (!this.hasPerm(permKey)) {
@@ -3640,7 +3721,7 @@ const App = {
       tab_trucks: 'Trucks', tab_personnel: 'Personnel', tab_reports: 'Reports',
       tab_shift_compare: 'RDD Compare', tab_rdd_summary: 'RDD Summary',
       tab_graph_recap: 'Graph Recap',
-      tab_assignment_history: 'Assign. History', tab_users: 'User Mgmt',
+      tab_assignment_history: 'Assign. History', tab_gap_log: 'Gap Log', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
       apply_wops_sync: 'WOPS Sync Apply',
     };
@@ -3675,7 +3756,7 @@ const App = {
     }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync'],
   SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync'],
   openAddUserModal() {
     this.state.pendingUserId = null;
@@ -4699,6 +4780,225 @@ const App = {
   },
 
   // ═══════════════════════════════════════════════════════
+  // DELAY / GAP LOG
+  // Measures the time gap between every consecutive milestone timestamp
+  // for each dispatch, flags gaps that exceed an admin-adjustable threshold
+  // as "incidents", and reports/exports them. Thresholds are stored in the
+  // existing alert_settings key-value table (key = 'gap_thresholds', minute
+  // values JSON-encoded into the 'template' column — same pattern used for
+  // excluded_personnel) so no schema change is needed.
+  // ═══════════════════════════════════════════════════════
+  GAP_STEP_PAIRS: [
+    ['pick_start', 'pick'],
+    ['pick', 'pgi'],
+    ['pgi', 'invoiced'],
+    ['invoiced', 'ds_printed'],
+    ['ds_printed', 'checking'],
+    ['checking', 'loaded'],
+  ],
+  GAP_STEP_NAMES: { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' },
+  DEFAULT_GAP_THRESHOLDS: {
+    'pick_start__pick': 60,
+    'pick__pgi': 30,
+    'pgi__invoiced': 20,
+    'invoiced__ds_printed': 15,
+    'ds_printed__checking': 30,
+    'checking__loaded': 30,
+  },
+  async loadGapThresholds() {
+    let thresholds = { ...this.DEFAULT_GAP_THRESHOLDS };
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'gap_thresholds').maybeSingle();
+      if (error) { console.error('loadGapThresholds error:', error); }
+      else if (data && data.template) {
+        try { thresholds = { ...thresholds, ...JSON.parse(data.template) }; } catch { /* keep defaults */ }
+      }
+    } catch (e) { console.error('loadGapThresholds error:', e); }
+    this.state.gapThresholds = thresholds;
+  },
+  async saveGapThresholds() {
+    const thresholds = {};
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => {
+      const key = `${a}__${b}`;
+      const el = document.getElementById(`gap-threshold-${key}`);
+      const val = el ? parseInt(el.value, 10) : NaN;
+      thresholds[key] = Number.isFinite(val) && val >= 0 ? val : this.DEFAULT_GAP_THRESHOLDS[key];
+    });
+    const payload = { key: 'gap_thresholds', enabled: true, template: JSON.stringify(thresholds), require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) return alert('Failed to save thresholds: ' + error.message);
+    this.state.gapThresholds = thresholds;
+    this.showToast('✓ Delay thresholds updated', 'info', 3000);
+    this.renderGapLogTab();
+  },
+  resetGapThresholds() {
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => {
+      const key = `${a}__${b}`;
+      const el = document.getElementById(`gap-threshold-${key}`);
+      if (el) el.value = this.DEFAULT_GAP_THRESHOLDS[key];
+    });
+  },
+  renderGapThresholdInputs() {
+    const wrap = document.getElementById('gap-threshold-inputs');
+    if (!wrap) return;
+    const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+    wrap.innerHTML = this.GAP_STEP_PAIRS.map(([a, b]) => {
+      const key = `${a}__${b}`;
+      return `<div>
+        <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">${this.GAP_STEP_NAMES[a]} → ${this.GAP_STEP_NAMES[b]}</label>
+        <div class="flex items-center gap-1">
+          <input type="number" min="0" id="gap-threshold-${key}" value="${t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key]}" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
+          <span class="text-xs text-slate-400">min</span>
+        </div>
+      </div>`;
+    }).join('');
+    const panel = document.getElementById('gap-threshold-panel');
+    if (panel) panel.classList.toggle('hidden', !this.hasPerm('tab_users') && !this.isTrueAdmin());
+  },
+  async initGapLogTab() {
+    if (!this.state.gapThresholds) await this.loadGapThresholds();
+    this.renderGapThresholdInputs();
+    await this.renderGapLogTab();
+  },
+  async renderGapLogTab() {
+    const sel = document.getElementById('gap-log-rdd-select');
+    const rddId = sel ? sel.value : 'all';
+    this.state.currentGapLogRddId = rddId === 'all' ? null : rddId;
+    const onlyIncidents = document.getElementById('gap-log-only-incidents')?.checked ?? true;
+    const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+
+    let disps = [];
+    const rddMap = {};
+    this.state.rdds.forEach(r => { rddMap[r.id] = r.rdd_date; });
+    if (rddId === 'all') {
+      const { data, error } = await supabaseClient.from('dispatches').select('*');
+      if (error) { console.error('renderGapLogTab error:', error); return; }
+      disps = data || [];
+    } else {
+      const { data, error } = await supabaseClient.from('dispatches').select('*').eq('rdd_id', rddId);
+      if (error) { console.error('renderGapLogTab error:', error); return; }
+      disps = data || [];
+    }
+
+    // Compute every consecutive-step gap for every dispatch
+    const rows = [];
+    const breakdown = {};
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => { breakdown[`${a}__${b}`] = { evaluated: 0, incidents: 0, totalMs: 0, worstMs: 0 }; });
+
+    disps.forEach(d => {
+      const mmdd = rddMap[d.rdd_id] ? rddMap[d.rdd_id].slice(5) : '—';
+      this.GAP_STEP_PAIRS.forEach(([a, b]) => {
+        const tsA = d[`${a}_timestamp`];
+        const tsB = d[`${b}_timestamp`];
+        if (!tsA || !tsB) return;
+        const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+        if (!Number.isFinite(gapMs) || gapMs < 0) return;
+        const key = `${a}__${b}`;
+        const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+        const isIncident = gapMs > thresholdMin * 60000;
+        const bd = breakdown[key];
+        bd.evaluated++;
+        bd.totalMs += gapMs;
+        if (gapMs > bd.worstMs) bd.worstMs = gapMs;
+        if (isIncident) bd.incidents++;
+        rows.push({
+          rddLabel: mmdd, truck_type: d.truck_type, dispatch_number: d.dispatch_number,
+          fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b],
+          gapMs, thresholdMin, isIncident,
+        });
+      });
+    });
+
+    rows.sort((x, y) => (y.isIncident - x.isIncident) || (y.gapMs - x.gapMs));
+    const visibleRows = onlyIncidents ? rows.filter(r => r.isIncident) : rows;
+
+    // Summary cards
+    const totalIncidents = rows.filter(r => r.isIncident).length;
+    const totalEvaluated = rows.length;
+    const rate = totalEvaluated ? Math.round((totalIncidents / totalEvaluated) * 100) : 0;
+    const worstRow = rows.reduce((worst, r) => (!worst || r.gapMs > worst.gapMs) ? r : worst, null);
+    const summaryEl = document.getElementById('gap-log-summary');
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="text-xs text-slate-400 mb-1">Gaps Evaluated</div>
+          <div class="text-2xl font-bold">${totalEvaluated}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="text-xs text-slate-400 mb-1">Incidents (over threshold)</div>
+          <div class="text-2xl font-bold text-red-500">${totalIncidents}</div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="text-xs text-slate-400 mb-1">Incident Rate</div>
+          <div class="text-2xl font-bold ${rate > 20 ? 'text-red-500' : rate > 5 ? 'text-amber-500' : 'text-emerald-500'}">${rate}%</div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="text-xs text-slate-400 mb-1">Worst Gap</div>
+          <div class="text-xl font-bold text-amber-600">${worstRow ? this.fmtDuration(worstRow.gapMs) : '—'}</div>
+          <div class="text-[11px] text-slate-400 truncate">${worstRow ? `${worstRow.dispatch_number} · ${worstRow.fromLabel} → ${worstRow.toLabel}` : ''}</div>
+        </div>`;
+    }
+
+    // Breakdown table
+    const bdBody = document.getElementById('gap-log-breakdown-tbody');
+    if (bdBody) {
+      bdBody.innerHTML = this.GAP_STEP_PAIRS.map(([a, b]) => {
+        const key = `${a}__${b}`;
+        const bd = breakdown[key];
+        const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+        const avgMs = bd.evaluated ? bd.totalMs / bd.evaluated : 0;
+        const bdRate = bd.evaluated ? Math.round((bd.incidents / bd.evaluated) * 100) : 0;
+        const col = MILESTONE_COLORS[b] || '#64748b';
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+          <td class="p-3 font-semibold flex items-center gap-2"><span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${col}"></span>${this.GAP_STEP_NAMES[a]} → ${this.GAP_STEP_NAMES[b]}</td>
+          <td class="p-3 text-center text-slate-500">${thresholdMin}m</td>
+          <td class="p-3 text-center">${bd.evaluated}</td>
+          <td class="p-3 text-center font-bold ${bd.incidents ? 'text-red-500' : 'text-slate-400'}">${bd.incidents}</td>
+          <td class="p-3 text-center">${bdRate}%</td>
+          <td class="p-3 text-center">${bd.evaluated ? this.fmtDuration(avgMs) : '—'}</td>
+          <td class="p-3 text-center ${bd.incidents ? 'text-amber-600 font-semibold' : ''}">${bd.evaluated ? this.fmtDuration(bd.worstMs) : '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Full log table
+    const tbody = document.getElementById('gap-log-tbody');
+    const empty = document.getElementById('gap-log-empty');
+    if (tbody) {
+      tbody.innerHTML = visibleRows.map(r => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 ${r.isIncident ? 'bg-red-50/60 dark:bg-red-900/10' : ''}">
+          <td class="p-3">${r.rddLabel}</td>
+          <td class="p-3">${r.truck_type}</td>
+          <td class="p-3 font-semibold">${r.dispatch_number}</td>
+          <td class="p-3">${r.fromLabel}</td>
+          <td class="p-3">${r.toLabel}</td>
+          <td class="p-3 text-center font-semibold ${r.isIncident ? 'text-red-500' : ''}">${this.fmtDuration(r.gapMs)}</td>
+          <td class="p-3 text-center text-slate-500">${r.thresholdMin}m</td>
+          <td class="p-3 text-center">${r.isIncident ? '<span class="px-2 py-0.5 text-xs font-bold rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">⚠ Incident</span>' : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">OK</span>'}</td>
+        </tr>`).join('');
+      if (empty) empty.classList.toggle('hidden', visibleRows.length > 0);
+    }
+  },
+  printGapLog() {
+    const summary = document.getElementById('gap-log-summary');
+    const breakdown = document.getElementById('gap-log-breakdown-table');
+    const log = document.getElementById('gap-log-table');
+    if (!log) return alert('Open the Delay / Gap Log tab first.');
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>Delay / Gap Log</title>
+      <style>body{font-family:sans-serif;color:#1e293b;background:#fff;padding:1.5rem}
+      table{border-collapse:collapse;width:100%;margin-bottom:20px}th,td{border:1px solid #cbd5e1;padding:6px 10px;text-align:left}
+      th{background:#f8fafc;font-size:11px;text-transform:uppercase}
+      .grid-cols-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+      .p-4{padding:12px}.rounded-xl{border-radius:8px}.border{border:1px solid #e2e8f0}
+      h1{color:#1d4ed8;font-size:20px}@media print{.no-print{display:none}}</style>
+    </head><body><h1>⏱ Delay / Gap Log</h1>${summary ? summary.outerHTML : ''}${breakdown ? breakdown.outerHTML : ''}${log.outerHTML}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  },
+
+  // ═══════════════════════════════════════════════════════
   // SHIFT COMPARISON
   // ═══════════════════════════════════════════════════════
   populateCompareSelects() {
@@ -4725,6 +5025,15 @@ const App = {
         return `<option value="${r.id}">RDD ${mmdd}</option>`;
       }).join('');
       if (prevValue && this.state.rdds.some(r => r.id === prevValue)) recap.value = prevValue;
+    }
+    const gapSel = document.getElementById('gap-log-rdd-select');
+    if (gapSel) {
+      const prevValue = gapSel.value;
+      gapSel.innerHTML = '<option value="all">All RDDs</option>' + this.state.rdds.map(r => {
+        const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
+        return `<option value="${r.id}">RDD ${mmdd}</option>`;
+      }).join('');
+      if (prevValue && (prevValue === 'all' || this.state.rdds.some(r => r.id === prevValue))) gapSel.value = prevValue;
     }
   },
   async runShiftComparison() {
@@ -5285,6 +5594,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_rdd_summary" class="accent-blue-600"> RDD Summary</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_graph_recap" class="accent-blue-600"> Graph Recap</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_assignment_history" class="accent-blue-600"> Assignment History</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_gap_log" class="accent-blue-600"> Delay / Gap Log</label>
       </div>
     </div>
     <div id="um-sensitive-perms" class="mb-4">
