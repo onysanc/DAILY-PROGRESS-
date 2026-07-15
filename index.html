@@ -291,9 +291,13 @@
     <div class="p-4 text-[11px] text-slate-500 border-t border-slate-800 min-w-[15rem]" id="connection-status">●  connecting…</div>
   </aside>
   <main class="flex-1 overflow-y-auto p-6 bg-slate-100 dark:bg-slate-950 transition-colors duration-300">
-    <div id="global-toggle-bar" class="flex items-center mb-3">
+    <div id="global-toggle-bar" class="flex items-center gap-2 mb-3">
       <button onclick="App.toggleSidebar()" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+      <button onclick="App.openExtractionModal()" title="Extract full dispatch details — All RDDs or one RDD" class="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800 text-xs font-semibold">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+        <span class="hidden sm:inline">Extract Data</span>
       </button>
     </div>
 
@@ -1061,6 +1065,31 @@
           <button onclick="App.closeModal('exclude-dispatch-modal')" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
           <button onclick="App.confirmExcludeDispatch()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-700">Confirm Exclusion</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ DATA EXTRACTION MODAL — full-detail CSV, All RDDs or a single RDD ══ -->
+    <div id="extraction-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800">
+        <div class="flex justify-between items-start mb-1">
+          <h2 class="text-lg font-bold">⬇ Extract Dispatch Data</h2>
+          <button onclick="App.closeModal('extraction-modal')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl leading-none">×</button>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Every milestone timestamp, step duration, bay, assignment, and status — for all RDDs at once, or just one.</p>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Scope</label>
+        <select id="extraction-rdd-select" class="w-full p-2.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm mb-4">
+          <option value="all">All RDDs</option>
+        </select>
+        <label class="flex items-center gap-2 mb-1 cursor-pointer">
+          <input type="checkbox" id="extraction-incidents-only" class="accent-blue-600">
+          <span class="text-xs text-slate-500 dark:text-slate-400 select-none">Only dispatches with a delay incident</span>
+        </label>
+        <label class="flex items-center gap-2 mb-5 cursor-pointer">
+          <input type="checkbox" id="extraction-include-excluded" checked class="accent-blue-600">
+          <span class="text-xs text-slate-500 dark:text-slate-400 select-none">Include dispatches excluded from Delay/Gap stats (tagged in the file)</span>
+        </label>
+        <button id="extraction-run-btn" onclick="App.runDataExtraction()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition">⬇ Extract CSV</button>
+        <p class="text-[11px] text-slate-400 mt-3">Includes every milestone timestamp, the duration of every step gap (flagged if over the admin-set threshold), total cycle time, bay, assigned picker/checker, and Comp. status — one row per dispatch.</p>
       </div>
     </div>
 
@@ -2778,20 +2807,25 @@ const App = {
     this.initUniversalCopyButtons();
   },
   initUniversalCopyButtons() {
-    // Tables: a small right-aligned "Copy" toolbar row inserted directly above each table.
+    // Tables: a small right-aligned toolbar inserted directly above each table, with two
+    // options — copy as a real table (rich paste into Excel/Sheets/Word) or copy as a picture
+    // (paste as an image into Word/Slack/email — looks exactly like it does on screen).
     document.querySelectorAll('table').forEach(table => {
       if (table.dataset.copyAttached) return;
       if (!table.closest('body')) return;
       table.dataset.copyAttached = '1';
       const bar = document.createElement('div');
-      bar.className = 'copy-btn-row flex justify-end no-print';
+      bar.className = 'copy-btn-row flex justify-end gap-1 no-print';
       bar.setAttribute('data-capture-hide', 'true');
-      bar.innerHTML = `<button type="button" class="copy-btn text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1 px-1.5 py-0.5 rounded mr-1 mt-1" title="Copy table — paste into Excel/Sheets/Word"><span class="copy-btn-icon">📋</span><span class="copy-btn-label">Copy</span></button>`;
-      const btn = bar.querySelector('button');
-      btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyTableToClipboard(table, btn); });
+      bar.innerHTML = `
+        <button type="button" data-role="table" class="copy-btn text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1 px-1.5 py-0.5 rounded mr-0.5 mt-1" title="Copy table — paste into Excel/Sheets/Word"><span class="copy-btn-icon">📋</span><span class="copy-btn-label">Copy</span></button>
+        <button type="button" data-role="picture" class="copy-btn text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1 px-1.5 py-0.5 rounded mr-1 mt-1" title="Copy table as a picture"><span class="copy-btn-icon">🖼️</span><span class="copy-btn-label">Picture</span></button>`;
+      const [tableBtn, pictureBtn] = bar.querySelectorAll('button');
+      tableBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyTableToClipboard(table, tableBtn); });
+      pictureBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyTableAsPicture(table, pictureBtn); });
       table.parentNode.insertBefore(bar, table);
     });
-    // Charts: a small floating "Copy" button pinned to the top-right corner of each chart's canvas.
+    // Charts: a small floating "Picture" button pinned to the top-right corner of each canvas.
     document.querySelectorAll('canvas').forEach(canvas => {
       if (canvas.dataset.copyAttached) return;
       if (!canvas.closest('body')) return;
@@ -2803,8 +2837,8 @@ const App = {
       btn.type = 'button';
       btn.className = 'copy-btn chart-copy-btn absolute top-1 right-1 z-10 text-[11px] font-semibold bg-white/90 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 flex items-center gap-1 px-2 py-1 rounded-md border dark:border-slate-700 shadow-sm no-print';
       btn.setAttribute('data-capture-hide', 'true');
-      btn.title = 'Copy chart as image';
-      btn.innerHTML = `<span class="copy-btn-icon">📋</span><span class="copy-btn-label">Copy</span>`;
+      btn.title = 'Copy chart as a picture';
+      btn.innerHTML = `<span class="copy-btn-icon">🖼️</span><span class="copy-btn-label">Picture</span>`;
       btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copyChartToClipboard(canvas, btn); });
       holder.appendChild(btn);
     });
@@ -2836,6 +2870,33 @@ const App = {
       this.flashCopyButton(btnEl, 'Copied');
     } catch (e) {
       console.error('copyTableToClipboard error:', e);
+      this.flashCopyButton(btnEl, 'Failed', true);
+    }
+  },
+  // Rasterizes the table exactly as it looks on screen (styling, colors, dark mode included) and
+  // puts it on the clipboard as a PNG, ready to paste into Word/Slack/email/etc. Falls back to
+  // opening the image in a new tab on browsers that don't support writing images to the clipboard.
+  async copyTableAsPicture(table, btnEl) {
+    if (!table || typeof html2canvas === 'undefined') return this.flashCopyButton(btnEl, 'Failed', true);
+    try {
+      const isDark = document.documentElement.classList.contains('dark');
+      const canvas = await html2canvas(table, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+      });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Could not generate image');
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        this.flashCopyButton(btnEl, 'Copied');
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        this.flashCopyButton(btnEl, 'Opened');
+      }
+    } catch (e) {
+      console.error('copyTableAsPicture error:', e);
       this.flashCopyButton(btnEl, 'Failed', true);
     }
   },
@@ -2902,6 +2963,96 @@ const App = {
     const rdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const rddLabel = rdd ? rdd.rdd_date : 'export';
     this.downloadCSV(lines.join('\r\n'), `${rddLabel}-pending-dispatches.csv`);
+  },
+  // ═══════════════════════════════════════════════════════
+  // DATA EXTRACTION — one comprehensive CSV per dispatch: every milestone timestamp, every
+  // step-gap duration (flagged against the admin thresholds), total cycle time, bay, assigned
+  // picker/checker, and Comp. status. Scope is either every RDD at once or a single RDD.
+  // ═══════════════════════════════════════════════════════
+  openExtractionModal() {
+    const sel = document.getElementById('extraction-rdd-select');
+    if (sel && this.state.currentRddId && this.state.rdds.some(r => r.id === this.state.currentRddId)) {
+      sel.value = this.state.currentRddId;
+    }
+    this.openModal('extraction-modal');
+  },
+  async runDataExtraction() {
+    const btn = document.getElementById('extraction-run-btn');
+    const rddId = document.getElementById('extraction-rdd-select')?.value || 'all';
+    const incidentsOnly = document.getElementById('extraction-incidents-only')?.checked ?? false;
+    const includeExcluded = document.getElementById('extraction-include-excluded')?.checked ?? true;
+    const originalLabel = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Extracting…'; }
+    try {
+      const rddMap = {};
+      this.state.rdds.forEach(r => { rddMap[r.id] = r.rdd_date; });
+      let disps;
+      if (rddId === 'all') {
+        const { data, error } = await supabaseClient.from('dispatches').select('*');
+        if (error) throw error;
+        disps = data || [];
+      } else {
+        const { data, error } = await supabaseClient.from('dispatches').select('*').eq('rdd_id', rddId);
+        if (error) throw error;
+        disps = data || [];
+      }
+      if (!this.state.excludedDispatches) await this.loadExcludedDispatches();
+      const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+      const stepOrder = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+      const header = [
+        'RDD Date', 'Type', 'Dispatch No.', 'Bay', 'Priority', 'Picker(s)', 'Checker(s)',
+        ...stepOrder.map(s => `${this.GAP_STEP_NAMES[s]} Timestamp`),
+        ...this.GAP_STEP_PAIRS.map(([a, b]) => `${this.GAP_STEP_NAMES[a]} → ${this.GAP_STEP_NAMES[b]} Duration`),
+        'Total Duration', 'Incidents', 'Status', 'Comp.',
+      ];
+      const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines = [header.map(esc).join(',')];
+      let rowCount = 0;
+      disps.forEach(d => {
+        const excludedInfo = this.state.excludedDispatches?.[d.id] || null;
+        const isExcluded = !!excludedInfo;
+        if (isExcluded && !includeExcluded) return;
+        let incidentCount = 0;
+        const gapDurations = this.GAP_STEP_PAIRS.map(([a, b]) => {
+          const key = `${a}__${b}`;
+          const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+          const tsA = d[`${a}_timestamp`];
+          const tsB = d[`${b}_timestamp`];
+          if (!tsA || !tsB) return '—';
+          const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+          if (!Number.isFinite(gapMs) || gapMs < 0) return '—';
+          const isIncident = gapMs > thresholdMin * 60000;
+          if (isIncident) incidentCount++;
+          return this.fmtDuration(gapMs) + (isIncident ? ' ⚠' : '');
+        });
+        if (incidentsOnly && incidentCount === 0) return;
+        const totalMs = (d.pick_start_timestamp && d.loaded_timestamp)
+          ? Math.max(0, new Date(d.loaded_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
+          : null;
+        const row = [
+          rddMap[d.rdd_id] || '', d.truck_type, d.dispatch_number, d.bay_location || '', d.priority || '',
+          d.pick_assigned_names || '', d.checking_assigned_names || '',
+          ...stepOrder.map(s => d[`${s}_timestamp`] ? new Date(d[`${s}_timestamp`]).toLocaleString() : ''),
+          ...gapDurations,
+          totalMs !== null ? this.fmtDuration(totalMs) : '—',
+          incidentCount,
+          d.loaded_checked ? 'Loaded' : 'In Progress',
+          isExcluded ? `Excluded — ${excludedInfo.remark || 'no reason given'}` : 'Included',
+        ];
+        lines.push(row.map(esc).join(','));
+        rowCount++;
+      });
+      if (!rowCount) { alert('No dispatches match this selection.'); return; }
+      const scopeLabel = rddId === 'all' ? 'all-rdd' : (rddMap[rddId] || 'rdd');
+      this.downloadCSV(lines.join('\r\n'), `${scopeLabel}-full-extraction.csv`);
+      this.closeModal('extraction-modal');
+      this.showToast(`⬇ Extracted ${rowCount} dispatch${rowCount === 1 ? '' : 'es'}`, 'info', 3000);
+    } catch (e) {
+      console.error('runDataExtraction error:', e);
+      alert('Extraction failed: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+    }
   },
   handleMilestoneClick(event, dispatchId, step) {
     event.preventDefault();
@@ -5859,6 +6010,15 @@ const App = {
       } else {
         this.syncGapLogRddSelectToDispatchActivity();
       }
+    }
+    const extractSel = document.getElementById('extraction-rdd-select');
+    if (extractSel) {
+      const prevValue = extractSel.value;
+      extractSel.innerHTML = '<option value="all">All RDDs</option>' + this.state.rdds.map(r => {
+        const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
+        return `<option value="${r.id}">RDD ${mmdd}</option>`;
+      }).join('');
+      if (prevValue && (prevValue === 'all' || this.state.rdds.some(r => r.id === prevValue))) extractSel.value = prevValue;
     }
   },
   async runShiftComparison() {
