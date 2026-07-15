@@ -728,6 +728,30 @@
         <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-2">Off (default): matches wait in the WOPS Sync panel for a user with the "Apply WOPS-Outbound Sync" permission to approve. On: matches write straight to the dispatch as soon as WOPS-Outbound shows them, for every user viewing the app — no click needed.</p>
       </div>
 
+      <!-- Break Times -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
+        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">⏸ Break Times</h2>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Recurring daily windows (e.g. AM Mid Break 10:00–10:30 AM, AM Lunch Break 12:00–1:00 PM) that are automatically excluded from every time-based computation app-wide — step durations, delay/gap tracking, pending/stuck alerts, leaderboards, throughput, and ETA. Applies going forward and recalculates existing records live.</p>
+        <div id="break-times-list" class="space-y-2 mb-4"></div>
+        <form onsubmit="App.addBreakTime(event)" class="grid sm:grid-cols-4 gap-2 items-end border-t dark:border-slate-700 pt-4">
+          <div class="sm:col-span-2">
+            <label class="block text-[11px] text-slate-400 dark:text-slate-500 mb-1">Label</label>
+            <input type="text" id="bt-label" placeholder="e.g. AM Mid Break" class="w-full p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" required>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 dark:text-slate-500 mb-1">Start</label>
+            <input type="time" id="bt-start" class="w-full p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" required>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 dark:text-slate-500 mb-1">End</label>
+            <input type="time" id="bt-end" class="w-full p-2 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" required>
+          </div>
+          <div class="sm:col-span-4 flex justify-end">
+            <button type="submit" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">Add Break Time</button>
+          </div>
+        </form>
+      </div>
+
       <!-- Alert Dismiss Response Log -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <div class="flex items-center justify-between mb-1">
@@ -1374,6 +1398,7 @@ const App = {
     alertRemarkDrafts: {}, // alertKey -> in-progress typed remark (always-visible remarks box, independent of dismiss flow)
     alertLatestRemarks: {}, // alertKey -> { text, username, created_at } — most recently saved remark, shown inline; new saves replace it
     excludedPersonnelNames: new Set(), // names an admin has excluded from all time-based computations (speed/duration/leaderboards)
+    breakTimes: [], // admin-configured recurring daily break windows [{id,label,start:'HH:MM',end:'HH:MM'}] excluded from all time computations
     excludedDispatches: {}, // dispatchId -> { remark, username, created_at } — dispatches an admin has excluded from Delay/Gap computation
     pendingExcludeDispatchId: null,
     gapLogRddManuallySet: false, // true once the admin manually picks an RDD in the Delay/Gap Log filter — otherwise it follows the Dispatch Activity selected RDD
@@ -1651,6 +1676,7 @@ const App = {
     await this.loadAlertSettings();
     await this.loadWopsAutoApplySetting();
     await this.loadExcludedPersonnel();
+    await this.loadBreakTimes();
     this.setupRealtimeSubscriptions();
     this.startStuckAlertTimer();
     this.startAutoRefresh();
@@ -1730,7 +1756,7 @@ const App = {
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
-    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); }
+    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); this.renderBreakTimes(); }
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
@@ -2520,7 +2546,7 @@ const App = {
       const names = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names;
       let tip = `${ts} — Picker(s): ${names}`;
       if (d.pick_start_timestamp && d.pick_timestamp) {
-        const dur = new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp);
+        const dur = this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp);
         tip += ` — Pick duration: ${this.fmtDuration(dur)}`;
       }
       return tip;
@@ -2545,7 +2571,7 @@ const App = {
       const step = STEPS_FLOW[i];
       if (d[`${step}_checked`]) {
         const ts = d[`${step}_timestamp`];
-        return !!(ts && (Date.now() - new Date(ts).getTime()) > 30 * 60 * 1000);
+        return !!(ts && (this.adjustedDurationMs(ts, Date.now()) || 0) > 30 * 60 * 1000);
       }
     }
     return false;
@@ -2631,7 +2657,7 @@ const App = {
           // applies to every step in the chain (Start Pick has no previous
           // step, so it's skipped there).
           if (prevStep && d[`${prevStep}_timestamp`] && d[`${step}_timestamp`]) {
-            const gap = new Date(d[`${step}_timestamp`]) - new Date(d[`${prevStep}_timestamp`]);
+            const gap = this.adjustedDurationMs(d[`${prevStep}_timestamp`], d[`${step}_timestamp`]);
             if (gap >= 0) subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">⏱ ${this.fmtDuration(gap)}</div>`;
           }
           if (step === 'pick') {
@@ -2739,7 +2765,7 @@ const App = {
       const pickerNames = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join('; ') : (d.pick_assigned_names || '');
       const loadedTruck = this.state.trucks.find(t => t.id === d.assigned_truck_id);
       const pickDur = d.pick_start_timestamp && d.pick_timestamp
-        ? this.fmtDuration(new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)) : '';
+        ? this.fmtDuration(this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)) : '';
       lines.push([
         d.truck_type, d.dispatch_number,
         cell('pick_start'), cell('pick'), pickDur, pickerNames,
@@ -2946,7 +2972,7 @@ const App = {
         if (d[`${step}_checked`]) {
           const ts = d[`${step}_timestamp`];
           if (ts) {
-            const elapsed = now - new Date(ts).getTime();
+            const elapsed = this.adjustedDurationMs(ts, now);
             if (elapsed > stuckMs) stuck.push({ d, step, elapsed });
           }
           break;
@@ -3019,7 +3045,7 @@ const App = {
           const tsA = d[`${a}_timestamp`];
           const tsB = d[`${b}_timestamp`];
           if (!tsA || !tsB) return '—';
-          const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+          const gapMs = this.adjustedDurationMs(tsA, tsB);
           if (!Number.isFinite(gapMs) || gapMs < 0) return '—';
           const isIncident = gapMs > thresholdMin * 60000;
           if (isIncident) incidentCount++;
@@ -3027,7 +3053,7 @@ const App = {
         });
         if (incidentsOnly && incidentCount === 0) return;
         const totalMs = (d.pick_start_timestamp && d.loaded_timestamp)
-          ? Math.max(0, new Date(d.loaded_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
+          ? Math.max(0, this.adjustedDurationMs(d.pick_start_timestamp, d.loaded_timestamp) ?? 0)
           : null;
         const row = [
           rddMap[d.rdd_id] || '', d.truck_type, d.dispatch_number, d.bay_location || '', d.priority || '',
@@ -4519,6 +4545,108 @@ const App = {
     const m = mins % 60;
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   },
+  // ── Break Times: admin-configured daily windows (e.g. "AM Mid Break" 10:00-10:30) excluded from
+  // every time-based computation — delays, gaps, step durations, leaderboards, pending/stuck timers, ETA, etc.
+  // Breaks recur every calendar day and are applied by wall-clock time-of-day, so they correctly subtract
+  // out of any [startTs, endTs] span regardless of which day(s) it crosses.
+  breakOverlapMs(startMs, endMs) {
+    const breaks = this.state.breakTimes || [];
+    if (!breaks.length || !startMs || !endMs || endMs <= startMs) return 0;
+    let total = 0;
+    let dayCursor = new Date(startMs);
+    dayCursor.setHours(0, 0, 0, 0);
+    while (dayCursor.getTime() < endMs) {
+      breaks.forEach(b => {
+        const sParts = String(b.start || '').split(':').map(Number);
+        const eParts = String(b.end || '').split(':').map(Number);
+        if (sParts.length < 2 || eParts.length < 2 || sParts.some(isNaN) || eParts.some(isNaN)) return;
+        const bStart = new Date(dayCursor).setHours(sParts[0], sParts[1], 0, 0);
+        const bEnd = new Date(dayCursor).setHours(eParts[0], eParts[1], 0, 0);
+        if (bEnd <= bStart) return; // ignore malformed/overnight entries
+        const overlapStart = Math.max(startMs, bStart);
+        const overlapEnd = Math.min(endMs, bEnd);
+        if (overlapEnd > overlapStart) total += (overlapEnd - overlapStart);
+      });
+      dayCursor = new Date(dayCursor.getTime() + 24 * 60 * 60 * 1000);
+    }
+    return total;
+  },
+  // Duration between two timestamps (or a timestamp and "now"), with configured break-time windows
+  // subtracted out. Use this instead of raw `new Date(b) - new Date(a)` anywhere a delay/duration/speed
+  // metric is computed. Accepts ISO strings, Date objects, or ms numbers. Returns null if inputs are invalid.
+  adjustedDurationMs(startTs, endTs) {
+    if (!startTs || !endTs) return null;
+    const startMs = startTs instanceof Date ? startTs.getTime() : (typeof startTs === 'number' ? startTs : new Date(startTs).getTime());
+    const endMs = endTs instanceof Date ? endTs.getTime() : (typeof endTs === 'number' ? endTs : new Date(endTs).getTime());
+    if (isNaN(startMs) || isNaN(endMs)) return null;
+    const raw = endMs - startMs;
+    if (raw <= 0) return Math.max(0, raw);
+    return Math.max(0, raw - this.breakOverlapMs(startMs, endMs));
+  },
+  async loadBreakTimes() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'break_times').maybeSingle();
+      if (error) { console.error('loadBreakTimes error:', error); return; }
+      let breaks = [];
+      if (data && data.template) { try { breaks = JSON.parse(data.template); } catch { breaks = []; } }
+      this.state.breakTimes = Array.isArray(breaks) ? breaks : [];
+    } catch (e) { console.error('loadBreakTimes error:', e); }
+    this.renderBreakTimes();
+  },
+  async persistBreakTimes() {
+    const payload = { key: 'break_times', template: JSON.stringify(this.state.breakTimes || []), require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' });
+    if (error) { console.error('persistBreakTimes error:', error); alert('Failed to save break times.'); return false; }
+    return true;
+  },
+  async addBreakTime(e) {
+    e.preventDefault();
+    if (!this.hasPerm('tab_users') && this.state.currentUser.role !== 'admin') return;
+    const label = document.getElementById('bt-label').value.trim();
+    const start = document.getElementById('bt-start').value;
+    const end = document.getElementById('bt-end').value;
+    if (!label || !start || !end) return alert('Enter a label, start time, and end time.');
+    if (end <= start) return alert('End time must be after start time.');
+    if (!this.state.breakTimes) this.state.breakTimes = [];
+    this.state.breakTimes.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label, start, end });
+    const ok = await this.persistBreakTimes();
+    if (ok) {
+      document.getElementById('bt-label').value = '';
+      document.getElementById('bt-start').value = '';
+      document.getElementById('bt-end').value = '';
+      this.renderBreakTimes();
+      if (this.state.currentRddId) this.loadDispatches();
+    }
+  },
+  async removeBreakTime(id) {
+    if (!this.hasPerm('tab_users') && this.state.currentUser.role !== 'admin') return;
+    if (!confirm('Remove this break time? Past computations already shown will refresh using the updated break list.')) return;
+    this.state.breakTimes = (this.state.breakTimes || []).filter(b => b.id !== id);
+    const ok = await this.persistBreakTimes();
+    if (ok) {
+      this.renderBreakTimes();
+      if (this.state.currentRddId) this.loadDispatches();
+    }
+  },
+  renderBreakTimes() {
+    const list = document.getElementById('break-times-list');
+    if (!list) return;
+    const breaks = this.state.breakTimes || [];
+    const fmtT = (t) => {
+      const [h, m] = String(t).split(':').map(Number);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+    };
+    list.innerHTML = breaks.length ? breaks.map(b => `
+      <div class="flex items-center justify-between border dark:border-slate-700 rounded-lg px-3 py-2">
+        <div>
+          <div class="text-sm font-semibold">${b.label}</div>
+          <div class="text-xs text-slate-400 dark:text-slate-500">${fmtT(b.start)} – ${fmtT(b.end)}</div>
+        </div>
+        <button onclick="App.removeBreakTime('${b.id}')" class="text-red-500 hover:text-red-700 text-xs font-semibold">Remove</button>
+      </div>`).join('') : '<div class="text-slate-400 italic text-sm text-center py-3">No break times configured — all durations are computed continuously.</div>';
+  },
   async renderRDDSummaryTab() {
     const currentRdd = this.state.rdds.find(r => r.id === this.state.currentRddId);
     const allRdds = currentRdd ? [currentRdd] : [];
@@ -4643,7 +4771,7 @@ const App = {
       const checkerMap = {};
       this.state.dispatches.filter(d => d.checking_checked && d.checking_assigned_names).forEach(d => {
         const names = Array.isArray(d.checking_assigned_names) ? d.checking_assigned_names : [d.checking_assigned_names];
-        const dur = (d.checking_timestamp && d.ds_printed_timestamp) ? new Date(d.checking_timestamp).getTime() - new Date(d.ds_printed_timestamp).getTime() : null;
+        const dur = (d.checking_timestamp && d.ds_printed_timestamp) ? this.adjustedDurationMs(d.ds_printed_timestamp, d.checking_timestamp) : null;
         names.forEach(n => {
           if (this.isVirtualPersonnelName(n)) return;
           if (!checkerMap[n]) checkerMap[n] = { count: 0, durs: [] };
@@ -4674,7 +4802,7 @@ const App = {
           if (d[`${step}_checked`]) {
             const ts = d[`${step}_timestamp`];
             if (ts) {
-              const elapsed = now2 - new Date(ts).getTime();
+              const elapsed = this.adjustedDurationMs(ts, now2);
               if (elapsed > stuckMs) stuck.push({ d, step, elapsed });
             }
             break;
@@ -4710,7 +4838,7 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.loadExcludedPersonnel(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.loadExcludedPersonnel(); this.loadBreakTimes(); this.renderAlertBanner(); })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
@@ -5095,7 +5223,7 @@ const App = {
 
     // Pick duration stats (Start Pick → End Pick)
     const pickDurs = disps.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
-      .map(d => new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
+      .map(d => this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp))
       .filter(v => v >= 300000);
     const avgPickDur = pickDurs.length ? pickDurs.reduce((a,b)=>a+b,0)/pickDurs.length : null;
     const minPickDur = pickDurs.length ? Math.min(...pickDurs) : null;
@@ -5478,7 +5606,7 @@ const App = {
         const tsA = d[`${a}_timestamp`];
         const tsB = d[`${b}_timestamp`];
         if (!tsA || !tsB) { recordGaps.push({ key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
-        const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+        const gapMs = this.adjustedDurationMs(tsA, tsB);
         if (!Number.isFinite(gapMs) || gapMs < 0) { recordGaps.push({ key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
         const isIncident = gapMs > thresholdMin * 60000;
         // Excluded dispatches are still computed/shown (so admins can see what they excluded),
@@ -5500,7 +5628,7 @@ const App = {
         });
       });
       const totalMs = (d.pick_start_timestamp && d.loaded_timestamp)
-        ? Math.max(0, new Date(d.loaded_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime())
+        ? Math.max(0, this.adjustedDurationMs(d.pick_start_timestamp, d.loaded_timestamp) ?? 0)
         : null;
       fullRecords.push({ dispatchId: d.id, rddLabel: mmdd, rddDateRaw, truck_type: d.truck_type, dispatch_number: d.dispatch_number, gaps: recordGaps, totalMs, incidentCount, isExcluded, excludedInfo });
     });
@@ -5658,7 +5786,7 @@ const App = {
         const tsA = d[`${a}_timestamp`];
         const tsB = d[`${b}_timestamp`];
         if (!tsA || !tsB) return;
-        const gapMs = new Date(tsB).getTime() - new Date(tsA).getTime();
+        const gapMs = this.adjustedDurationMs(tsA, tsB);
         if (!Number.isFinite(gapMs) || gapMs < 0) return;
         rows.push({ dispatchId: d.id, pairKey: key, isIncident: gapMs > thresholdMin * 60000, isExcluded });
       });
@@ -6131,13 +6259,13 @@ const App = {
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#16a34a"></span>Fastest Pick</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center font-semibold" style="color:#16a34a">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.min(...durs)) : '—'; })()}</td>
             </tr>
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
               <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 font-semibold flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:#c46262"></span>Slowest Pick</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
-              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>new Date(d.pick_timestamp)-new Date(d.pick_start_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (da||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
+              <td class="border border-slate-200 dark:border-slate-700 px-3 py-2 text-center text-amber-600">${(() => { const durs = (db||[]).filter(d=>d.pick_start_checked&&d.pick_checked&&d.pick_start_timestamp&&d.pick_timestamp).map(d=>this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)).filter(v=>v>=300000); return durs.length ? this.fmtDuration(Math.max(...durs)) : '—'; })()}</td>
             </tr>
           </tbody>
         </table>
@@ -6222,7 +6350,7 @@ const App = {
     const plan = rdd ? (rdd.initial_planning_count || 0) : 0;
     const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
     const pickDurs = list.filter(d => d.pick_start_checked && d.pick_checked && d.pick_start_timestamp && d.pick_timestamp)
-      .map(d => new Date(d.pick_timestamp) - new Date(d.pick_start_timestamp)).filter(v => v >= 300000);
+      .map(d => this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp)).filter(v => v >= 300000);
     const avgPick = pickDurs.length ? pickDurs.reduce((a, b) => a + b, 0) / pickDurs.length : null;
     const trucksUsed = truckList.filter(t => t.status === 'Dispatched').length;
     const cards = [
@@ -6443,7 +6571,7 @@ const App = {
     allDisps.forEach(d => {
       if (d.pick_checked && d.pick_assigned_names && d.pick_assigned_names.length) {
         const dur = (d.pick_start_checked && d.pick_start_timestamp && d.pick_timestamp)
-          ? new Date(d.pick_timestamp).getTime() - new Date(d.pick_start_timestamp).getTime() : null;
+          ? this.adjustedDurationMs(d.pick_start_timestamp, d.pick_timestamp) : null;
         d.pick_assigned_names.forEach(n => {
           if (this.isVirtualPersonnelName(n)) return;
           if (!personMap[n]) personMap[n] = { pool: 'picker', rdds: {}, pickDurs: [] };
