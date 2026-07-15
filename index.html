@@ -859,7 +859,7 @@
       <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
         <h1 class="text-2xl font-bold">⏱ Delay / Gap Log</h1>
         <div class="flex gap-2 flex-wrap items-center">
-          <select id="gap-log-rdd-select" onchange="App.renderGapLogTab()" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+          <select id="gap-log-rdd-select" onchange="App.state.gapLogRddManuallySet = true; App.renderGapLogTab()" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
             <option value="all">All RDDs</option>
           </select>
           <select id="gap-log-milestone-filter" onchange="App.renderGapLogTab()" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
@@ -1305,6 +1305,7 @@ const App = {
     excludedPersonnelNames: new Set(), // names an admin has excluded from all time-based computations (speed/duration/leaderboards)
     excludedDispatches: {}, // dispatchId -> { remark, username, created_at } — dispatches an admin has excluded from Delay/Gap computation
     pendingExcludeDispatchId: null,
+    gapLogRddManuallySet: false, // true once the admin manually picks an RDD in the Delay/Gap Log filter — otherwise it follows the Dispatch Activity selected RDD
     chartYStep: 1,
     dispatchFilter: 'all',
     sortCol: null,
@@ -1758,6 +1759,7 @@ const App = {
   },
   async selectRDD(id) {
     this.state.currentRddId = id || null;
+    this.syncGapLogRddSelectToDispatchActivity();
     this.state.dispatchFilter = 'all';
     this.state.openAlertResponseKey = null;
     this.updateFilterPillStyles('all');
@@ -5046,9 +5048,21 @@ const App = {
     ).join('');
     if ([...el.options].some(o => o.value === prev)) el.value = prev;
   },
+  // Keeps the Delay/Gap Log RDD filter defaulted to whatever RDD is selected in Dispatch Activity,
+  // unless the admin has manually picked a different option in the Gap Log filter itself this session.
+  syncGapLogRddSelectToDispatchActivity() {
+    if (this.state.gapLogRddManuallySet) return;
+    const gapSel = document.getElementById('gap-log-rdd-select');
+    if (!gapSel) return;
+    const target = this.state.currentRddId && this.state.rdds.some(r => r.id === this.state.currentRddId)
+      ? this.state.currentRddId
+      : 'all';
+    gapSel.value = target;
+  },
   async initGapLogTab() {
     if (!this.state.gapThresholds) await this.loadGapThresholds();
     await this.loadExcludedDispatches();
+    this.syncGapLogRddSelectToDispatchActivity();
     this.renderGapThresholdInputs();
     this.populateGapLogMilestoneFilter();
     this.state.gapLogViewMode = this.state.gapLogViewMode || 'list';
@@ -5404,7 +5418,11 @@ const App = {
         const mmdd = r.rdd_date ? r.rdd_date.slice(5) : r.rdd_date;
         return `<option value="${r.id}">RDD ${mmdd}</option>`;
       }).join('');
-      if (prevValue && (prevValue === 'all' || this.state.rdds.some(r => r.id === prevValue))) gapSel.value = prevValue;
+      if (this.state.gapLogRddManuallySet) {
+        if (prevValue && (prevValue === 'all' || this.state.rdds.some(r => r.id === prevValue))) gapSel.value = prevValue;
+      } else {
+        this.syncGapLogRddSelectToDispatchActivity();
+      }
     }
   },
   async runShiftComparison() {
