@@ -960,10 +960,31 @@
             <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
           </div>
         </div>
+        <div class="border-t dark:border-slate-700 mt-4 pt-4">
+          <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">💡 Recommendations — delayed dispatches on one step, within one RDD, to trigger a suggested action</label>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">Once a single step/department accumulates this many delayed (incident) dispatches within the SAME RDD, it's flagged in the Recommendations panel below with a suggested action. Default <b>3</b>.</p>
+          <div class="flex items-center gap-2">
+            <input type="number" min="1" id="gap-recommendation-threshold" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
+            <span class="text-xs text-slate-400">dispatches / RDD / step</span>
+            <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
+          </div>
+        </div>
       </div>
 
       <!-- Summary cards -->
       <div id="gap-log-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+
+      <!-- Recommendations — flags a step/department once its delayed-dispatch count within a single RDD reaches the admin-set threshold, with a suggested action -->
+      <div id="gap-recommendations-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 mb-5">
+        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">💡 Recommendations — Action by Department</h2>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 italic">Per RDD · flags once a step hits the threshold set above (default 3) · excluded dispatches not counted</span>
+        </div>
+        <div class="relative mb-4" style="height:220px;">
+          <canvas id="gapRecommendationsChart"></canvas>
+        </div>
+        <div id="gap-recommendations-list" class="space-y-2"></div>
+      </div>
 
       <!-- Incidents by Hour chart (mirrors the Dashboard Activity Timeline styling) -->
       <div id="gap-chart-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col mb-5 relative" style="height:420px;">
@@ -5571,23 +5592,38 @@ const App = {
   // to only flag hours with a meaningful cluster of delays. Stored alongside the per-step minute
   // thresholds in the same 'gap_thresholds' alert_settings row — no schema change needed.
   DEFAULT_MIN_INCIDENTS_PER_HOUR: 1,
+  // Recommendations panel — how many delayed (incident) dispatches on the SAME step, within the
+  // SAME RDD, before that step/department is flagged with a suggested action. Stored alongside
+  // the per-step minute thresholds and minIncidentsPerHour in the same 'gap_thresholds' row.
+  DEFAULT_RECOMMENDATION_THRESHOLD: 3,
+  RECOMMENDED_ACTIONS: {
+    'pick_start__pick': 'Add pickers or reprioritize open picks — Picking is falling behind for this RDD.',
+    'pick__pgi': 'Escalate to the PGI/Staging team — staged shipments are backing up waiting for PGI.',
+    'pgi__invoiced': 'Escalate to Billing/Invoicing — invoices are lagging behind PGI.',
+    'invoiced__ds_printed': 'Escalate to Documentation — DS printing is lagging behind invoicing.',
+    'ds_printed__checking': 'Add checkers or open more bays — Checking is falling behind.',
+    'checking__loaded': 'Escalate to Logistics — confirm truck/bay availability for Loading.',
+  },
   async loadGapThresholds() {
     let thresholds = { ...this.DEFAULT_GAP_THRESHOLDS };
     let minIncidentsPerHour = this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
+    let recommendationThreshold = this.DEFAULT_RECOMMENDATION_THRESHOLD;
     try {
       const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'gap_thresholds').maybeSingle();
       if (error) { console.error('loadGapThresholds error:', error); }
       else if (data && data.template) {
         try {
           const parsed = JSON.parse(data.template);
-          const { minIncidentsPerHour: mip, ...pairThresholds } = parsed || {};
+          const { minIncidentsPerHour: mip, recommendationThreshold: rt, ...pairThresholds } = parsed || {};
           thresholds = { ...thresholds, ...pairThresholds };
           if (Number.isFinite(mip) && mip >= 1) minIncidentsPerHour = mip;
+          if (Number.isFinite(rt) && rt >= 1) recommendationThreshold = rt;
         } catch { /* keep defaults */ }
       }
     } catch (e) { console.error('loadGapThresholds error:', e); }
     this.state.gapThresholds = thresholds;
     this.state.minIncidentsPerHour = minIncidentsPerHour;
+    this.state.recommendationThreshold = recommendationThreshold;
   },
   async saveGapThresholds() {
     const thresholds = {};
@@ -5600,11 +5636,15 @@ const App = {
     const mipEl = document.getElementById('gap-min-incidents-per-hour');
     const mipVal = mipEl ? parseInt(mipEl.value, 10) : NaN;
     const minIncidentsPerHour = Number.isFinite(mipVal) && mipVal >= 1 ? mipVal : this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
-    const payload = { key: 'gap_thresholds', enabled: true, template: JSON.stringify({ ...thresholds, minIncidentsPerHour }), require_response: false };
+    const recEl = document.getElementById('gap-recommendation-threshold');
+    const recVal = recEl ? parseInt(recEl.value, 10) : NaN;
+    const recommendationThreshold = Number.isFinite(recVal) && recVal >= 1 ? recVal : this.DEFAULT_RECOMMENDATION_THRESHOLD;
+    const payload = { key: 'gap_thresholds', enabled: true, template: JSON.stringify({ ...thresholds, minIncidentsPerHour, recommendationThreshold }), require_response: false };
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save thresholds: ' + error.message);
     this.state.gapThresholds = thresholds;
     this.state.minIncidentsPerHour = minIncidentsPerHour;
+    this.state.recommendationThreshold = recommendationThreshold;
     this.showToast('✓ Delay thresholds updated', 'info', 3000);
     this.renderGapLogTab();
   },
@@ -5616,6 +5656,8 @@ const App = {
     });
     const mipEl = document.getElementById('gap-min-incidents-per-hour');
     if (mipEl) mipEl.value = this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
+    const recEl = document.getElementById('gap-recommendation-threshold');
+    if (recEl) recEl.value = this.DEFAULT_RECOMMENDATION_THRESHOLD;
   },
   renderGapThresholdInputs() {
     const wrap = document.getElementById('gap-threshold-inputs');
@@ -5633,6 +5675,8 @@ const App = {
     }).join('');
     const mipEl = document.getElementById('gap-min-incidents-per-hour');
     if (mipEl) mipEl.value = this.state.minIncidentsPerHour ?? this.DEFAULT_MIN_INCIDENTS_PER_HOUR;
+    const recEl = document.getElementById('gap-recommendation-threshold');
+    if (recEl) recEl.value = this.state.recommendationThreshold ?? this.DEFAULT_RECOMMENDATION_THRESHOLD;
     const panel = document.getElementById('gap-threshold-panel');
     if (panel) panel.classList.toggle('hidden', !this.hasPerm('tab_users') && !this.isTrueAdmin());
   },
@@ -5935,6 +5979,7 @@ const App = {
 
     this.renderGapIncidentChart(rows);
     this.renderGapDelayMatrix(rows, allRddRows, allRddDispatchesById);
+    this.renderGapRecommendations(rows);
 
     // Gap list table (per step-gap, one row each)
     const tbody = document.getElementById('gap-log-tbody');
@@ -6153,6 +6198,80 @@ const App = {
   // buckets and visual language as the Dashboard's Activity Timeline. Bucketed by the hour of the
   // "to" milestone timestamp (i.e. the moment the gap/incident actually landed). Excluded
   // dispatches are left out, matching every other Delay/Gap Log stat.
+  // Recommendations panel: groups incident rows by RDD + step, and flags any
+  // (RDD, step) combo that reaches state.recommendationThreshold (default 3)
+  // with a suggested action for that department. Resets per RDD by design —
+  // a step's count in one RDD never carries into another RDD's count.
+  renderGapRecommendations(rows) {
+    const threshold = this.state.recommendationThreshold ?? this.DEFAULT_RECOMMENDATION_THRESHOLD;
+    const buckets = {}; // `${rddKey}||${pairKey}` -> { rddLabel, pairKey, count }
+    (rows || []).forEach(r => {
+      if (r.isExcluded || !r.isIncident) return;
+      const rddKey = r.rddDateRaw || r.rddLabel || 'unknown';
+      const bKey = `${rddKey}||${r.pairKey}`;
+      if (!buckets[bKey]) buckets[bKey] = { rddLabel: r.rddLabel, pairKey: r.pairKey, count: 0 };
+      buckets[bKey].count++;
+    });
+    const triggered = Object.values(buckets).filter(b => b.count >= threshold).sort((x, y) => y.count - x.count);
+
+    // Chart: one bar per department/step, height = the worst single-RDD count
+    // reached in the current scope, so the current severity per department is
+    // visible at a glance regardless of whether one RDD or all RDDs are selected.
+    const worstByStep = {};
+    this.GAP_STEP_PAIRS.forEach(([a, b]) => { worstByStep[`${a}__${b}`] = 0; });
+    Object.values(buckets).forEach(b => { if (b.count > worstByStep[b.pairKey]) worstByStep[b.pairKey] = b.count; });
+
+    const canvas = document.getElementById('gapRecommendationsChart');
+    if (canvas && typeof Chart !== 'undefined') {
+      const ctx = canvas.getContext('2d');
+      if (this.state.gapRecommendationsChartInstance) this.state.gapRecommendationsChartInstance.destroy();
+      const isDark = document.documentElement.classList.contains('dark');
+      const textColor = isDark ? '#f1f5f9' : '#334155';
+      const gridColor = isDark ? '#334155' : '#e2e8f0';
+      const labels = this.GAP_STEP_PAIRS.map(([a, b]) => (this.GAP_MATRIX_LABELS[`${a}__${b}`] || {}).activity || this.GAP_STEP_NAMES[b]);
+      const data = this.GAP_STEP_PAIRS.map(([a, b]) => worstByStep[`${a}__${b}`]);
+      const colors = this.GAP_STEP_PAIRS.map(([a, b]) => (worstByStep[`${a}__${b}`] >= threshold ? '#dc2626' : (MILESTONE_COLORS[b] || '#64748b')));
+      this.state.gapRecommendationsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Worst delayed count in one RDD', data, backgroundColor: colors }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => `${c.formattedValue} delayed dispatch(es) in one RDD` } },
+            datalabels: { anchor: 'end', align: 'top', color: textColor, font: { weight: 'bold', size: 11 }, formatter: (v) => v || '' },
+          },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: textColor }, grid: { color: gridColor },
+              title: { display: true, text: `Delayed dispatches (threshold: ${threshold})`, color: textColor, font: { size: 12, weight: 'bold' } } },
+          },
+        },
+      });
+    }
+
+    const listEl = document.getElementById('gap-recommendations-list');
+    if (listEl) {
+      if (!triggered.length) {
+        listEl.innerHTML = `<p class="text-xs text-slate-400 dark:text-slate-500 italic">No department has hit ${threshold}+ delayed dispatches in a single RDD right now — nothing to act on.</p>`;
+      } else {
+        listEl.innerHTML = triggered.map(b => {
+          const label = (this.GAP_MATRIX_LABELS[b.pairKey] || {}).activity || b.pairKey;
+          const action = this.RECOMMENDED_ACTIONS[b.pairKey] || 'Review this step for this RDD.';
+          return `<div class="flex items-start gap-3 p-3 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700">
+            <span class="text-red-600 dark:text-red-400 text-lg leading-none mt-0.5">🚨</span>
+            <div class="flex-1 text-sm">
+              <span class="font-bold text-red-700 dark:text-red-300">${label}</span>
+              <span class="text-slate-500 dark:text-slate-400"> — RDD ${this.escapeHtml(b.rddLabel)} · </span>
+              <span class="font-semibold">${b.count} dispatches delayed</span>
+              <div class="text-slate-600 dark:text-slate-300 mt-0.5">${this.escapeHtml(action)}</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  },
   renderGapIncidentChart(rows) {
     const canvas = document.getElementById('gapIncidentChart');
     if (!canvas || typeof Chart === 'undefined') return;
