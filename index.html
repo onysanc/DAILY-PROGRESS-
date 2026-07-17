@@ -321,7 +321,7 @@
           <select id="rdd-selector" onchange="App.selectRDD(this.value)" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white">
             <option value="">Select RDD…</option>
           </select>
-          <button onclick="App.exportDispatchesCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
+          <button id="export-dispatches-btn" onclick="App.exportDispatchesCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
           <button id="sync-bays-btn" onclick="App.backfillMissingCheckingBays()" class="hidden bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 text-sm font-semibold" title="Fill in Bay for already-Checked dispatches that are missing it or don't match what the Puller used in WOPS-Outbound">🅱 Sync Bays</button>
           <button onclick="App.openCreateRddModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow hover:bg-emerald-700 text-sm font-semibold">+ Create RDD</button>
         </div>
@@ -615,7 +615,7 @@
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5">
           <div class="flex justify-between items-center mb-3">
             <div class="text-xs font-extrabold text-slate-500 dark:text-slate-400 tracking-widest">STEP DURATION BREAKDOWN — CURRENT RDD</div>
-            <button onclick="App.exportTableToCSV('step-duration-table','step-duration-breakdown.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
+            <button id="export-step-duration-btn" onclick="App.exportTableToCSV('step-duration-table','step-duration-breakdown.csv')" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">⬇ Export</button>
           </div>
           <table class="w-full text-xs border-collapse" id="step-duration-table">
             <thead>
@@ -842,9 +842,9 @@
           <select id="recap-rdd-select" onchange="App.renderGraphRecap()" class="p-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
             <option value="">Select RDD…</option>
           </select>
-          <button onclick="App.downloadRecapChartImage()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖼 Save Chart PNG</button>
-          <button onclick="App.exportRecapCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
-          <button onclick="App.printGraphRecap()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖨 Print / Save PDF</button>
+          <button id="export-recap-png-btn" onclick="App.downloadRecapChartImage()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖼 Save Chart PNG</button>
+          <button id="export-recap-csv-btn" onclick="App.exportRecapCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">⬇ Export CSV</button>
+          <button id="export-recap-print-btn" onclick="App.printGraphRecap()" class="bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-semibold">🖨 Print / Save PDF</button>
         </div>
       </div>
       <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
@@ -868,7 +868,7 @@
             <option value="picker">Pickers Only</option>
             <option value="checker">Checkers Only</option>
           </select>
-          <button onclick="App.exportTableToCSV('assignment-history-table','assignment-history.csv')" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
+          <button id="export-assignment-history-btn" onclick="App.exportTableToCSV('assignment-history-table','assignment-history.csv')" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
         </div>
       </div>
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto">
@@ -932,8 +932,8 @@
             <button id="gap-view-btn-list" onclick="App.setGapLogViewMode('list')" class="px-3 py-2 text-sm font-semibold bg-blue-600 text-white">Gap List</button>
             <button id="gap-view-btn-full" onclick="App.setGapLogViewMode('full')" class="px-3 py-2 text-sm font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Full Records</button>
           </div>
-          <button onclick="App.exportCurrentGapLogCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
-          <button onclick="App.printGapLog()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">🖨 Print / Save PDF</button>
+          <button id="export-gaplog-csv-btn" onclick="App.exportCurrentGapLogCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
+          <button id="export-gaplog-print-btn" onclick="App.printGapLog()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">🖨 Print / Save PDF</button>
         </div>
       </div>
       <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
@@ -1688,6 +1688,7 @@ const App = {
     delete_dispatch: ['admin'],
     admin_override: ['admin'],
     apply_wops_sync: ['admin'], // apply WOPS-Outbound auto-fill suggestions (Pick/Checking) — admin by default, grantable to specific users
+    export_data: ['admin'], // export/print/download buttons (CSV, PNG, PDF) anywhere in the app — admin by default, grantable to specific users
   },
   isTrueAdmin() {
     return this.state.currentUser?.role === 'admin';
@@ -1705,6 +1706,23 @@ const App = {
     Object.keys(this.TAB_ROLE_DEFAULTS).forEach(key => {
       const btn = document.getElementById(`btn-${key.replace(/^tab_/, 'tab-').replace(/_/g, '-')}`);
       if (btn) btn.classList.toggle('hidden', !this.hasPerm(key));
+    });
+    this.applyExportButtonVisibility();
+  },
+  // Every CSV/PNG/print export button in the app is admin-only by default;
+  // an admin can grant the 'export_data' permission to specific users in
+  // User Management to let them export too.
+  EXPORT_BUTTON_IDS: [
+    'export-dispatches-btn', 'export-step-duration-btn',
+    'export-recap-png-btn', 'export-recap-csv-btn', 'export-recap-print-btn',
+    'export-assignment-history-btn',
+    'export-gaplog-csv-btn', 'export-gaplog-print-btn',
+  ],
+  applyExportButtonVisibility() {
+    const canExport = this.hasPerm('export_data');
+    this.EXPORT_BUTTON_IDS.forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.toggle('hidden', !canExport);
     });
   },
   async init() {
@@ -2802,6 +2820,7 @@ const App = {
     });
   },
   exportDispatchesCSV() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
     if (!this.state.dispatches.length) return alert('No dispatches to export.');
     const searchEl = document.getElementById('dispatch-search-input');
     const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
@@ -2859,6 +2878,7 @@ const App = {
     URL.revokeObjectURL(url);
   },
   exportTableToCSV(tableId, filename, rddIdOverride) {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
     const table = document.getElementById(tableId);
     if (!table) return;
     const rows = [...table.querySelectorAll('tr')].filter(tr => tr.children.length);
@@ -3017,6 +3037,7 @@ const App = {
     }, 1500);
   },
   exportStuckDispatchesCSV() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
@@ -4211,7 +4232,7 @@ const App = {
       tab_graph_recap: 'Graph Recap',
       tab_assignment_history: 'Assign. History', tab_gap_log: 'Gap Log', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
-      apply_wops_sync: 'WOPS Sync Apply',
+      apply_wops_sync: 'WOPS Sync Apply', export_data: 'Export/Print',
     };
     tbody.innerHTML = this.state.appUsers.map(u => {
       const perms = Array.isArray(u.permissions) ? u.permissions : [];
@@ -4244,8 +4265,8 @@ const App = {
     }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync'],
-  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
+  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
   openAddUserModal() {
     this.state.pendingUserId = null;
     document.getElementById('user-modal-title').textContent = 'Add User';
@@ -6156,6 +6177,7 @@ const App = {
     this.openModal('gap-record-detail-modal');
   },
   printGapLog() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export/print data. Ask an admin to grant it in User Management.');
     const summary = document.getElementById('gap-log-summary');
     const breakdown = document.getElementById('gap-log-breakdown-table');
     const mode = this.state.gapLogViewMode || 'list';
@@ -6597,6 +6619,7 @@ const App = {
     });
   },
   downloadRecapChartImage() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
     if (!this.state.recapChartInstance) return alert('Select an RDD first to generate the chart.');
     const rddId = document.getElementById('recap-rdd-select').value;
     const rdd = this.state.rdds.find(r => r.id === rddId);
@@ -6614,6 +6637,7 @@ const App = {
     this.exportTableToCSV('recap-step-table', 'graph-recap-milestones.csv', rddId);
   },
   printGraphRecap() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export/print data. Ask an admin to grant it in User Management.');
     const el = document.getElementById('recap-printable');
     if (!el || !this.state.recapChartInstance) return alert('Select an RDD first to generate the recap.');
     const chartImg = `<img src="${this.state.recapChartInstance.toBase64Image('image/png', 1)}" style="width:100%;max-width:900px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px" />`;
@@ -6805,6 +6829,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-admin_override" class="accent-red-600"> Admin Override (untick/edit completed steps + timestamps)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Checking using live WOPS-Outbound data)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-export_data" class="accent-red-600"> Export / Print / Download (CSV exports, chart PNG, print-to-PDF)</label>
       </div>
       <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
     </div>
