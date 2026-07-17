@@ -2178,95 +2178,117 @@ const App = {
   // this.state.wopsStatusMap so renderDispatches() can show it inline.
   // Silently no-ops on failure (network/CORS/etc.) — the Outbound Status
   // column just shows "—" for everything rather than breaking the page.
+  // Core WOPS-Outbound lookup, factored out of fetchWopsStatuses() so other
+  // callers (e.g. the Delay/Gap Log, which needs Staged status for dispatches
+  // outside the currently-loaded RDD) can pull the same data for an arbitrary
+  // set of dispatch/shipment numbers without touching state.wopsStatusMap.
+  async buildWopsStatusMap(numbers) {
+    const map = {};
+    if (!numbers.length) return map;
+    const { data: shipments, error: shipErr } = await wopsClient.from('shipments')
+      .select('*')
+      .in('shipment_no', numbers);
+    if (shipErr) { console.error('WOPS lookup failed:', shipErr); return map; }
+
+    const soNumbers = (shipments || []).map(s => s.so_number).filter(Boolean);
+    let logs = [];
+    if (soNumbers.length) {
+      const { data: logData, error: logErr } = await wopsClient.from('activity_logs')
+        .select('so_number,role,personnel_name,start_time,end_time,status,bay')
+        .in('so_number', soNumbers);
+      if (logErr) console.error('WOPS activity_logs lookup failed:', logErr);
+      else logs = logData || [];
+    }
+
+    // Most-recently-started log per so_number+role, Completed preferred over Ongoing/Paused.
+    const logMap = {};
+    logs.forEach(l => {
+      const key = `${l.so_number}||${l.role}`;
+      const existing = logMap[key];
+      if (!existing) { logMap[key] = l; return; }
+      const rank = s => (s === 'Completed' ? 2 : s === 'Ongoing' ? 1 : 0);
+      if (rank(l.status) > rank(existing.status) || (rank(l.status) === rank(existing.status) && new Date(l.start_time) > new Date(existing.start_time))) {
+        logMap[key] = l;
+      }
+    });
+
+    // Group by shipment_no: a single Dispatch/Shipment Number can have
+    // several SO line items in WOPS-Outbound. A stage (Pick, Staging,
+    // Pull, Check) only counts as actually done for that dispatch once
+    // EVERY row in the group has a Completed log for that role — one row
+    // still Pending/Ongoing means the dispatch as a whole is NOT done yet,
+    // even if every other row already finished.
+    const groups = {};
+    (shipments || []).forEach(s => {
+      (groups[s.shipment_no] = groups[s.shipment_no] || []).push(s);
+    });
+    Object.keys(groups).forEach(shipmentNo => {
+      const rows = groups[shipmentNo];
+      const soNumbersInGroup = rows.map(r => r.so_number).filter(Boolean);
+      const steps = WOPS_ROLE_STEPS.map(step => {
+        const logsForStep = soNumbersInGroup.map(so => logMap[`${so}||${step.role}`] || null);
+        const completedLogs = logsForStep.filter(l => l && l.status === 'Completed');
+        const anyLog = logsForStep.find(l => l);
+        const allDone = soNumbersInGroup.length > 0 && completedLogs.length === soNumbersInGroup.length;
+        // Representative log for the dot tooltip / names display: once
+        // every row is done, show a completed one; otherwise show
+        // whichever log is in progress so the dot can read "Ongoing"
+        // rather than silently claiming completion.
+        // When every SO row is done, use the one that finished LAST (max
+        // end_time), not just the first completed row in array order —
+        // otherwise an earlier end (e.g. 9am, or Jul 7) could win over a
+        // later one (10am, or Jul 8) purely by array position.
+        const repLog = allDone
+          ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
+          : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
+        return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
+      });
+      // Bay is only trusted once every row under this dispatch has
+      // actually been pulled — otherwise a bay shown here could belong to
+      // a line that finished early while others are still pending, which
+      // isn't the bay Checking should rely on yet.
+      const pullerDone = steps.find(s => s.role === 'Puller').allDone;
+      const pullerBays = pullerDone
+        ? [...new Set(soNumbersInGroup.map(so => (logMap[`${so}||Puller`] || {}).bay).filter(Boolean))]
+        : [];
+      map[shipmentNo] = {
+        so_number: soNumbersInGroup.join(', '),
+        shipment_status: [...new Set(rows.map(r => r.status).filter(Boolean))].join(', '),
+        // Customer name confirmed as the `sold_to_party_name` column on
+        // WOPS-Outbound's `shipments` table. Older aliases kept as a
+        // fallback only in case a given row has that field blank.
+        customer: rows[0].sold_to_party_name ?? rows[0].customer ?? rows[0].ship_to_party_name ?? rows[0].customer_name ?? null,
+        quantity: rows.reduce((sum, r) => sum + (Number(r.quantity ?? r.qty) || 0), 0) || null,
+        target_minutes: rows[0].target_minutes ?? rows[0].target_time ?? rows[0].target ?? null,
+        pullerBay: pullerBays.length === 1 ? pullerBays[0] : (pullerBays.length > 1 ? pullerBays.join(', ') : null),
+        rowCount: rows.length,
+        steps
+      };
+    });
+    return map;
+  },
+  // Returns the WOPS-Outbound Staging Checker step for a dispatch (from
+  // state.wopsStatusMap), or null if there's no matching shipment.
+  wopsStagingStep(d) {
+    const info = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+    return info ? info.steps.find(s => s.role === 'Staging Checker') : null;
+  },
+  // True once WOPS-Outbound shows every row for this dispatch as Staged
+  // (Staging Checker role Completed for all SO lines).
+  isWopsStaged(d) {
+    const step = this.wopsStagingStep(d);
+    return !!(step && step.allDone);
+  },
+  // The timestamp WOPS-Outbound recorded staging as finished, or null.
+  wopsStagedTimestamp(d) {
+    const step = this.wopsStagingStep(d);
+    return (step && step.allDone && step.log && step.log.end_time) ? step.log.end_time : null;
+  },
   async fetchWopsStatuses() {
     const numbers = [...new Set(this.state.dispatches.map(d => String(d.dispatch_number).trim()).filter(Boolean))];
     if (!numbers.length) return;
     try {
-      const { data: shipments, error: shipErr } = await wopsClient.from('shipments')
-        .select('*')
-        .in('shipment_no', numbers);
-      if (shipErr) { console.error('WOPS lookup failed:', shipErr); return; }
-
-      const soNumbers = (shipments || []).map(s => s.so_number).filter(Boolean);
-      let logs = [];
-      if (soNumbers.length) {
-        const { data: logData, error: logErr } = await wopsClient.from('activity_logs')
-          .select('so_number,role,personnel_name,start_time,end_time,status,bay')
-          .in('so_number', soNumbers);
-        if (logErr) console.error('WOPS activity_logs lookup failed:', logErr);
-        else logs = logData || [];
-      }
-
-      // Most-recently-started log per so_number+role, Completed preferred over Ongoing/Paused.
-      const logMap = {};
-      logs.forEach(l => {
-        const key = `${l.so_number}||${l.role}`;
-        const existing = logMap[key];
-        if (!existing) { logMap[key] = l; return; }
-        const rank = s => (s === 'Completed' ? 2 : s === 'Ongoing' ? 1 : 0);
-        if (rank(l.status) > rank(existing.status) || (rank(l.status) === rank(existing.status) && new Date(l.start_time) > new Date(existing.start_time))) {
-          logMap[key] = l;
-        }
-      });
-
-      if (shipments && shipments.length) {
-        console.log('[WOPS DEBUG] Sample raw shipment record — check this for the real Customer/Quantity/Target field names:', shipments[0]);
-      }
-      // Group by shipment_no: a single Dispatch/Shipment Number can have
-      // several SO line items in WOPS-Outbound. A stage (Pick, Staging,
-      // Pull, Check) only counts as actually done for that dispatch once
-      // EVERY row in the group has a Completed log for that role — one row
-      // still Pending/Ongoing means the dispatch as a whole is NOT done yet,
-      // even if every other row already finished.
-      const groups = {};
-      (shipments || []).forEach(s => {
-        (groups[s.shipment_no] = groups[s.shipment_no] || []).push(s);
-      });
-      const map = {};
-      Object.keys(groups).forEach(shipmentNo => {
-        const rows = groups[shipmentNo];
-        const soNumbersInGroup = rows.map(r => r.so_number).filter(Boolean);
-        const steps = WOPS_ROLE_STEPS.map(step => {
-          const logsForStep = soNumbersInGroup.map(so => logMap[`${so}||${step.role}`] || null);
-          const completedLogs = logsForStep.filter(l => l && l.status === 'Completed');
-          const anyLog = logsForStep.find(l => l);
-          const allDone = soNumbersInGroup.length > 0 && completedLogs.length === soNumbersInGroup.length;
-          // Representative log for the dot tooltip / names display: once
-          // every row is done, show a completed one; otherwise show
-          // whichever log is in progress so the dot can read "Ongoing"
-          // rather than silently claiming completion.
-          // When every SO row is done, use the one that finished LAST (max
-          // end_time), not just the first completed row in array order —
-          // otherwise an earlier end (e.g. 9am, or Jul 7) could win over a
-          // later one (10am, or Jul 8) purely by array position.
-          const repLog = allDone
-            ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
-            : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
-          return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
-        });
-        // Bay is only trusted once every row under this dispatch has
-        // actually been pulled — otherwise a bay shown here could belong to
-        // a line that finished early while others are still pending, which
-        // isn't the bay Checking should rely on yet.
-        const pullerDone = steps.find(s => s.role === 'Puller').allDone;
-        const pullerBays = pullerDone
-          ? [...new Set(soNumbersInGroup.map(so => (logMap[`${so}||Puller`] || {}).bay).filter(Boolean))]
-          : [];
-        map[shipmentNo] = {
-          so_number: soNumbersInGroup.join(', '),
-          shipment_status: [...new Set(rows.map(r => r.status).filter(Boolean))].join(', '),
-          // Customer name confirmed as the `sold_to_party_name` column on
-          // WOPS-Outbound's `shipments` table. Older aliases kept as a
-          // fallback only in case a given row has that field blank.
-          customer: rows[0].sold_to_party_name ?? rows[0].customer ?? rows[0].ship_to_party_name ?? rows[0].customer_name ?? null,
-          quantity: rows.reduce((sum, r) => sum + (Number(r.quantity ?? r.qty) || 0), 0) || null,
-          target_minutes: rows[0].target_minutes ?? rows[0].target_time ?? rows[0].target ?? null,
-          pullerBay: pullerBays.length === 1 ? pullerBays[0] : (pullerBays.length > 1 ? pullerBays.join(', ') : null),
-          rowCount: rows.length,
-          steps
-        };
-      });
-      this.state.wopsStatusMap = map;
+      this.state.wopsStatusMap = await this.buildWopsStatusMap(numbers);
       this.computeWopsSyncQueue();
       this.renderDispatches();
       this.renderWopsSyncFab();
@@ -2677,7 +2699,14 @@ const App = {
       const step = filter.slice(3);
       const idx = MILESTONE_FLOW.indexOf(step);
       const nextStep = idx >= 0 && idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
-      visible = searched.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
+      if (step === 'pick') {
+        // Pending to PGI: End Pick checked here is no longer enough on its own —
+        // the shipment must also show Staged in WOPS-Outbound before PGI is
+        // actually due. Both must be true, and PGI itself must not be ticked yet.
+        visible = searched.filter(d => d.pick_checked && this.isWopsStaged(d) && !d.pgi_checked);
+      } else {
+        visible = searched.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
+      }
     }
     if (countEl) countEl.textContent = `${visible.length} of ${this.state.dispatches.length} shown`;
     this.updateFilterBadgeCounts();
@@ -3104,6 +3133,17 @@ const App = {
       if (!this.state.excludedDispatches) await this.loadExcludedDispatches();
       const t = this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
       const stepOrder = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+      // Same Staged (WOPS-Outbound) lookup used by the Gap Log, so the
+      // exported "End Pick → PGI" column and its incident flag stay
+      // consistent with what's shown on-screen.
+      const extractionWopsNumbers = [...new Set(disps.map(d => String(d.dispatch_number).trim()).filter(Boolean))];
+      const extractionWopsMap = await this.buildWopsStatusMap(extractionWopsNumbers);
+      const extractionStagedTs = (d) => {
+        const info = extractionWopsMap[String(d.dispatch_number).trim()];
+        const stagingStep = info ? info.steps.find(s => s.role === 'Staging Checker') : null;
+        return (stagingStep && stagingStep.allDone && stagingStep.log && stagingStep.log.end_time) ? stagingStep.log.end_time : null;
+      };
+      const SIXTEEN_HOURS_MS = 16 * 60 * 60 * 1000;
       const header = [
         'RDD Date', 'Type', 'Dispatch No.', 'Bay', 'Priority', 'Picker(s)', 'Checker(s)',
         ...stepOrder.map(s => `${this.GAP_STEP_NAMES[s]} Timestamp`),
@@ -3121,6 +3161,24 @@ const App = {
         const gapDurations = this.GAP_STEP_PAIRS.map(([a, b]) => {
           const key = `${a}__${b}`;
           const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+
+          if (key === 'pick__pgi') {
+            const pickTs = d.pick_timestamp;
+            const pgiTs = d.pgi_timestamp;
+            const stagedTs = extractionStagedTs(d);
+            const startTs = stagedTs || pickTs;
+            if (!startTs || !pgiTs) return '—';
+            const gapMs = this.adjustedDurationMs(startTs, pgiTs);
+            if (!Number.isFinite(gapMs) || gapMs < 0) return '—';
+            const pickToPgiMs = (pickTs && pgiTs) ? this.adjustedDurationMs(pickTs, pgiTs) : null;
+            const stagedToPgiMs = (stagedTs && pgiTs) ? this.adjustedDurationMs(stagedTs, pgiTs) : null;
+            const isAdvancePicked = (Number.isFinite(pickToPgiMs) && pickToPgiMs > SIXTEEN_HOURS_MS)
+              || (Number.isFinite(stagedToPgiMs) && stagedToPgiMs > SIXTEEN_HOURS_MS);
+            const isIncident = !isAdvancePicked && gapMs > thresholdMin * 60000;
+            if (isIncident) incidentCount++;
+            return this.fmtDuration(gapMs) + (isIncident ? ' ⚠' : (isAdvancePicked ? ' (advance-picked)' : ''));
+          }
+
           const tsA = d[`${a}_timestamp`];
           const tsB = d[`${b}_timestamp`];
           if (!tsA || !tsB) return '—';
@@ -4581,7 +4639,9 @@ const App = {
     }
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
-      const count = list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
+      const count = step === 'pick'
+        ? list.filter(d => d.pick_checked && this.isWopsStaged(d) && !d.pgi_checked).length
+        : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
       const badge = document.getElementById(`filter-badge-at_${step}`);
       if (badge) {
         badge.textContent = count;
@@ -5686,6 +5746,31 @@ const App = {
     this.state.gapLogRddMap = rddMap;
     this.state.gapLogDispatchesById = {};
 
+    // MTD/QTD/YTD in the Delay Matrix must always reflect EVERY RDD, even while a single RDD is
+    // selected above — so when the filter narrows `disps`, fetch the full unfiltered dispatch set
+    // separately just for those three columns. When "All RDDs" is already selected, reuse `disps`.
+    // Fetched up-front (rather than after the main loop below) so the WOPS staged-status lookup
+    // right after this can cover both sets of dispatches in one request.
+    let allRddDisps = disps;
+    if (rddId !== 'all') {
+      const { data: allData, error: allErr } = await supabaseClient.from('dispatches').select('*');
+      if (allErr) { console.error('renderGapLogTab (all-RDD fetch) error:', allErr); allRddDisps = []; }
+      else allRddDisps = allData || [];
+    }
+
+    // Staged status/timestamps from WOPS-Outbound, needed for the pick→PGI
+    // gap below. state.wopsStatusMap only covers the currently-loaded RDD's
+    // dispatches, so fetch fresh for whatever set the Gap Log is evaluating
+    // (union of the selected-RDD set and the all-RDD set used for MTD/QTD/YTD).
+    const gapLogWopsNumbers = [...new Set([...disps, ...allRddDisps].map(d => String(d.dispatch_number).trim()).filter(Boolean))];
+    const gapLogWopsMap = await this.buildWopsStatusMap(gapLogWopsNumbers);
+    const gapLogStagedTs = (d) => {
+      const info = gapLogWopsMap[String(d.dispatch_number).trim()];
+      const stagingStep = info ? info.steps.find(s => s.role === 'Staging Checker') : null;
+      return (stagingStep && stagingStep.allDone && stagingStep.log && stagingStep.log.end_time) ? stagingStep.log.end_time : null;
+    };
+    const SIXTEEN_HOURS_MS = 16 * 60 * 60 * 1000;
+
     // Compute every consecutive-step gap for every dispatch
     const rows = [];
     const fullRecords = [];
@@ -5703,6 +5788,47 @@ const App = {
       this.GAP_STEP_PAIRS.forEach(([a, b]) => {
         const key = `${a}__${b}`;
         const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+
+        if (key === 'pick__pgi') {
+          // Pick→PGI is measured from Staged (WOPS-Outbound Staging Checker
+          // completion) rather than End Pick — PGI isn't actually due until
+          // the shipment has been staged. Falls back to End Pick if there's
+          // no matching/completed WOPS staging record for this dispatch.
+          const pickTs = d.pick_timestamp;
+          const pgiTs = d.pgi_timestamp;
+          const stagedTs = gapLogStagedTs(d);
+          const startTs = stagedTs || pickTs;
+          const fromLabel = stagedTs ? 'Staged' : this.GAP_STEP_NAMES[a];
+          if (!startTs || !pgiTs) { recordGaps.push({ key, fromLabel, toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
+          const gapMs = this.adjustedDurationMs(startTs, pgiTs);
+          if (!Number.isFinite(gapMs) || gapMs < 0) { recordGaps.push({ key, fromLabel, toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
+          // Advance-pick override: if EITHER the End Pick→PGI leg or the
+          // Staged→PGI leg runs past 16h, picking simply ran far ahead of
+          // staging/PGI (advance-picked) — that's a positive, not a delay,
+          // so it's never flagged as an incident.
+          const pickToPgiMs = (pickTs && pgiTs) ? this.adjustedDurationMs(pickTs, pgiTs) : null;
+          const stagedToPgiMs = (stagedTs && pgiTs) ? this.adjustedDurationMs(stagedTs, pgiTs) : null;
+          const isAdvancePicked = (Number.isFinite(pickToPgiMs) && pickToPgiMs > SIXTEEN_HOURS_MS)
+            || (Number.isFinite(stagedToPgiMs) && stagedToPgiMs > SIXTEEN_HOURS_MS);
+          const isIncident = !isAdvancePicked && gapMs > thresholdMin * 60000;
+          if (!isExcluded) {
+            const bd = breakdown[key];
+            bd.evaluated++;
+            bd.totalMs += gapMs;
+            if (gapMs > bd.worstMs) bd.worstMs = gapMs;
+            if (isIncident) { bd.incidents++; incidentCount++; }
+          } else if (isIncident) {
+            incidentCount++;
+          }
+          recordGaps.push({ key, fromLabel, toLabel: this.GAP_STEP_NAMES[b], gapMs, thresholdMin, isIncident, isAdvancePicked });
+          rows.push({
+            dispatchId: d.id, rddLabel: mmdd, rddDateRaw, truck_type: d.truck_type, dispatch_number: d.dispatch_number,
+            pairKey: key, fromLabel, toLabel: this.GAP_STEP_NAMES[b],
+            gapMs, thresholdMin, isIncident, isExcluded, excludedInfo, isAdvancePicked,
+          });
+          return;
+        }
+
         const tsA = d[`${a}_timestamp`];
         const tsB = d[`${b}_timestamp`];
         if (!tsA || !tsB) { recordGaps.push({ key, fromLabel: this.GAP_STEP_NAMES[a], toLabel: this.GAP_STEP_NAMES[b], gapMs: null, thresholdMin, isIncident: false }); return; }
@@ -5735,19 +5861,14 @@ const App = {
     this.state.gapLogComputedById = {};
     fullRecords.forEach(fr => { this.state.gapLogComputedById[fr.dispatchId] = fr; });
 
-    // MTD/QTD/YTD in the Delay Matrix must always reflect EVERY RDD, even while a single RDD is
-    // selected above — so when the filter narrows `disps`, fetch the full unfiltered dispatch set
-    // separately just for those three columns. When "All RDDs" is already selected, reuse `rows`.
+    // MTD/QTD/YTD in the Delay Matrix must always reflect EVERY RDD (allRddDisps, fetched above
+    // alongside the WOPS staged-status lookup), even while a single RDD is selected in `disps`.
     let allRddRows = rows;
     let allRddDispatchesById = this.state.gapLogDispatchesById;
     if (rddId !== 'all') {
-      const { data: allData, error: allErr } = await supabaseClient.from('dispatches').select('*');
-      if (allErr) { console.error('renderGapLogTab (all-RDD fetch) error:', allErr); }
-      else {
-        const built = this.buildIncidentPairRows(allData || [], t);
-        allRddRows = built.rows;
-        allRddDispatchesById = built.dispatchesById;
-      }
+      const built = this.buildIncidentPairRows(allRddDisps, t, gapLogWopsMap);
+      allRddRows = built.rows;
+      allRddDispatchesById = built.dispatchesById;
     }
 
     let filteredRows = milestoneFilter === 'all' ? rows : rows.filter(r => r.pairKey === milestoneFilter);
@@ -5873,8 +5994,15 @@ const App = {
   // Lightweight version of the gap-computation loop in renderGapLogTab — used only to build an
   // all-RDD incident list (pairKey/isIncident/isExcluded per dispatch) for the Delay Matrix's
   // MTD/QTD/YTD columns, independent of whatever RDD filter is currently selected on-screen.
-  buildIncidentPairRows(disps, thresholds) {
+  buildIncidentPairRows(disps, thresholds, wopsMap) {
     const t = thresholds || this.state.gapThresholds || this.DEFAULT_GAP_THRESHOLDS;
+    const SIXTEEN_HOURS_MS = 16 * 60 * 60 * 1000;
+    const stagedTsFor = (d) => {
+      if (!wopsMap) return null;
+      const info = wopsMap[String(d.dispatch_number).trim()];
+      const stagingStep = info ? info.steps.find(s => s.role === 'Staging Checker') : null;
+      return (stagingStep && stagingStep.allDone && stagingStep.log && stagingStep.log.end_time) ? stagingStep.log.end_time : null;
+    };
     const rows = [];
     const dispatchesById = {};
     (disps || []).forEach(d => {
@@ -5883,6 +6011,23 @@ const App = {
       this.GAP_STEP_PAIRS.forEach(([a, b]) => {
         const key = `${a}__${b}`;
         const thresholdMin = t[key] ?? this.DEFAULT_GAP_THRESHOLDS[key];
+
+        if (key === 'pick__pgi') {
+          const pickTs = d.pick_timestamp;
+          const pgiTs = d.pgi_timestamp;
+          const stagedTs = stagedTsFor(d);
+          const startTs = stagedTs || pickTs;
+          if (!startTs || !pgiTs) return;
+          const gapMs = this.adjustedDurationMs(startTs, pgiTs);
+          if (!Number.isFinite(gapMs) || gapMs < 0) return;
+          const pickToPgiMs = (pickTs && pgiTs) ? this.adjustedDurationMs(pickTs, pgiTs) : null;
+          const stagedToPgiMs = (stagedTs && pgiTs) ? this.adjustedDurationMs(stagedTs, pgiTs) : null;
+          const isAdvancePicked = (Number.isFinite(pickToPgiMs) && pickToPgiMs > SIXTEEN_HOURS_MS)
+            || (Number.isFinite(stagedToPgiMs) && stagedToPgiMs > SIXTEEN_HOURS_MS);
+          rows.push({ dispatchId: d.id, pairKey: key, isIncident: !isAdvancePicked && gapMs > thresholdMin * 60000, isExcluded });
+          return;
+        }
+
         const tsA = d[`${a}_timestamp`];
         const tsB = d[`${b}_timestamp`];
         if (!tsA || !tsB) return;
