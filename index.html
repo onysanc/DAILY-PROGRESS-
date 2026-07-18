@@ -696,29 +696,26 @@
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">🔔 Alerts &amp; Notification Settings</h2>
         <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">One place for every automatic alert in the app — wording, thresholds, and exactly where each one shows up (dashboard banner and/or toast pop-up). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
-        <div class="grid md:grid-cols-3 gap-3">
-          <!-- Pending-at-step Alert -->
-          <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
-            <div class="flex items-center justify-between mb-2">
-              <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Pending-at-step</label>
-              <button onclick="App.resetAlertSetting('stuck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
-            </div>
-            <textarea id="as-stuck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
-            <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes}</div>
-            <div class="flex items-center gap-2 mb-3 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
-              <span>Trigger when ≥</span>
-              <input type="number" id="as-stuck-count" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-              <span>pending ≥</span>
-              <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
-              <span>min</span>
-            </div>
-            <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
-              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
-            </div>
-            <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-stuck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
-            <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+        <!-- Pending-at-step Alert — full width so each milestone can have its own trigger point -->
+        <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col mb-3">
+          <div class="flex items-center justify-between mb-2">
+            <label class="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" id="as-stuck-enabled" class="accent-blue-600"> 🔴 Pending-at-step</label>
+            <button onclick="App.resetAlertSetting('stuck')" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Reset</button>
           </div>
+          <textarea id="as-stuck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
+          <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count} {step} {minutes} — same wording is reused for every milestone below, with {step} and {minutes} filled in per-milestone.</div>
+          <div class="mb-3">
+            <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Per-milestone trigger point — each step can have its own count and wait time</div>
+            <div id="as-stuck-per-step-inputs" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+          </div>
+          <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
+          </div>
+          <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-stuck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
+          <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
           <!-- No Truck Alert -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
             <div class="flex items-center justify-between mb-2">
@@ -749,6 +746,7 @@
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
         </div>
+
 
         <!-- Delay / Gap incident thresholds — moved here from the Delay/Gap Log tab so every
              alert-related setting lives in this one admin card. -->
@@ -1449,6 +1447,19 @@ const App = {
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!', require_response: false },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!', require_response: false },
   },
+  // Milestones the Pending-at-step alert watches, each with its own trigger point
+  // (independent count + wait-time threshold) — saved as key='stuck_per_step',
+  // template=JSON, same generic key/value pattern as gap_thresholds below.
+  STUCK_STEPS: ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking'],
+  DEFAULT_STUCK_PER_STEP: {
+    pick_start: { threshold_count: 3, threshold_minutes: 30 },
+    pick:       { threshold_count: 3, threshold_minutes: 30 },
+    pgi:        { threshold_count: 3, threshold_minutes: 30 },
+    invoiced:   { threshold_count: 3, threshold_minutes: 30 },
+    ds_printed: { threshold_count: 3, threshold_minutes: 30 },
+    pulling:    { threshold_count: 3, threshold_minutes: 30 },
+    checking:   { threshold_count: 3, threshold_minutes: 30 },
+  },
   // Per-alert on/off switches for WHERE it shows up — independent of the master "enabled"
   // switch above. Saved as a single JSON row (key='alert_display_prefs') in the same
   // alert_settings table, the same pattern already used for gap_thresholds.
@@ -2064,11 +2075,11 @@ const App = {
     const content = document.getElementById('dispatch-alert-content');
     if (!banner || !content || !this.state.currentRddId) { if (banner) banner.classList.add('hidden'); return; }
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const stuckPerStep = this.state.stuckPerStepThresholds || this.DEFAULT_STUCK_PER_STEP;
     const now = Date.now();
     const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
     const alerts = []; // { key, text, requireResponse }
-    // Alert 1: dispatches stuck at a step > configured minutes
+    // Alert 1: dispatches stuck at a step > that step's own configured minutes
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     const stepStuckCounts = {};
     this.state.dispatches.forEach(d => {
@@ -2076,6 +2087,8 @@ const App = {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
+          const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
+          const stuckMs = ((cfg && cfg.threshold_minutes) || 30) * 60 * 1000;
           const ts = d[`${step}_timestamp`];
           if (ts && (now - new Date(ts).getTime()) > stuckMs) {
             stepStuckCounts[step] = (stepStuckCounts[step] || 0) + 1;
@@ -2087,11 +2100,12 @@ const App = {
     const displayPrefs = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
     if (stuckCfg.enabled && displayPrefs.stuck.banner) {
       Object.entries(stepStuckCounts).forEach(([step, count]) => {
-        if (count >= (stuckCfg.threshold_count || 3)) {
+        const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
+        if (count >= ((cfg && cfg.threshold_count) || 3)) {
           const nextStep = STEPS_FLOW[STEPS_FLOW.indexOf(step) + 1]; // the milestone dispatches are pending on
           alerts.push({
             key: `stuck-${step}`,
-            text: this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 }),
+            text: this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: (cfg && cfg.threshold_minutes) || 30 }),
             requireResponse: !!stuckCfg.require_response,
             color: MILESTONE_COLORS[nextStep] || '#d97706',
           });
@@ -4610,6 +4624,7 @@ const App = {
   async loadAlertSettings() {
     const merged = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_SETTINGS));
     const displayPrefs = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_DISPLAY_PREFS));
+    const stuckPerStep = JSON.parse(JSON.stringify(this.DEFAULT_STUCK_PER_STEP));
     try {
       const { data, error } = await supabaseClient.from('alert_settings').select('*');
       if (!error && data) {
@@ -4619,6 +4634,13 @@ const App = {
               const parsed = JSON.parse(row.template || '{}');
               Object.keys(displayPrefs).forEach(k => { if (parsed[k]) displayPrefs[k] = { ...displayPrefs[k], ...parsed[k] }; });
             } catch (e) { console.error('alert_display_prefs parse error:', e); }
+            return;
+          }
+          if (row.key === 'stuck_per_step') {
+            try {
+              const parsed = JSON.parse(row.template || '{}');
+              Object.keys(stuckPerStep).forEach(k => { if (parsed[k]) stuckPerStep[k] = { ...stuckPerStep[k], ...parsed[k] }; });
+            } catch (e) { console.error('stuck_per_step parse error:', e); }
             return;
           }
           if (!merged[row.key]) return;
@@ -4636,7 +4658,24 @@ const App = {
     } catch (e) { console.error('loadAlertSettings error:', e); }
     this.state.alertSettings = merged;
     this.state.alertDisplayPrefs = displayPrefs;
+    this.state.stuckPerStepThresholds = stuckPerStep;
     this.renderAlertSettingsPanel();
+  },
+  renderStuckPerStepInputs() {
+    const wrap = document.getElementById('as-stuck-per-step-inputs');
+    if (!wrap) return;
+    const t = this.state.stuckPerStepThresholds || this.DEFAULT_STUCK_PER_STEP;
+    wrap.innerHTML = this.STUCK_STEPS.map(step => {
+      const cfg = t[step] || this.DEFAULT_STUCK_PER_STEP[step];
+      return `<div class="flex items-center gap-1.5 flex-wrap border dark:border-slate-800 rounded-lg px-2 py-1.5">
+        <span class="w-28 shrink-0 text-[11px] font-semibold text-slate-600 dark:text-slate-300">${PENDING_LABELS[step]}</span>
+        <span class="text-[11px] text-slate-400">≥</span>
+        <input type="number" min="1" id="as-stuck-count-${step}" value="${cfg.threshold_count}" class="w-12 p-1 border rounded-md text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+        <span class="text-[11px] text-slate-400">pending ≥</span>
+        <input type="number" min="1" id="as-stuck-minutes-${step}" value="${cfg.threshold_minutes}" class="w-14 p-1 border rounded-md text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+        <span class="text-[11px] text-slate-400">min</span>
+      </div>`;
+    }).join('');
   },
   renderAlertSettingsPanel() {
     const s = this.state.alertSettings;
@@ -4654,10 +4693,7 @@ const App = {
       if (bannerEl) bannerEl.checked = !!(p[key] && p[key].banner);
       if (popupEl) popupEl.checked = !!(p[key] && p[key].popup);
     });
-    const cnt = document.getElementById('as-stuck-count');
-    const min = document.getElementById('as-stuck-minutes');
-    if (cnt) cnt.value = s.stuck.threshold_count;
-    if (min) min.value = s.stuck.threshold_minutes;
+    this.renderStuckPerStepInputs();
   },
   async saveAlertSetting(key) {
     const enabledEl = document.getElementById(`as-${key}-enabled`);
@@ -4668,13 +4704,27 @@ const App = {
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
     const payload = { key, enabled: enabledEl.checked, template, require_response: requireEl ? requireEl.checked : false };
-    if (key === 'stuck') {
-      payload.threshold_count = parseInt(document.getElementById('as-stuck-count').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_count;
-      payload.threshold_minutes = parseInt(document.getElementById('as-stuck-minutes').value, 10) || this.DEFAULT_ALERT_SETTINGS.stuck.threshold_minutes;
-    }
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save: ' + error.message);
     this.state.alertSettings[key] = { ...this.state.alertSettings[key], ...payload };
+    // Pending-at-step also has its own per-milestone count/minutes grid — save it as a
+    // separate JSON row, same pattern as alert_display_prefs / gap_thresholds.
+    if (key === 'stuck') {
+      const perStep = {};
+      this.STUCK_STEPS.forEach(step => {
+        const cEl = document.getElementById(`as-stuck-count-${step}`);
+        const mEl = document.getElementById(`as-stuck-minutes-${step}`);
+        const d = this.DEFAULT_STUCK_PER_STEP[step];
+        perStep[step] = {
+          threshold_count: (cEl && parseInt(cEl.value, 10)) || d.threshold_count,
+          threshold_minutes: (mEl && parseInt(mEl.value, 10)) || d.threshold_minutes,
+        };
+      });
+      this.state.stuckPerStepThresholds = perStep;
+      const perStepPayload = { key: 'stuck_per_step', enabled: true, template: JSON.stringify(perStep), require_response: false };
+      const { error: perStepError } = await supabaseClient.from('alert_settings').upsert(perStepPayload, { onConflict: 'key' }).select();
+      if (perStepError) return alert('Failed to save per-milestone thresholds: ' + perStepError.message);
+    }
     // Save this alert's banner/popup display prefs, merged into the single shared prefs row.
     if (!this.state.alertDisplayPrefs) this.state.alertDisplayPrefs = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_DISPLAY_PREFS));
     this.state.alertDisplayPrefs[key] = {
@@ -4770,8 +4820,13 @@ const App = {
     if (bannerEl) bannerEl.checked = !!dp.banner;
     if (popupEl) popupEl.checked = !!dp.popup;
     if (key === 'stuck') {
-      document.getElementById('as-stuck-count').value = d.threshold_count;
-      document.getElementById('as-stuck-minutes').value = d.threshold_minutes;
+      this.STUCK_STEPS.forEach(step => {
+        const dStep = this.DEFAULT_STUCK_PER_STEP[step];
+        const cEl = document.getElementById(`as-stuck-count-${step}`);
+        const mEl = document.getElementById(`as-stuck-minutes-${step}`);
+        if (cEl) cEl.value = dStep.threshold_count;
+        if (mEl) mEl.value = dStep.threshold_minutes;
+      });
     }
   },
   async loadAlertResponseLog() {
