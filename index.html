@@ -526,7 +526,7 @@
       
       <div class="flex flex-col gap-4 flex-1 min-h-0">
         <div id="dash-ongoing-status-strip" class="grid grid-cols-3 gap-3 shrink-0">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+          <div onclick="App.openOngoingDetailModal('Picker')" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between cursor-pointer hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition" title="Click for details">
             <div class="flex items-center gap-2">
               <span class="relative flex h-2.5 w-2.5">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#0284c7"></span>
@@ -536,7 +536,7 @@
             </div>
             <span id="dash-ongoing-picking-count" class="text-lg font-bold text-slate-800 dark:text-white">—</span>
           </div>
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+          <div onclick="App.openOngoingDetailModal('Puller')" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between cursor-pointer hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition" title="Click for details">
             <div class="flex items-center gap-2">
               <span class="relative flex h-2.5 w-2.5">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#0ea5e9"></span>
@@ -546,7 +546,7 @@
             </div>
             <span id="dash-ongoing-pulling-count" class="text-lg font-bold text-slate-800 dark:text-white">—</span>
           </div>
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+          <div onclick="App.openOngoingDetailModal('Outbound Checker')" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between cursor-pointer hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition" title="Click for details">
             <div class="flex items-center gap-2">
               <span class="relative flex h-2.5 w-2.5">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#2563eb"></span>
@@ -1302,6 +1302,19 @@
     <div id="wops-detail-body"></div>
     <div class="flex justify-end mt-4">
       <button onclick="App.closeModal('wops-detail-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Close</button>
+    </div>
+  </div>
+</div>
+<div id="ongoing-detail-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[460px] border dark:border-slate-800 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-1">
+      <h2 id="ongoing-detail-title" class="text-base font-bold">Ongoing</h2>
+      <button onclick="App.closeModal('ongoing-detail-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl leading-none">&times;</button>
+    </div>
+    <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-3">Live from WOPS-Outbound — dispatches with this step currently in progress. Click a row for the full pipeline.</p>
+    <div id="ongoing-detail-body" class="space-y-2"></div>
+    <div class="flex justify-end mt-4">
+      <button onclick="App.closeModal('ongoing-detail-modal')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm">Close</button>
     </div>
   </div>
 </div>
@@ -2779,6 +2792,44 @@ const App = {
         </div>`;
     }
     document.getElementById('wops-detail-modal').classList.remove('hidden');
+  },
+  // Role -> display label/color for the ongoing-status strip's detail modal.
+  ONGOING_ROLE_META: {
+    Picker: { label: 'Ongoing Picking', color: '#0284c7' },
+    Puller: { label: 'Ongoing Pulling', color: '#0ea5e9' },
+    'Outbound Checker': { label: 'Ongoing Checking', color: '#2563eb' }
+  },
+  // Lists every dispatch currently "Ongoing" (someone clocked in, not yet
+  // finished) for the given WOPS-Outbound role — backs the click-through on
+  // the Ongoing Picking/Pulling/Checking cards above the Activity Timeline.
+  // Clicking a row drills into the full per-dispatch Outbound Progress modal.
+  openOngoingDetailModal(role) {
+    const meta = this.ONGOING_ROLE_META[role] || { label: role, color: '#64748b' };
+    document.getElementById('ongoing-detail-title').textContent = meta.label;
+    const body = document.getElementById('ongoing-detail-body');
+    const rows = [];
+    Object.entries(this.state.wopsStatusMap || {}).forEach(([dispatchNumber, info]) => {
+      const step = (info.steps || []).find(s => s.role === role);
+      if (step && step.log && step.log.status === 'Ongoing') {
+        rows.push({ dispatchNumber, step, info });
+      }
+    });
+    rows.sort((a, b) => new Date(a.step.log.start_time) - new Date(b.step.log.start_time));
+    if (!rows.length) {
+      body.innerHTML = `<p class="text-sm text-slate-400 italic">Nothing currently ongoing for this step.</p>`;
+    } else {
+      body.innerHTML = rows.map(({ dispatchNumber, step, info }) => {
+        const fraction = info.rowCount > 1 ? ` <span class="font-normal text-slate-400 text-xs">(${step.completedCount}/${step.totalCount} rows)</span>` : '';
+        return `<button type="button" onclick="App.closeModal('ongoing-detail-modal'); App.openWopsDetailModal('${String(dispatchNumber).replace(/'/g, "\\'")}')" class="w-full text-left flex items-start gap-3 p-2 rounded-lg border dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <span style="display:inline-block;margin-top:3px;width:10px;height:10px;border-radius:50%;background:${meta.color}"></span>
+                    <div class="flex-1">
+                      <div class="text-sm font-semibold">${this.escapeHtml(dispatchNumber)}${fraction}</div>
+                      <div class="text-xs text-slate-500 dark:text-slate-400">${this.escapeHtml(step.log.personnel_name || '—')} · started ${step.log.start_time ? new Date(step.log.start_time).toLocaleString() : '—'}</div>
+                    </div>
+                  </button>`;
+      }).join('');
+    }
+    document.getElementById('ongoing-detail-modal').classList.remove('hidden');
   },
   async addSingleDispatch(e) {
     e.preventDefault();
