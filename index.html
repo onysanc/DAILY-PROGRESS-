@@ -687,10 +687,15 @@
         <button onclick="App.openAddUserModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 text-sm font-semibold">+ Add User</button>
       </div>
 
-      <!-- Alert Message Settings -->
+      <!-- ═══ UNIFIED ALERTS & NOTIFICATIONS SETTINGS (Admin) ═══
+           Everything that can pop a toast or light up the dashboard banner is
+           configured from this one card: message wording/thresholds, and — per
+           alert — independent on/off switches for the dashboard banner vs. the
+           toast pop-up, plus (below) the Delay/Gap incident thresholds that used
+           to live on the Delay/Gap Log tab. -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
-        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">⚠ Alert Message Settings</h2>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">Customize the wording, thresholds, and on/off state of the automatic dispatch alerts (toast pop-ups + dashboard banner). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
+        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">🔔 Alerts &amp; Notification Settings</h2>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">One place for every automatic alert in the app — wording, thresholds, and exactly where each one shows up (dashboard banner and/or toast pop-up). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
         <div class="grid md:grid-cols-3 gap-3">
           <!-- Pending-at-step Alert -->
           <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col">
@@ -707,6 +712,10 @@
               <input type="number" id="as-stuck-minutes" min="1" class="w-14 p-1 border rounded-lg text-xs bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
               <span>min</span>
             </div>
+            <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
+            </div>
             <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-stuck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
             <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
@@ -718,6 +727,10 @@
             </div>
             <textarea id="as-no_truck-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
             <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}</div>
+            <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-no_truck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-no_truck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
+            </div>
             <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-no_truck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
             <button onclick="App.saveAlertSetting('no_truck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
@@ -729,7 +742,41 @@
             </div>
             <textarea id="as-urgent-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
             <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}</div>
+            <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-urgent-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
+              <span class="text-slate-300 dark:text-slate-600 italic">(no dashboard banner for this one)</span>
+            </div>
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
+          </div>
+        </div>
+
+        <!-- Delay / Gap incident thresholds — moved here from the Delay/Gap Log tab so every
+             alert-related setting lives in this one admin card. -->
+        <div class="border-t dark:border-slate-700 mt-5 pt-4">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">⏱ Delay / Gap Incident Thresholds (minutes)</h3>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-3">Drives the "incident" flags shown on the Delay/Gap Log tab, its Incidents-by-Hour chart, and the Recommendations panel.</p>
+          <div id="gap-threshold-inputs" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3"></div>
+          <div class="flex items-center gap-3 flex-wrap">
+            <button onclick="App.saveGapThresholds()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save Thresholds</button>
+            <button onclick="App.resetGapThresholds()" class="text-xs text-slate-500 hover:underline">Reset to defaults</button>
+          </div>
+          <div class="border-t dark:border-slate-700 mt-4 pt-4">
+            <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">📋 Delay Matrix — minimum dispatches in an hour to flag it as an incident</label>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">By default any single delayed dispatch lights up an hour cell in the Delay Matrix. Set this higher (e.g. <b>3</b>) so an hour only gets flagged once it has at least that many delayed dispatches — filters out one-off noise.</p>
+            <div class="flex items-center gap-2">
+              <input type="number" min="1" id="gap-min-incidents-per-hour" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
+              <span class="text-xs text-slate-400">dispatches / hour</span>
+              <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
+            </div>
+          </div>
+          <div class="border-t dark:border-slate-700 mt-4 pt-4">
+            <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">💡 Recommendations — delayed dispatches on one step, within one RDD, to trigger a suggested action</label>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">Once a single step/department accumulates this many delayed (incident) dispatches within the SAME RDD, it's flagged in the Recommendations panel with a suggested action. Default <b>3</b>.</p>
+            <div class="flex items-center gap-2">
+              <input type="number" min="1" id="gap-recommendation-threshold" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
+              <span class="text-xs text-slate-400">dispatches / RDD / step</span>
+              <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
+            </div>
           </div>
         </div>
       </div>
@@ -951,32 +998,11 @@
         </div>
       </div>
 
-      <!-- Admin-adjustable thresholds -->
-      <div id="gap-threshold-panel" class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4 mb-5 hidden">
-        <h2 class="text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">⚙ Delay Thresholds (minutes) — Admin</h2>
-        <div id="gap-threshold-inputs" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3"></div>
-        <div class="flex items-center gap-3 flex-wrap">
-          <button onclick="App.saveGapThresholds()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save Thresholds</button>
-          <button onclick="App.resetGapThresholds()" class="text-xs text-slate-500 hover:underline">Reset to defaults</button>
-        </div>
-        <div class="border-t dark:border-slate-700 mt-4 pt-4">
-          <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">📋 Delay Matrix — minimum dispatches in an hour to flag it as an incident</label>
-          <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">By default any single delayed dispatch lights up an hour cell in the Delay Matrix below. Set this higher (e.g. <b>3</b>) so an hour only gets flagged once it has at least that many delayed dispatches — filters out one-off noise.</p>
-          <div class="flex items-center gap-2">
-            <input type="number" min="1" id="gap-min-incidents-per-hour" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
-            <span class="text-xs text-slate-400">dispatches / hour</span>
-            <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
-          </div>
-        </div>
-        <div class="border-t dark:border-slate-700 mt-4 pt-4">
-          <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">💡 Recommendations — delayed dispatches on one step, within one RDD, to trigger a suggested action</label>
-          <p class="text-[11px] text-slate-400 dark:text-slate-500 mb-2">Once a single step/department accumulates this many delayed (incident) dispatches within the SAME RDD, it's flagged in the Recommendations panel below with a suggested action. Default <b>3</b>.</p>
-          <div class="flex items-center gap-2">
-            <input type="number" min="1" id="gap-recommendation-threshold" placeholder="e.g. 3" class="w-24 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm">
-            <span class="text-xs text-slate-400">dispatches / RDD / step</span>
-            <button onclick="App.saveGapThresholds()" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Save</button>
-          </div>
-        </div>
+      <!-- Delay/Gap thresholds now live in User Management → 🔔 Alerts & Notification Settings,
+           alongside every other alert setting. Admins get a quick jump link here. -->
+      <div id="gap-threshold-panel" class="hidden mb-5 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-center justify-between gap-3 flex-wrap">
+        <span class="text-sm text-blue-800 dark:text-blue-200">⚙ Delay/Gap incident thresholds are now configured under <b>User Management → Alerts &amp; Notification Settings</b>.</span>
+        <button onclick="App.tryTab('tab-users','tab_users')" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 whitespace-nowrap">Open Alert Settings</button>
       </div>
 
       <!-- Summary cards -->
@@ -1423,6 +1449,14 @@ const App = {
     no_truck: { enabled: true, template: 'No available {type} truck — dispatches waiting at Checking!', require_response: false },
     urgent:   { enabled: true, template: '{count} URGENT dispatch(es) still pending!', require_response: false },
   },
+  // Per-alert on/off switches for WHERE it shows up — independent of the master "enabled"
+  // switch above. Saved as a single JSON row (key='alert_display_prefs') in the same
+  // alert_settings table, the same pattern already used for gap_thresholds.
+  DEFAULT_ALERT_DISPLAY_PREFS: {
+    stuck:    { banner: true, popup: true },
+    no_truck: { banner: true, popup: true },
+    urgent:   { popup: true }, // urgent has no dashboard banner presentation
+  },
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
     currentRddId: null,
@@ -1858,7 +1892,11 @@ const App = {
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
     if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
-    if (tabId === 'tab-users') { this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); this.renderBreakTimes(); }
+    if (tabId === 'tab-users') {
+      this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); this.renderBreakTimes();
+      if (!this.state.gapThresholds) this.loadGapThresholds().then(() => this.renderGapThresholdInputs());
+      else this.renderGapThresholdInputs();
+    }
     if (tabId === 'tab-rdd-summary') this.renderRDDSummaryTab();
     if (tabId === 'tab-reports') { this.populateCompareSelects(); }
     if (tabId === 'tab-shift-compare') { this.populateCompareSelects(); }
@@ -2046,7 +2084,8 @@ const App = {
         }
       }
     });
-    if (stuckCfg.enabled) {
+    const displayPrefs = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
+    if (stuckCfg.enabled && displayPrefs.stuck.banner) {
       Object.entries(stepStuckCounts).forEach(([step, count]) => {
         if (count >= (stuckCfg.threshold_count || 3)) {
           const nextStep = STEPS_FLOW[STEPS_FLOW.indexOf(step) + 1]; // the milestone dispatches are pending on
@@ -2061,7 +2100,7 @@ const App = {
     }
     // Alert 2: checking dispatches need trucks but none available
     const noTruckCfg = settings.no_truck;
-    if (noTruckCfg.enabled) {
+    if (noTruckCfg.enabled && displayPrefs.no_truck.banner) {
       const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
       checkingTypes.forEach(type => {
         const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
@@ -4570,10 +4609,18 @@ const App = {
   },
   async loadAlertSettings() {
     const merged = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_SETTINGS));
+    const displayPrefs = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_DISPLAY_PREFS));
     try {
       const { data, error } = await supabaseClient.from('alert_settings').select('*');
       if (!error && data) {
         data.forEach(row => {
+          if (row.key === 'alert_display_prefs') {
+            try {
+              const parsed = JSON.parse(row.template || '{}');
+              Object.keys(displayPrefs).forEach(k => { if (parsed[k]) displayPrefs[k] = { ...displayPrefs[k], ...parsed[k] }; });
+            } catch (e) { console.error('alert_display_prefs parse error:', e); }
+            return;
+          }
           if (!merged[row.key]) return;
           merged[row.key] = {
             enabled: (row.enabled !== null && row.enabled !== undefined) ? !!row.enabled : merged[row.key].enabled,
@@ -4588,18 +4635,24 @@ const App = {
       }
     } catch (e) { console.error('loadAlertSettings error:', e); }
     this.state.alertSettings = merged;
+    this.state.alertDisplayPrefs = displayPrefs;
     this.renderAlertSettingsPanel();
   },
   renderAlertSettingsPanel() {
     const s = this.state.alertSettings;
     if (!s) return;
+    const p = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
     ['stuck', 'no_truck', 'urgent'].forEach(key => {
       const enabledEl = document.getElementById(`as-${key}-enabled`);
       const templateEl = document.getElementById(`as-${key}-template`);
       const requireEl = document.getElementById(`as-${key}-require`);
+      const bannerEl = document.getElementById(`as-${key}-banner`);
+      const popupEl = document.getElementById(`as-${key}-popup`);
       if (enabledEl) enabledEl.checked = !!s[key].enabled;
       if (templateEl) templateEl.value = s[key].template;
       if (requireEl) requireEl.checked = !!s[key].require_response;
+      if (bannerEl) bannerEl.checked = !!(p[key] && p[key].banner);
+      if (popupEl) popupEl.checked = !!(p[key] && p[key].popup);
     });
     const cnt = document.getElementById('as-stuck-count');
     const min = document.getElementById('as-stuck-minutes');
@@ -4610,6 +4663,8 @@ const App = {
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
     const requireEl = document.getElementById(`as-${key}-require`);
+    const bannerEl = document.getElementById(`as-${key}-banner`);
+    const popupEl = document.getElementById(`as-${key}-popup`);
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
     const payload = { key, enabled: enabledEl.checked, template, require_response: requireEl ? requireEl.checked : false };
@@ -4620,6 +4675,16 @@ const App = {
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save: ' + error.message);
     this.state.alertSettings[key] = { ...this.state.alertSettings[key], ...payload };
+    // Save this alert's banner/popup display prefs, merged into the single shared prefs row.
+    if (!this.state.alertDisplayPrefs) this.state.alertDisplayPrefs = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_DISPLAY_PREFS));
+    this.state.alertDisplayPrefs[key] = {
+      ...(this.state.alertDisplayPrefs[key] || {}),
+      ...(bannerEl ? { banner: bannerEl.checked } : {}),
+      ...(popupEl ? { popup: popupEl.checked } : {}),
+    };
+    const prefsPayload = { key: 'alert_display_prefs', enabled: true, template: JSON.stringify(this.state.alertDisplayPrefs), require_response: false };
+    const { error: prefsError } = await supabaseClient.from('alert_settings').upsert(prefsPayload, { onConflict: 'key' }).select();
+    if (prefsError) return alert('Failed to save banner/pop-up display settings: ' + prefsError.message);
     this.showToast('✓ Alert message updated', 'info', 3000);
     this.renderAlertBanner();
   },
@@ -4683,12 +4748,17 @@ const App = {
   },
   resetAlertSetting(key) {
     const d = this.DEFAULT_ALERT_SETTINGS[key];
+    const dp = this.DEFAULT_ALERT_DISPLAY_PREFS[key] || {};
     const enabledEl = document.getElementById(`as-${key}-enabled`);
     const templateEl = document.getElementById(`as-${key}-template`);
     const requireEl = document.getElementById(`as-${key}-require`);
+    const bannerEl = document.getElementById(`as-${key}-banner`);
+    const popupEl = document.getElementById(`as-${key}-popup`);
     if (enabledEl) enabledEl.checked = d.enabled;
     if (templateEl) templateEl.value = d.template;
     if (requireEl) requireEl.checked = d.require_response;
+    if (bannerEl) bannerEl.checked = !!dp.banner;
+    if (popupEl) popupEl.checked = !!dp.popup;
     if (key === 'stuck') {
       document.getElementById('as-stuck-count').value = d.threshold_count;
       document.getElementById('as-stuck-minutes').value = d.threshold_minutes;
@@ -5363,6 +5433,7 @@ const App = {
   checkStuckAlerts() {
     if (!this.state.currentRddId) return;
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const displayPrefs = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
     const now = Date.now();
     const stuckCfg = settings.stuck;
     const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
@@ -5380,7 +5451,7 @@ const App = {
         }
       }
     });
-    if (stuckCfg.enabled) {
+    if (stuckCfg.enabled && displayPrefs.stuck.popup) {
       Object.entries(stepCounts).forEach(([step, count]) => {
         const key = `stuck-${step}-${count}`;
         if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
@@ -5396,7 +5467,7 @@ const App = {
     checkingTypes.forEach(type => {
       const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
       const key = `notruck-${type}`;
-      if (noTruckCfg.enabled && avail === 0 && !this._alertedNoTruck.has(key)) {
+      if (noTruckCfg.enabled && displayPrefs.no_truck.popup && avail === 0 && !this._alertedNoTruck.has(key)) {
         this._alertedNoTruck.add(key);
         const msg = this.formatAlertTemplate(noTruckCfg.template, { type });
         this.showToast(msg, 'warn', 10000);
@@ -5407,7 +5478,7 @@ const App = {
     // Urgent priority reminder
     const urgentCfg = settings.urgent;
     const urgent = this.state.dispatches.filter(d => d.priority === 'urgent' && !d.loaded_checked);
-    if (urgentCfg.enabled && urgent.length > 0) {
+    if (urgentCfg.enabled && displayPrefs.urgent.popup && urgent.length > 0) {
       const key = `urgent-${urgent.map(d => d.id).join(',')}`;
       if (!this._alertedStuck.has(key)) {
         this._alertedStuck.add(key);
