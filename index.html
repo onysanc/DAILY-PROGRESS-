@@ -525,6 +525,38 @@
       </div>
       
       <div class="flex flex-col gap-4 flex-1 min-h-0">
+        <div id="dash-ongoing-status-strip" data-capture-hide="true" class="grid grid-cols-3 gap-3 shrink-0">
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#0284c7"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background:#0284c7"></span>
+              </span>
+              <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest uppercase">Ongoing Picking</span>
+            </div>
+            <span id="dash-ongoing-picking-count" class="text-lg font-bold text-slate-800 dark:text-white">—</span>
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#0ea5e9"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background:#0ea5e9"></span>
+              </span>
+              <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest uppercase">Ongoing Pulling</span>
+            </div>
+            <span id="dash-ongoing-pulling-count" class="text-lg font-bold text-slate-800 dark:text-white">—</span>
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style="background:#2563eb"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background:#2563eb"></span>
+              </span>
+              <span class="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 tracking-widest uppercase">Ongoing Checking</span>
+            </div>
+            <span id="dash-ongoing-checking-count" class="text-lg font-bold text-slate-800 dark:text-white">—</span>
+          </div>
+        </div>
         <div id="chart-card" class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 flex flex-col flex-1 min-h-[550px] relative transition-all duration-300">
           <div class="flex justify-between items-center mb-2 shrink-0">
             <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Activity Timeline</h2>
@@ -2395,6 +2427,7 @@ const App = {
       this.computeWopsSyncQueue();
       this.renderDispatches();
       this.renderWopsSyncFab();
+      this.renderOngoingStatusCounts();
       // Keep Checked dispatches' Bay in sync with the Puller's data
       // automatically — no button click required. Runs quietly (no confirm
       // prompt, no "nothing to fix" noise) and only touches rows that are
@@ -3937,6 +3970,30 @@ const App = {
       document.getElementById('dashboard-heading-rdd').textContent = 'RDD —';
     }
     this.buildActivityFeed();
+    this.renderOngoingStatusCounts();
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // ONGOING STATUS STRIP (above the Activity Timeline)
+  // Counts live "Ongoing" roles from the WOPS-Outbound activity_logs
+  // feed (see buildWopsStatusMap/state.wopsStatusMap) — a role only
+  // reads "Ongoing" here once someone has actually clocked in on that
+  // step and not yet finished it, so this reflects real-time floor
+  // activity rather than this app's own checkbox state.
+  // ═══════════════════════════════════════════════════════
+  renderOngoingStatusCounts() {
+    const counts = { Picker: 0, Puller: 0, 'Outbound Checker': 0 };
+    Object.values(this.state.wopsStatusMap || {}).forEach(info => {
+      (info.steps || []).forEach(step => {
+        if (step.log && step.log.status === 'Ongoing' && counts.hasOwnProperty(step.role)) {
+          counts[step.role]++;
+        }
+      });
+    });
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('dash-ongoing-picking-count', counts.Picker);
+    set('dash-ongoing-pulling-count', counts.Puller);
+    set('dash-ongoing-checking-count', counts['Outbound Checker']);
   },
 
   // ═══════════════════════════════════════════════════════
