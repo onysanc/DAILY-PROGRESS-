@@ -339,7 +339,7 @@
         <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
         <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
         <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Pull<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0ea5e9">0</span></button>
+        <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#9333ea">0</span></button>
         <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
         <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
@@ -1411,7 +1411,7 @@ Chart.register(ChartDataLabels);
 const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
 const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
 const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', pulling: 'Pulling', checking: 'Checking', loaded: 'Loaded' };
-const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', pulling: '#0ea5e9', checking: '#2563eb', loaded: '#7c3aed' };
+const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', pulling: '#9333ea', checking: '#2563eb', loaded: '#7c3aed' };
 // A dispatch that hasn't reached the next milestone is "pending" on that next step, not sitting at the one already checked.
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
 const NOT_STARTED_LABEL = 'Pending to Start Picking';
@@ -2886,7 +2886,7 @@ const App = {
             // Puller names
             if (d.pulling_assigned_names && d.pulling_assigned_names.length) {
               const names = Array.isArray(d.pulling_assigned_names) ? d.pulling_assigned_names.join(', ') : d.pulling_assigned_names;
-              subHtml += `<div class="text-[10px] leading-tight" style="color:#0ea5e9;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+              subHtml += `<div class="text-[10px] leading-tight" style="color:#9333ea;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
             }
             // Bay confirmed by the Puller in WOPS-Outbound
             if (d.bay_location) {
@@ -3901,7 +3901,7 @@ const App = {
       pgi:        { label: 'PGI',        color: '#ec4899', icon: '✔' },
       invoiced:   { label: 'Invoiced',   color: '#dc2626', icon: '✔' },
       ds_printed: { label: 'DS Printed', color: '#c46262', icon: '✔' },
-      pulling:    { label: 'Pulled',     color: '#0ea5e9', icon: '✔' },
+      pulling:    { label: 'Pulled',     color: '#9333ea', icon: '✔' },
       checking:   { label: 'Checked',    color: '#2563eb', icon: '✔' },
       loaded:     { label: 'Loaded',     color: '#7c3aed', icon: '✔' },
     };
@@ -4062,7 +4062,7 @@ const App = {
     const series = [
       { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
       { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
-      { key: 'pulling',  label: 'Pulled',        color: '#0ea5e9', data: toCumulative(raw.pulling) },
+      { key: 'pulling',  label: 'Pulled',        color: '#9333ea', data: toCumulative(raw.pulling) },
       { key: 'ds',       label: 'DS Printed',     color: '#c46262', data: toCumulative(raw.ds_printed) },
       { key: 'invoiced', label: 'Invoiced',        color: '#dc2626', data: toCumulative(raw.invoiced) },
       { key: 'pgi',      label: 'PGI',            color: '#ec4899', data: toCumulative(raw.pgi) },
@@ -5678,16 +5678,18 @@ const App = {
     ['pick', 'pgi'],
     ['pgi', 'invoiced'],
     ['invoiced', 'ds_printed'],
-    ['ds_printed', 'checking'],
+    ['ds_printed', 'pulling'],
+    ['pulling', 'checking'],
     ['checking', 'loaded'],
   ],
-  GAP_STEP_NAMES: { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' },
+  GAP_STEP_NAMES: { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', pulling: 'Pulling', checking: 'Checking', loaded: 'Loaded' },
   DEFAULT_GAP_THRESHOLDS: {
     'pick_start__pick': 60,
     'pick__pgi': 30,
     'pgi__invoiced': 20,
     'invoiced__ds_printed': 15,
-    'ds_printed__checking': 30,
+    'ds_printed__pulling': 15,
+    'pulling__checking': 15,
     'checking__loaded': 30,
   },
   // Delay Matrix — how many delayed dispatches must land in the same hour cell before that hour
@@ -5705,7 +5707,8 @@ const App = {
     'pick__pgi': 'Escalate to the PGI/Staging team — staged shipments are backing up waiting for PGI.',
     'pgi__invoiced': 'Escalate to Billing/Invoicing — invoices are lagging behind PGI.',
     'invoiced__ds_printed': 'Escalate to Documentation — DS printing is lagging behind invoicing.',
-    'ds_printed__checking': 'Add checkers or open more bays — Checking is falling behind.',
+    'ds_printed__pulling': 'Add pullers or reprioritize open pulls — Pulling is falling behind after DS print.',
+    'pulling__checking': 'Add checkers or open more bays — Checking is falling behind after Pulling.',
     'checking__loaded': 'Escalate to Logistics — confirm truck/bay availability for Loading.',
   },
   async loadGapThresholds() {
@@ -6137,7 +6140,8 @@ const App = {
     'pick__pgi': { activity: 'PGI', milestone: 'pick to PGI' },
     'pgi__invoiced': { activity: 'INVOICING', milestone: 'pgi to invoice' },
     'invoiced__ds_printed': { activity: 'DS PRINTING', milestone: 'invoice to DS print' },
-    'ds_printed__checking': { activity: 'CHECKING', milestone: 'ds print to Checking' },
+    'ds_printed__pulling': { activity: 'PULLING', milestone: 'ds print to Pulling' },
+    'pulling__checking': { activity: 'CHECKING', milestone: 'Pulling to Checking' },
     'checking__loaded': { activity: 'LOADING', milestone: 'checking to loading' },
   },
   // Lightweight version of the gap-computation loop in renderGapLogTab — used only to build an
