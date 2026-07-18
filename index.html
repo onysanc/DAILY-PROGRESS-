@@ -338,7 +338,8 @@
         <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
         <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
         <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
-        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
+        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Pull<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
+        <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#9333ea">0</span></button>
         <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
         <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
@@ -391,6 +392,7 @@
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pgi')">PGI <span id="sort-pgi" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('invoiced')">Invoiced <span id="sort-invoiced" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('ds_printed')">DS Printed <span id="sort-ds_printed" class="sort-arrow"></span></th>
+              <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('pulling')">Pulling <span id="sort-pulling" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('checking')">Checking <span id="sort-checking" class="sort-arrow"></span></th>
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('loaded')">Loaded <span id="sort-loaded" class="sort-arrow"></span></th>
               <th class="p-3">Loaded Truck</th>
@@ -462,6 +464,7 @@
                 <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">PGI</th>
                 <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">INVOICED</th>
                 <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">DS PRINTED</th>
+                <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">PULLED</th>
                 <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">CHECKED</th>
                 <th class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-300">LOADED</th>
               </tr>
@@ -473,6 +476,7 @@
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-pgi-done">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-invoiced-done">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-ds_printed-done">—</td>
+                <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-pulling-done">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-checking-done">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-emerald-600 dark:text-emerald-400" id="dm-loaded-done">—</td>
               </tr>
@@ -482,6 +486,7 @@
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-pgi-pending">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-invoiced-pending">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-ds_printed-pending">—</td>
+                <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-pulling-pending">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-checking-pending">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-bold text-amber-500 dark:text-amber-400" id="dm-loaded-pending">—</td>
               </tr>
@@ -491,6 +496,7 @@
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-pgi-pct">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-invoiced-pct">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-ds_printed-pct">—</td>
+                <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-pulling-pct">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-checking-pct">—</td>
                 <td class="border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-300" id="dm-loaded-pct">—</td>
               </tr>
@@ -730,7 +736,7 @@
       <!-- WOPS-Outbound Auto-Check Approval Setting -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">🔄 WOPS-Outbound Auto-Check Approval</h2>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Controls whether Start Pick / End Pick / Checking suggestions pulled live from WOPS-Outbound need someone to click Apply (Outbound or Admin, via the WOPS Sync panel), or whether they get checked off automatically the moment they're detected.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">Controls whether Start Pick / End Pick / Pulling / Checking suggestions pulled live from WOPS-Outbound need someone to click Apply (Outbound or Admin, via the WOPS Sync panel), or whether they get checked off automatically the moment they're detected.</p>
         <div class="flex items-center justify-between border dark:border-slate-700 rounded-lg p-3">
           <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
             <input type="checkbox" id="wops-auto-apply-toggle" class="accent-emerald-600">
@@ -1401,14 +1407,14 @@ const WOPS_ROLE_STEPS = [
 Chart.register(ChartDataLabels);
 // ROLE_PERMISSIONS and TRUCK_CANCEL_ROLES are now dynamic per user from DB
 // Kept as runtime state on App.state.currentUser
-const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
-const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', checking: 'Checking', loaded: 'Loaded' };
-const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', checking: '#2563eb', loaded: '#7c3aed' };
+const MILESTONE_STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
+const MILESTONE_FLOW = ['pick_start', 'pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
+const MILESTONE_LABELS = { pick_start: 'Start Pick', pick: 'End Pick', pgi: 'PGI', invoiced: 'Invoiced', ds_printed: 'DS Printed', pulling: 'Pulling', checking: 'Checking', loaded: 'Loaded' };
+const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899', invoiced: '#dc2626', ds_printed: '#c46262', pulling: '#9333ea', checking: '#2563eb', loaded: '#7c3aed' };
 // A dispatch that hasn't reached the next milestone is "pending" on that next step, not sitting at the one already checked.
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
 const NOT_STARTED_LABEL = 'Pending to Start Picking';
-const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Check', checking: 'Pending to Load' };
+const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Pull', pulling: 'Pending to Check', checking: 'Pending to Load' };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
     stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30, require_response: false },
@@ -1423,7 +1429,7 @@ const App = {
     wopsStatusMap: {}, // dispatch_number -> live WOPS-Outbound status (see fetchWopsStatuses)
     wopsSyncQueue: [], // pending Pick/Checking auto-fill suggestions awaiting admin approval (see computeWopsSyncQueue)
     wopsAutoApply: false, // admin toggle (User Management tab) — false = suggestions need manual Apply, true = they write straight through with no approval step
-    wopsCheckedPendingChronology: {}, // dispatch.id -> true when WOPS-Outbound shows Outbound Checker done but PGI/Invoiced/DS Printed aren't ticked here yet (highlight only, not auto-applied)
+    wopsCheckedPendingChronology: {}, // dispatch.id -> { pulling: true, checking: true } — set when WOPS-Outbound shows Puller/Outbound Checker done but this app's chronology (DS Printed / Pulling) hasn't caught up yet (highlight only, not auto-applied)
     trucks: [],
     personnel: [],
     appUsers: [],        // for User Management tab
@@ -2023,7 +2029,7 @@ const App = {
     const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
     const alerts = []; // { key, text, requireResponse }
     // Alert 1: dispatches stuck at a step > configured minutes
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     const stepStuckCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
@@ -2312,6 +2318,18 @@ const App = {
     const step = this.wopsStagingStep(d);
     return (step && step.allDone && step.log && step.log.end_time) ? step.log.end_time : null;
   },
+  // Returns the WOPS-Outbound Puller step for a dispatch (from
+  // state.wopsStatusMap), or null if there's no matching shipment.
+  wopsPullerStep(d) {
+    const info = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+    return info ? info.steps.find(s => s.role === 'Puller') : null;
+  },
+  // True once WOPS-Outbound shows every row for this dispatch as Pulled
+  // (Puller role Completed for all SO lines).
+  isWopsPulled(d) {
+    const step = this.wopsPullerStep(d);
+    return !!(step && step.allDone);
+  },
   async fetchWopsStatuses() {
     const numbers = [...new Set(this.state.dispatches.map(d => String(d.dispatch_number).trim()).filter(Boolean))];
     if (!numbers.length) return;
@@ -2352,8 +2370,10 @@ const App = {
       const info = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
       if (!info) return;
       const pickStep = info.steps.find(s => s.role === 'Picker');
+      const pullStep = info.steps.find(s => s.role === 'Puller');
       const checkStep = info.steps.find(s => s.role === 'Outbound Checker');
       const pickLog = pickStep?.log;
+      const pullLog = pullStep?.log;
       const checkLog = checkStep?.log;
 
       if (pickLog && (pickLog.status === 'Ongoing' || pickStep.allDone)) {
@@ -2377,11 +2397,25 @@ const App = {
           queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, needsStartRefresh, log: pickLog });
         }
       }
-      if (checkLog && checkStep.allDone && !d.checking_checked) {
+      // Puller Completed in WOPS-Outbound -> queue a 'pulling' item, but
+      // ONLY if this app's own chronology is already satisfied (DS Printed
+      // ticked) — same reasoning as Checking below.
+      if (pullLog && pullStep.allDone && !d.pulling_checked) {
         if (d.ds_printed_checked) {
+          queue.push({ id: `${d.id}-pulling`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pulling', log: pullLog, pullerBay: info.pullerBay });
+        } else {
+          chronoFlags[d.id] = { ...(chronoFlags[d.id] || {}), pulling: true };
+        }
+      }
+      // Outbound Checker Completed in WOPS-Outbound -> queue a 'checking'
+      // item, but ONLY if this app's own chronology is already satisfied
+      // (Pulling ticked). If not, it's surfaced as a highlight instead
+      // (see wopsCheckedPendingChronology) rather than queued.
+      if (checkLog && checkStep.allDone && !d.checking_checked) {
+        if (d.pulling_checked) {
           queue.push({ id: `${d.id}-checking`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'checking', log: checkLog, pullerBay: info.pullerBay });
         } else {
-          chronoFlags[d.id] = true;
+          chronoFlags[d.id] = { ...(chronoFlags[d.id] || {}), checking: true };
         }
       }
     });
@@ -2423,7 +2457,7 @@ const App = {
     list.innerHTML = banner + this.wopsChronoWarningListHtml() + queue.map(item => {
       const stepLabel = item.kind === 'pick'
         ? [item.needsStart ? 'Start Pick' : (item.needsStartRefresh ? 'Start Pick (update)' : null), item.needsEnd ? 'End Pick' : null].filter(Boolean).join(' + ')
-        : 'Checking';
+        : item.kind === 'pulling' ? 'Pulling' : 'Checking';
       const when = item.log.end_time ? new Date(item.log.end_time).toLocaleString() : (item.log.start_time ? new Date(item.log.start_time).toLocaleString() : '—');
       return `<div class="flex items-center justify-between gap-2 p-2.5 border-b dark:border-slate-800 text-xs">
                 <div>
@@ -2445,14 +2479,14 @@ const App = {
     if (!Object.keys(payload).length) return;
     const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
     if (error) return alert('Sync failed: ' + error.message);
-    this.showToast(`Synced ${item.kind === 'pick' ? 'Pick' : 'Checking'} for dispatch ${item.dispatch_number} from WOPS-Outbound.`, 'info', 3500);
+    this.showToast(`Synced ${item.kind === 'pick' ? 'Pick' : item.kind === 'pulling' ? 'Pulling' : 'Checking'} for dispatch ${item.dispatch_number} from WOPS-Outbound.`, 'info', 3500);
     await this.loadDispatches();
   },
   async applyAllWopsSyncItems() {
     if (!this.hasPerm('apply_wops_sync')) return alert('You do not have permission to apply WOPS-Outbound sync updates. Ask an admin to grant it in User Management.');
     const items = [...this.state.wopsSyncQueue];
     if (!items.length) return;
-    if (!confirm(`Apply ${items.length} pending WOPS-Outbound sync update(s)? This checks off Pick/Checking milestones here using data pulled live from WOPS-Outbound.`)) return;
+    if (!confirm(`Apply ${items.length} pending WOPS-Outbound sync update(s)? This checks off Pick/Pulling/Checking milestones here using data pulled live from WOPS-Outbound.`)) return;
     for (const item of items) {
       const payload = this.buildWopsSyncPayload(item);
       if (!Object.keys(payload).length) continue;
@@ -2524,6 +2558,15 @@ const App = {
         payload.pick_timestamp = item.log.end_time || new Date().toISOString();
         payload.pick_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
       }
+    } else if (item.kind === 'pulling') {
+      payload.pulling_checked = true;
+      payload.pulling_timestamp = item.log.end_time || new Date().toISOString();
+      payload.pulling_assigned_names = item.log.personnel_name ? [item.log.personnel_name] : [];
+      // Bay is known as soon as the Puller confirms it in WOPS-Outbound —
+      // write it here so Checking (and the dashboard bay table) already
+      // has it, same matching used by the manual Check modal.
+      const matchedBays = this.parsePullerBays(item.pullerBay);
+      if (matchedBays.length) payload.bay_location = matchedBays.join(', ');
     } else if (item.kind === 'checking') {
       payload.checking_checked = true;
       payload.checking_timestamp = item.log.end_time || new Date().toISOString();
@@ -2552,22 +2595,34 @@ const App = {
   // (PGI/Invoiced/DS Printed) isn't caught up yet — so Checking can't be
   // auto-applied. Previously computed but never actually shown anywhere.
   wopsChronoWarningListHtml() {
-    const ids = Object.keys(this.state.wopsCheckedPendingChronology).filter(id => this.state.wopsCheckedPendingChronology[id]);
+    const ids = Object.keys(this.state.wopsCheckedPendingChronology).filter(id => {
+      const f = this.state.wopsCheckedPendingChronology[id];
+      return f && (f.pulling || f.checking);
+    });
     if (!ids.length) return '';
     const rows = ids.map(id => {
       const d = this.state.dispatches.find(x => String(x.id) === String(id));
-      return d ? this.escapeHtml(String(d.dispatch_number)) : null;
+      if (!d) return null;
+      const f = this.state.wopsCheckedPendingChronology[id];
+      const kinds = [f.pulling ? 'Pulling' : null, f.checking ? 'Checking' : null].filter(Boolean).join(' & ');
+      return `${this.escapeHtml(String(d.dispatch_number))} (${kinds})`;
     }).filter(Boolean);
     if (!rows.length) return '';
     return `<div class="p-2.5 border-b dark:border-slate-800 bg-amber-50 dark:bg-amber-900/20 text-xs">
-              <div class="font-semibold text-amber-700 dark:text-amber-400 mb-1">⚠️ Outbound Checked, but Daily Progress chronology incomplete (${rows.length})</div>
+              <div class="font-semibold text-amber-700 dark:text-amber-400 mb-1">⚠️ WOPS-Outbound ahead of Daily Progress chronology (${rows.length})</div>
               <div class="text-slate-500 dark:text-slate-400">${rows.join(', ')}</div>
-              <div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Tick PGI / Invoiced / DS Printed here first — Checking will then queue automatically.</div>
+              <div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Tick PGI / Invoiced / DS Printed first (for Pulling), or Pulling (for Checking) — the suggestion will then queue automatically.</div>
             </div>`;
   },
   wopsChronoWarningHtml(dispatchId) {
-    if (!this.state.wopsCheckedPendingChronology[dispatchId]) return '';
-    return `<span class="ml-1 text-amber-500 cursor-help" title="WOPS-Outbound shows Outbound Checker Completed, but PGI / Invoiced / DS Printed aren't all checked here yet. Checking will not auto-apply until those catch up.">⚠️</span>`;
+    const f = this.state.wopsCheckedPendingChronology[dispatchId];
+    if (!f || (!f.pulling && !f.checking)) return '';
+    const title = f.pulling && f.checking
+      ? 'WOPS-Outbound shows Puller and Outbound Checker Completed, but this app\'s chronology hasn\'t caught up yet (DS Printed / Pulling). Sync will not auto-apply until those catch up.'
+      : f.pulling
+        ? 'WOPS-Outbound shows Puller Completed, but PGI / Invoiced / DS Printed aren\'t all checked here yet. Pulling will not auto-apply until those catch up.'
+        : 'WOPS-Outbound shows Outbound Checker Completed, but Pulling isn\'t checked here yet. Checking will not auto-apply until it catches up.';
+    return `<span class="ml-1 text-amber-500 cursor-help" title="${title}">⚠️</span>`;
   },
   // Compact inline cell for the Outbound Status column — a row of dots, one
   // per WOPS-Outbound stage, filled in as each stage completes.
@@ -2706,7 +2761,7 @@ const App = {
   },
   isDispatchStuck(d) {
     if (d.loaded_checked) return false;
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
       const step = STEPS_FLOW[i];
       if (d[`${step}_checked`]) {
@@ -2788,10 +2843,22 @@ const App = {
             wopsPickGateReason = `Picking not complete for all rows in WOPS-Outbound (${pickStep.completedCount}/${pickStep.totalCount} done)`;
           }
         }
-        const clickable = isChecked ? isAdmin : (chronologyMet && hasPermission && wopsPickGateOk);
+        // Pulling is likewise tied to WOPS-Outbound's Puller role — every SO
+        // line under this dispatch must show Puller Completed there before
+        // it can be manually ticked here (mirrors the Pick gate above).
+        let wopsPullGateOk = true, wopsPullGateReason = '';
+        if (step === 'pulling') {
+          const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+          const pullStep = wopsInfo ? wopsInfo.steps.find(s => s.role === 'Puller') : null;
+          if (pullStep && !pullStep.allDone) {
+            wopsPullGateOk = false;
+            wopsPullGateReason = `Pulling not complete for all rows in WOPS-Outbound (${pullStep.completedCount}/${pullStep.totalCount} done)`;
+          }
+        }
+        const clickable = isChecked ? isAdmin : (chronologyMet && hasPermission && wopsPickGateOk && wopsPullGateOk);
         const tip = isChecked
           ? this.milestoneTooltip(d, step)
-          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : (!wopsPickGateOk ? wopsPickGateReason : '')));
+          : (!chronologyMet ? `${MILESTONE_LABELS[prevStep]} must be done first` : (!hasPermission ? 'Not permitted for your role' : (!wopsPickGateOk ? wopsPickGateReason : (!wopsPullGateOk ? wopsPullGateReason : ''))));
         // Sub-content shown below the checkbox when checked: gap time from the
         // previous milestone (every step), plus picker/checker names + bay
         // for pick/checking specifically. Everything below the checkbox lives
@@ -2812,6 +2879,17 @@ const App = {
             if (d.pick_assigned_names && d.pick_assigned_names.length) {
               const names = Array.isArray(d.pick_assigned_names) ? d.pick_assigned_names.join(', ') : d.pick_assigned_names;
               subHtml += `<div class="text-[10px] leading-tight" style="color:#16a34a;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+            }
+            if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
+          } else if (step === 'pulling') {
+            // Puller names
+            if (d.pulling_assigned_names && d.pulling_assigned_names.length) {
+              const names = Array.isArray(d.pulling_assigned_names) ? d.pulling_assigned_names.join(', ') : d.pulling_assigned_names;
+              subHtml += `<div class="text-[10px] leading-tight" style="color:#9333ea;max-width:90px;white-space:normal">${this.escapeHtml(names)}</div>`;
+            }
+            // Bay confirmed by the Puller in WOPS-Outbound
+            if (d.bay_location) {
+              subHtml += `<div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">Bay: ${this.escapeHtml(d.bay_location)}</div>`;
             }
             if (isAdmin) subHtml += `<button onclick="event.stopPropagation();App.handleMilestoneClick(event,'${d.id}','${step}')" class="text-[9px] text-blue-500 hover:underline block">✎ edit</button>`;
           } else if (step === 'checking') {
@@ -3114,7 +3192,7 @@ const App = {
     if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
     const now = Date.now();
     const stuckMs = 30 * 60 * 1000;
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     const stuck = [];
     this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -3691,7 +3769,7 @@ const App = {
   },
   renderDashboardSummary() {
     const total = this.state.dispatches.length;
-    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
 
     steps.forEach(step => {
       const done = this.state.dispatches.filter(d => d[`${step}_checked`]).length;
@@ -3822,13 +3900,14 @@ const App = {
       pgi:        { label: 'PGI',        color: '#ec4899', icon: '✔' },
       invoiced:   { label: 'Invoiced',   color: '#dc2626', icon: '✔' },
       ds_printed: { label: 'DS Printed', color: '#c46262', icon: '✔' },
+      pulling:    { label: 'Pulled',     color: '#9333ea', icon: '✔' },
       checking:   { label: 'Checked',    color: '#2563eb', icon: '✔' },
       loaded:     { label: 'Loaded',     color: '#7c3aed', icon: '✔' },
     };
 
     // 1. Collect dispatch milestone events
     const events = [];
-    const STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const STEPS = ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'];
     this.state.dispatches.forEach(d => {
       STEPS.forEach(step => {
         const ts = d[`${step}_timestamp`];
@@ -3939,9 +4018,9 @@ const App = {
     };
     const nowBucket = bucketOf(new Date().toISOString());
     this.state.lastChartBucket = nowBucket;
-    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), pulling: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     this.state.dispatches.forEach(d => {
-      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
+      ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'].forEach(step => {
         const b = bucketOf(d[`${step}_timestamp`]);
         if (b !== null) raw[step][b]++;
       });
@@ -3982,6 +4061,7 @@ const App = {
     const series = [
       { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
       { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
+      { key: 'pulling',  label: 'Pulled',        color: '#9333ea', data: toCumulative(raw.pulling) },
       { key: 'ds',       label: 'DS Printed',     color: '#c46262', data: toCumulative(raw.ds_printed) },
       { key: 'invoiced', label: 'Invoiced',        color: '#dc2626', data: toCumulative(raw.invoiced) },
       { key: 'pgi',      label: 'PGI',            color: '#ec4899', data: toCumulative(raw.pgi) },
@@ -4369,7 +4449,7 @@ const App = {
       </tr>`;
     }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
-  MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','checking','loaded'],
+  MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','pulling','checking','loaded'],
   EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
   SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
   openAddUserModal() {
@@ -4694,7 +4774,7 @@ const App = {
     });
   },
   updateFilterPillStyles(filter) {
-    ['all', 'priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_checking', 'at_loaded'].forEach(f => {
+    ['all', 'priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_pulling', 'at_checking', 'at_loaded'].forEach(f => {
       const btn = document.getElementById(`filter-${f}`);
       if (!btn) return;
       if (f === filter) {
@@ -4977,7 +5057,7 @@ const App = {
     if (stuckList) {
       const now2 = Date.now();
       const stuckMs = 30 * 60 * 1000;
-      const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+      const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
       const stuck = [];
       this.state.dispatches.filter(d => !d.loaded_checked).forEach(d => {
         for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
@@ -5285,7 +5365,7 @@ const App = {
     const stuckCfg = settings.stuck;
     const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
     const stuckThreshold = stuckCfg.threshold_count || 3;
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','checking','loaded'];
+    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     const stepCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
