@@ -4686,7 +4686,17 @@ const App = {
     const { error: prefsError } = await supabaseClient.from('alert_settings').upsert(prefsPayload, { onConflict: 'key' }).select();
     if (prefsError) return alert('Failed to save banner/pop-up display settings: ' + prefsError.message);
     this.showToast('✓ Alert message updated', 'info', 3000);
+    // Clear this alert's dedupe cache so it re-evaluates immediately against the NEW
+    // wording/threshold instead of waiting for the underlying counts to change — otherwise
+    // an already-fired toast/banner just sits there showing stale numbers until the
+    // dispatch data itself shifts, which looks like "my save didn't take effect."
+    if (key === 'stuck' || key === 'urgent') {
+      [...this._alertedStuck].forEach(k => { if (k.startsWith(`${key}-`)) this._alertedStuck.delete(k); });
+    } else if (key === 'no_truck') {
+      this._alertedNoTruck.clear();
+    }
     this.renderAlertBanner();
+    this.checkStuckAlerts();
   },
   // ── WOPS-Outbound auto-check approval toggle ──
   // Reuses the same key-value alert_settings table (key = 'wops_auto_apply')
