@@ -2249,7 +2249,6 @@ const App = {
       const steps = WOPS_ROLE_STEPS.map(step => {
         const logsForStep = soNumbersInGroup.map(so => logMap[`${so}||${step.role}`] || null);
         const completedLogs = logsForStep.filter(l => l && l.status === 'Completed');
-        const anyLog = logsForStep.find(l => l);
         const allDone = soNumbersInGroup.length > 0 && completedLogs.length === soNumbersInGroup.length;
         // Representative log for the dot tooltip / names display: once
         // every row is done, show a completed one; otherwise show
@@ -2259,9 +2258,17 @@ const App = {
         // end_time), not just the first completed row in array order —
         // otherwise an earlier end (e.g. 9am, or Jul 7) could win over a
         // later one (10am, or Jul 8) purely by array position.
+        // Same idea while still in progress: multiple SO rows can each have
+        // their own Start Pick log (e.g. one row started 7/16, another
+        // started 7/17) — always surface the LATEST start_time across every
+        // row in the group, not just whichever row happens to come first in
+        // array order, otherwise an earlier start can incorrectly win.
+        const latestStartedLog = logsForStep
+          .filter(l => l)
+          .reduce((latest, l) => (!latest || new Date(l.start_time) > new Date(latest.start_time)) ? l : latest, null);
         const repLog = allDone
           ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
-          : (anyLog ? { ...anyLog, status: anyLog.status === 'Completed' ? 'Ongoing' : anyLog.status } : null);
+          : (latestStartedLog ? { ...latestStartedLog, status: latestStartedLog.status === 'Completed' ? 'Ongoing' : latestStartedLog.status } : null);
         return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
       });
       // Bay is only trusted once every row under this dispatch has
