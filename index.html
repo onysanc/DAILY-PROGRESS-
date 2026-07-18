@@ -4079,7 +4079,17 @@ const App = {
     this.state.dispatches.forEach(d => {
       ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'].forEach(step => {
         const b = bucketOf(d[`${step}_timestamp`]);
-        if (b !== null) raw[step][b]++;
+        if (b === null) return;
+        // Every timestamp here already happened (it's only ever written when
+        // someone actually checks the milestone), so it can never truly be
+        // "future" data. But bucketOf only looks at clock hour, not date —
+        // an advance-picked dispatch finished days ago at, say, 3 PM lands
+        // in the 3 PM bucket, which is later than "now" if it's currently
+        // only 10 AM. Without clamping, that already-done pick got wiped
+        // out by the future cutoff below and silently dropped from the
+        // cumulative total. Clamp it into the current bucket instead —
+        // same approach already used for the Avail. Trucks trend.
+        raw[step][Math.min(b, nowBucket)]++;
       });
     });
     const toCumulative = (arr) => {
