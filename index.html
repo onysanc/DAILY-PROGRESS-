@@ -2089,13 +2089,6 @@ const App = {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
-          // Mirror the "Pending to PGI" badge/filter logic: End Pick alone
-          // doesn't mean a dispatch is actually pending to PGI yet — it also
-          // needs to show Staged in WOPS-Outbound. Without this check the
-          // stuck-alert count included dispatches that are done picking but
-          // not yet staged, inflating the number above what the Dispatch
-          // Activity "Pending to PGI" badge shows.
-          if (step === 'pick' && !this.isWopsStaged(d)) break;
           const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
           const stuckMs = ((cfg && cfg.threshold_minutes) || 30) * 60 * 1000;
           const ts = d[`${step}_timestamp`];
@@ -2863,10 +2856,10 @@ const App = {
       const idx = MILESTONE_FLOW.indexOf(step);
       const nextStep = idx >= 0 && idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
       if (step === 'pick') {
-        // Pending to PGI: End Pick checked here is no longer enough on its own —
-        // the shipment must also show Staged in WOPS-Outbound before PGI is
-        // actually due. Both must be true, and PGI itself must not be ticked yet.
-        visible = searched.filter(d => d.pick_checked && this.isWopsStaged(d) && !d.pgi_checked);
+        // Pending to PGI: shows as soon as End Pick is checked and PGI isn't
+        // done yet, regardless of whether WOPS-Outbound shows the shipment
+        // as Staged — staging status is informational only here, not a gate.
+        visible = searched.filter(d => d.pick_checked && !d.pgi_checked);
       } else {
         visible = searched.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
       }
@@ -4910,7 +4903,7 @@ const App = {
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
       const count = step === 'pick'
-        ? list.filter(d => d.pick_checked && this.isWopsStaged(d) && !d.pgi_checked).length
+        ? list.filter(d => d.pick_checked && !d.pgi_checked).length
         : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
       const badge = document.getElementById(`filter-badge-at_${step}`);
       if (badge) {
@@ -5518,10 +5511,6 @@ const App = {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
-          // Same "not really pending to PGI until WOPS-staged" gate used by
-          // the Pending to PGI badge/filter — keeps this toast count in sync
-          // with what Dispatch Activity actually shows as pending.
-          if (step === 'pick' && !this.isWopsStaged(d)) break;
           // Use this step's own configured wait time (matches the per-step
           // thresholds set in Alerts & Notification Settings), not a single
           // global minutes value shared by every milestone.
