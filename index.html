@@ -791,6 +791,7 @@
               <th class="p-3 text-center">PGI</th>
               <th class="p-3 text-center">Invoiced</th>
               <th class="p-3 text-center">DS Printed</th>
+              <th class="p-3 text-center">Pulling</th>
               <th class="p-3 text-center">Checking</th>
               <th class="p-3 text-center">Loaded</th>
               <th class="p-3 text-center">Cancel Truck</th>
@@ -4410,7 +4411,7 @@ const App = {
   renderUsers() {
     const tbody = document.getElementById('users-tbody');
     if (!tbody) return;
-    const steps = ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'];
+    const steps = this.MILESTONE_PERM_KEYS;
     const accessLabels = {
       tab_trucks: 'Trucks', tab_personnel: 'Personnel', tab_reports: 'Reports',
       tab_shift_compare: 'RDD Compare', tab_rdd_summary: 'RDD Summary',
@@ -4447,7 +4448,7 @@ const App = {
           ${!hasAll ? `<button onclick="App.grantAllAccessToUser('${u.id}')" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 text-xs font-semibold" title="Grant all milestone permissions + cancel truck">Allow All</button>` : '<span class="text-xs text-slate-300 dark:text-slate-600 italic">Full access</span>'}
         </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="11" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
+    }).join('') || '<tr><td colspan="12" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','pulling','checking','loaded'],
   EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
@@ -7173,6 +7174,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pgi" class="accent-blue-600"> PGI</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-invoiced" class="accent-blue-600"> Invoiced</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-ds_printed" class="accent-blue-600"> DS Printed</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-pulling" class="accent-blue-600"> Pulling</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-checking" class="accent-blue-600"> Checking</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-loaded" class="accent-blue-600"> Loaded</label>
       </div>
@@ -7198,7 +7200,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-delete_dispatch" class="accent-red-600"> Delete dispatch rows</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-admin_override" class="accent-red-600"> Admin Override (untick/edit completed steps + timestamps)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
-        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Checking using live WOPS-Outbound data)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Pulling/Checking using live WOPS-Outbound data)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-export_data" class="accent-red-600"> Export / Print / Download (CSV exports, chart PNG, print-to-PDF)</label>
       </div>
       <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
