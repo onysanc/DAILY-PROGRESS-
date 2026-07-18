@@ -1783,14 +1783,16 @@ const App = {
     });
     this.applyExportButtonVisibility();
   },
-  // Every CSV/PNG/print export button in the app is admin-only by default;
-  // an admin can grant the 'export_data' permission to specific users in
-  // User Management to let them export too.
+  // Every CSV/PNG export button in the app is admin-only by default; an
+  // admin can grant the 'export_data' permission to specific users in User
+  // Management to let them export too. Print buttons are excluded here —
+  // printing is allowed for all users regardless of the export_data
+  // permission (see printGraphRecap / printGapLog / printEODReport).
   EXPORT_BUTTON_IDS: [
     'export-dispatches-btn', 'export-step-duration-btn',
-    'export-recap-png-btn', 'export-recap-csv-btn', 'export-recap-print-btn',
+    'export-recap-png-btn', 'export-recap-csv-btn',
     'export-assignment-history-btn',
-    'export-gaplog-csv-btn', 'export-gaplog-print-btn',
+    'export-gaplog-csv-btn',
     'extract-data-btn',
   ],
   applyExportButtonVisibility() {
@@ -4479,7 +4481,7 @@ const App = {
       tab_graph_recap: 'Graph Recap',
       tab_assignment_history: 'Assign. History', tab_gap_log: 'Gap Log', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
-      apply_wops_sync: 'WOPS Sync Apply', export_data: 'Export/Print',
+      apply_wops_sync: 'WOPS Sync Apply', export_data: 'Export',
     };
     tbody.innerHTML = this.state.appUsers.map(u => {
       const perms = Array.isArray(u.permissions) ? u.permissions : [];
@@ -6700,7 +6702,6 @@ const App = {
     this.openModal('gap-record-detail-modal');
   },
   printGapLog() {
-    if (!this.hasPerm('export_data')) return alert('You do not have permission to export/print data. Ask an admin to grant it in User Management.');
     const summary = document.getElementById('gap-log-summary');
     const breakdown = document.getElementById('gap-log-breakdown-table');
     const mode = this.state.gapLogViewMode || 'list';
@@ -7031,9 +7032,9 @@ const App = {
       const h = new Date(isoString).getHours();
       return (h - 5 + 24) % 24;
     };
-    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
+    const raw = { pick: Array(24).fill(0), pgi: Array(24).fill(0), invoiced: Array(24).fill(0), ds_printed: Array(24).fill(0), pulling: Array(24).fill(0), checking: Array(24).fill(0), loaded: Array(24).fill(0) };
     list.forEach(d => {
-      ['pick', 'pgi', 'invoiced', 'ds_printed', 'checking', 'loaded'].forEach(step => {
+      ['pick', 'pgi', 'invoiced', 'ds_printed', 'pulling', 'checking', 'loaded'].forEach(step => {
         const b = bucketOf(d[`${step}_timestamp`]);
         if (b !== null) raw[step][b]++;
       });
@@ -7058,6 +7059,7 @@ const App = {
     const series = [
       { key: 'loaded',   label: 'Loaded',        color: '#7c3aed', data: toCumulative(raw.loaded) },
       { key: 'check',    label: 'Checked',        color: '#2563eb', data: toCumulative(raw.checking) },
+      { key: 'pulling',  label: 'Pulled',         color: '#0ea5e9', data: toCumulative(raw.pulling) },
       { key: 'ds',       label: 'DS Printed',     color: '#c46262', data: toCumulative(raw.ds_printed) },
       { key: 'invoiced', label: 'Invoiced',        color: '#dc2626', data: toCumulative(raw.invoiced) },
       { key: 'pgi',      label: 'PGI',            color: '#ec4899', data: toCumulative(raw.pgi) },
@@ -7160,7 +7162,6 @@ const App = {
     this.exportTableToCSV('recap-step-table', 'graph-recap-milestones.csv', rddId);
   },
   printGraphRecap() {
-    if (!this.hasPerm('export_data')) return alert('You do not have permission to export/print data. Ask an admin to grant it in User Management.');
     const el = document.getElementById('recap-printable');
     if (!el || !this.state.recapChartInstance) return alert('Select an RDD first to generate the recap.');
     const chartImg = `<img src="${this.state.recapChartInstance.toBase64Image('image/png', 1)}" style="width:100%;max-width:900px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px" />`;
@@ -7353,7 +7354,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-admin_override" class="accent-red-600"> Admin Override (untick/edit completed steps + timestamps)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Pulling/Checking using live WOPS-Outbound data)</label>
-        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-export_data" class="accent-red-600"> Export / Print / Download (CSV exports, chart PNG, print-to-PDF)</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-export_data" class="accent-red-600"> Export / Download (CSV exports, chart PNG) — printing is allowed for all users regardless of this setting</label>
       </div>
       <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
     </div>
