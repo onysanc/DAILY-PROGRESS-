@@ -2087,6 +2087,13 @@ const App = {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
+          // Mirror the "Pending to PGI" badge/filter logic: End Pick alone
+          // doesn't mean a dispatch is actually pending to PGI yet — it also
+          // needs to show Staged in WOPS-Outbound. Without this check the
+          // stuck-alert count included dispatches that are done picking but
+          // not yet staged, inflating the number above what the Dispatch
+          // Activity "Pending to PGI" badge shows.
+          if (step === 'pick' && !this.isWopsStaged(d)) break;
           const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
           const stuckMs = ((cfg && cfg.threshold_minutes) || 30) * 60 * 1000;
           const ts = d[`${step}_timestamp`];
@@ -5510,6 +5517,10 @@ const App = {
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
+          // Same "not really pending to PGI until WOPS-staged" gate used by
+          // the Pending to PGI badge/filter — keeps this toast count in sync
+          // with what Dispatch Activity actually shows as pending.
+          if (step === 'pick' && !this.isWopsStaged(d)) break;
           const ts = d[`${step}_timestamp`];
           if (ts && (now - new Date(ts).getTime()) > stuckMs) stepCounts[step] = (stepCounts[step] || 0) + 1;
           break;
