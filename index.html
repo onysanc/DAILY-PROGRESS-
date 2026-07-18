@@ -2298,22 +2298,44 @@ const App = {
   // callers (e.g. the Delay/Gap Log, which needs Staged status for dispatches
   // outside the currently-loaded RDD) can pull the same data for an arbitrary
   // set of dispatch/shipment numbers without touching state.wopsStatusMap.
+  // Fetches every row matching an `.in()` query across as many pages as
+  // needed. PostgREST/Supabase silently caps a single request's result set
+  // at a default max-rows limit (commonly 1000) — it does NOT error, it
+  // just quietly truncates, which is what caused a handful of Picker/
+  // Checker rows to randomly go missing from the Outbound Progress modal
+  // once total row counts (across every SO line, every role, every
+  // dispatch currently loaded) crept past that cap. Paginating with
+  // .range() guarantees every matching row is actually retrieved,
+  // regardless of how large the result set grows.
+  async fetchAllRows(client, table, selectCols, inColumn, inValues, pageSize = 1000) {
+    const all = [];
+    if (!inValues.length) return all;
+    let from = 0;
+    while (true) {
+      const { data, error } = await client.from(table)
+        .select(selectCols)
+        .in(inColumn, inValues)
+        .range(from, from + pageSize - 1);
+      if (error) { console.error(`WOPS ${table} lookup failed:`, error); break; }
+      all.push(...(data || []));
+      if (!data || data.length < pageSize) break; // last page was partial -> done
+      from += pageSize;
+    }
+    return all;
+  },
   async buildWopsStatusMap(numbers) {
     const map = {};
     if (!numbers.length) return map;
-    const { data: shipments, error: shipErr } = await wopsClient.from('shipments')
-      .select('*')
-      .in('shipment_no', numbers);
-    if (shipErr) { console.error('WOPS lookup failed:', shipErr); return map; }
+    const shipments = await this.fetchAllRows(wopsClient, 'shipments', '*', 'shipment_no', numbers);
 
     const soNumbers = (shipments || []).map(s => s.so_number).filter(Boolean);
     let logs = [];
     if (soNumbers.length) {
-      const { data: logData, error: logErr } = await wopsClient.from('activity_logs')
-        .select('so_number,role,personnel_name,start_time,end_time,status,bay')
-        .in('so_number', soNumbers);
-      if (logErr) console.error('WOPS activity_logs lookup failed:', logErr);
-      else logs = logData || [];
+      logs = await this.fetchAllRows(
+        wopsClient, 'activity_logs',
+        'so_number,role,personnel_name,start_time,end_time,status,bay',
+        'so_number', soNumbers
+      );
     }
 
     // Most-recently-started log per so_number+role, Completed preferred over Ongoing/Paused.
