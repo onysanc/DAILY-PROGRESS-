@@ -5507,11 +5507,10 @@ const App = {
   checkStuckAlerts() {
     if (!this.state.currentRddId) return;
     const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
+    const stuckPerStep = this.state.stuckPerStepThresholds || this.DEFAULT_STUCK_PER_STEP;
     const displayPrefs = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
     const now = Date.now();
     const stuckCfg = settings.stuck;
-    const stuckMs = (stuckCfg.threshold_minutes || 30) * 60 * 1000;
-    const stuckThreshold = stuckCfg.threshold_count || 3;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     const stepCounts = {};
     this.state.dispatches.forEach(d => {
@@ -5523,6 +5522,11 @@ const App = {
           // the Pending to PGI badge/filter — keeps this toast count in sync
           // with what Dispatch Activity actually shows as pending.
           if (step === 'pick' && !this.isWopsStaged(d)) break;
+          // Use this step's own configured wait time (matches the per-step
+          // thresholds set in Alerts & Notification Settings), not a single
+          // global minutes value shared by every milestone.
+          const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
+          const stuckMs = ((cfg && cfg.threshold_minutes) || 30) * 60 * 1000;
           const ts = d[`${step}_timestamp`];
           if (ts && (now - new Date(ts).getTime()) > stuckMs) stepCounts[step] = (stepCounts[step] || 0) + 1;
           break;
@@ -5531,10 +5535,12 @@ const App = {
     });
     if (stuckCfg.enabled && displayPrefs.stuck.popup) {
       Object.entries(stepCounts).forEach(([step, count]) => {
+        const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
+        const stuckThreshold = (cfg && cfg.threshold_count) || 3;
         const key = `stuck-${step}-${count}`;
         if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
           this._alertedStuck.add(key);
-          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: stuckCfg.threshold_minutes || 30 });
+          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: (cfg && cfg.threshold_minutes) || 30 });
           this.showToast(msg, 'alert', 10000);
         }
       });
