@@ -7299,16 +7299,34 @@ const App = {
   printGraphRecap() {
     const el = document.getElementById('recap-printable');
     if (!el || !this.state.recapChartInstance) return alert('Select an RDD first to generate the recap.');
-    const chartImg = `<img src="${this.state.recapChartInstance.toBase64Image('image/png', 1)}" style="width:100%;max-width:900px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px" />`;
+
+    // Clone the printable section so the live DOM is untouched, then swap the
+    // live <canvas> for a static <img> by walking the DOM (not a regex string
+    // match) — this stays correct even when other features (e.g. the
+    // universal "Copy as Picture" button) inject extra elements next to the
+    // canvas, which previously broke the old regex-based swap and left the
+    // print window with a blank, unrendered <canvas> (no Chart.js loaded
+    // there) instead of the chart image.
+    const clone = el.cloneNode(true);
+    const canvas = clone.querySelector('#recapChart');
+    if (canvas) {
+      const img = document.createElement('img');
+      img.src = this.state.recapChartInstance.toBase64Image('image/png', 1);
+      img.style.cssText = 'width:100%;max-width:900px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px';
+      canvas.replaceWith(img);
+    }
+    // Strip copy buttons / on-screen-only controls that shouldn't appear on the printout.
+    clone.querySelectorAll('.no-print, [data-capture-hide="true"], .copy-btn-row, .chart-copy-btn').forEach(n => n.remove());
+
     const w = window.open('', '_blank');
     w.document.write(`<html><head><title>Graph Recap</title>
       <style>body{font-family:sans-serif;color:#1e293b;background:#fff;padding:1.5rem}
       table{border-collapse:collapse;width:100%;margin-bottom:16px}th,td{border:1px solid #cbd5e1;padding:6px 10px;text-align:left}
       th{background:#f8fafc;font-size:11px;text-transform:uppercase}
-      .grid-cols-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+      .grid-cols-2,.sm\\:grid-cols-3,.lg\\:grid-cols-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
       .card{border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center}
       h2{color:#1d4ed8}@media print{.no-print{display:none}}</style>
-    </head><body>${el.innerHTML.replace(/<div class="relative flex-1 min-h-0"><canvas[\s\S]*?<\/canvas><\/div>/, chartImg)}</body></html>`);
+    </head><body>${clone.innerHTML}</body></html>`);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 400);
