@@ -56,14 +56,6 @@
   .priority-flag{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
   .priority-flag.urgent{background:#dc2626}
   .priority-flag.high{background:#f97316}
-  #toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none}
-  .toast{pointer-events:auto;min-width:260px;max-width:360px;padding:.75rem 1rem;border-radius:.75rem;box-shadow:0 4px 24px rgba(0,0,0,.18);font-size:.85rem;font-weight:600;display:flex;align-items:flex-start;gap:.6rem;animation:slideIn .25s ease}
-  .toast.alert{background:#dc2626;color:#fff}
-  .toast.warn{background:#f97316;color:#fff}
-  .toast.info{background:#0e7490;color:#fff}
-  @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
-  @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(110%);opacity:0}}
-  .toast.removing{animation:slideOut .25s ease forwards}
   /* Frozen/sticky dispatch table header */
   #dispatch-table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px);position:relative}
   #dispatch-table-wrap thead th{position:sticky;top:0;z-index:10;background:#f8fafc;box-shadow:0 1px 0 #e2e8f0}
@@ -333,15 +325,38 @@
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
         <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
         <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
-        <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold mr-1">Currently at:</span>
-        <button onclick="App.setDispatchFilter('at_not_started')" id="filter-at_not_started" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Start Picking<span id="filter-badge-at_not_started" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#64748b">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to End Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
-        <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
-        <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Pull<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
-        <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0ea5e9">0</span></button>
-        <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_not_started')" id="filter-at_not_started" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Start Picking<span id="filter-badge-at_not_started" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#64748b">0</span></button>
+          <span id="filter-maxpending-at_not_started" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to End Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
+          <span id="filter-maxpending-at_pick_start" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
+          <span id="filter-maxpending-at_pick" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
+          <span id="filter-maxpending-at_pgi" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
+          <span id="filter-maxpending-at_invoiced" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Pull<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
+          <span id="filter-maxpending-at_ds_printed" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0ea5e9">0</span></button>
+          <span id="filter-maxpending-at_pulling" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
+          <span id="filter-maxpending-at_checking" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+        </div>
         <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
       </div>
@@ -720,14 +735,14 @@
       </div>
 
       <!-- ═══ UNIFIED ALERTS & NOTIFICATIONS SETTINGS (Admin) ═══
-           Everything that can pop a toast or light up the dashboard banner is
+           Everything that can light up the dashboard banner is
            configured from this one card: message wording/thresholds, and — per
-           alert — independent on/off switches for the dashboard banner vs. the
-           toast pop-up, plus (below) the Delay/Gap incident thresholds that used
+           alert — an on/off switch for the dashboard banner,
+           plus (below) the Delay/Gap incident thresholds that used
            to live on the Delay/Gap Log tab. -->
       <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-5 mb-5">
         <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide mb-1">🔔 Alerts &amp; Notification Settings</h2>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">One place for every automatic alert in the app — wording, thresholds, and exactly where each one shows up (dashboard banner and/or toast pop-up). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">One place for every automatic alert in the app — wording, thresholds, and exactly where each one shows up (dashboard banner). Placeholders in <code>{curly braces}</code> are filled in automatically.</p>
         <!-- Pending-at-step Alert — full width so each milestone can have its own trigger point -->
         <div class="border dark:border-slate-700 rounded-lg p-3 flex flex-col mb-3">
           <div class="flex items-center justify-between mb-2">
@@ -742,7 +757,6 @@
           </div>
           <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-stuck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
           </div>
           <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-stuck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
           <button onclick="App.saveAlertSetting('stuck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
@@ -758,7 +772,6 @@
             <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {type}</div>
             <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-no_truck-banner" class="accent-emerald-600"> 🗔 Dashboard banner</label>
-              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-no_truck-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
             </div>
             <label class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-2 cursor-pointer"><input type="checkbox" id="as-no_truck-require" class="accent-amber-600"> Require a written reason before a user can dismiss this alert</label>
             <button onclick="App.saveAlertSetting('no_truck')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
@@ -771,10 +784,7 @@
             </div>
             <textarea id="as-urgent-template" rows="2" class="w-full text-sm p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white mb-2"></textarea>
             <div class="text-[11px] text-slate-400 dark:text-slate-500 italic mb-2">Placeholders: {count}</div>
-            <div class="flex items-center gap-3 mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="as-urgent-popup" class="accent-emerald-600"> 🔔 Toast pop-up</label>
-              <span class="text-slate-300 dark:text-slate-600 italic">(no dashboard banner for this one)</span>
-            </div>
+            <div class="text-[11px] text-slate-300 dark:text-slate-600 italic mb-2">(no dashboard banner for this alert)</div>
             <button onclick="App.saveAlertSetting('urgent')" class="mt-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-end">Save</button>
           </div>
         </div>
@@ -1227,10 +1237,6 @@
   </main>
 </div>
 
-<!-- ══════════════════════════════════════════════ -->
-<!-- TOAST CONTAINER                                -->
-<!-- ══════════════════════════════════════════════ -->
-<div id="toast-container"></div>
 <div id="chart-remark-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-96 border dark:border-slate-800">
     <h2 class="text-lg font-bold mb-4">Chart Remark</h2>
@@ -1509,9 +1515,9 @@ const App = {
   // switch above. Saved as a single JSON row (key='alert_display_prefs') in the same
   // alert_settings table, the same pattern already used for gap_thresholds.
   DEFAULT_ALERT_DISPLAY_PREFS: {
-    stuck:    { banner: true, popup: true },
-    no_truck: { banner: true, popup: true },
-    urgent:   { popup: true }, // urgent has no dashboard banner presentation
+    stuck:    { banner: true },
+    no_truck: { banner: true },
+    urgent:   {}, // urgent has no dashboard banner presentation
   },
   state: {
     currentUser: null,   // { id, username, role, permissions: [], canCancelTruck: bool }
@@ -1872,7 +1878,6 @@ const App = {
     await this.loadExcludedPersonnel();
     await this.loadBreakTimes();
     this.setupRealtimeSubscriptions();
-    this.startStuckAlertTimer();
     this.startAutoRefresh();
     this.populateCompareSelects();
   },
@@ -1966,7 +1971,6 @@ const App = {
   tryTab(tabId, permKey) {
     if (!this.hasPerm(permKey)) {
       const defaults = this.TAB_ROLE_DEFAULTS[permKey] || [];
-      this.showToast(`🔒 Access restricted — ask an admin to enable this for your account${defaults.length ? ` (default: ${defaults.join(' / ')})` : ''}`, 'alert');
       return;
     }
     this.switchTab(tabId);
@@ -2242,7 +2246,6 @@ const App = {
     this.state.dismissedAlertKeys[rddId].add(key);
     delete this.state.alertResponseDrafts[key];
     this.state.openAlertResponseKey = null;
-    this.showToast('✓ Response saved, alert dismissed', 'info', 3000);
     this.renderAlertBanner();
     const usersTab = document.getElementById('tab-users');
     if (usersTab && !usersTab.classList.contains('hidden')) this.loadAlertResponseLog();
@@ -2271,7 +2274,6 @@ const App = {
     if (ta) ta.value = '';
     if (!this.state.alertLatestRemarks) this.state.alertLatestRemarks = {};
     this.state.alertLatestRemarks[key] = { text, username: payload.username, created_at: new Date().toISOString() };
-    this.showToast('✓ Remark saved', 'info', 2500);
     this.renderAlertBanner();
     const usersTab2 = document.getElementById('tab-users');
     if (usersTab2 && !usersTab2.classList.contains('hidden')) this.loadAlertResponseLog();
@@ -2299,7 +2301,6 @@ const App = {
     this.renderDispatches();
     this.renderRddSummary();
     this.refreshDashboardIfVisible();
-    this.checkStuckAlerts();
     this.fetchWopsStatuses(); // fire-and-forget: re-renders the table once live outbound status is in
   },
   // Batches a lookup to WOPS-Outbound for every dispatch currently loaded,
@@ -2604,7 +2605,6 @@ const App = {
     if (!Object.keys(payload).length) return;
     const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
     if (error) return alert('Sync failed: ' + error.message);
-    this.showToast(`Synced ${item.kind === 'pick' ? 'Pick' : item.kind === 'pulling' ? 'Pulling' : 'Checking'} for dispatch ${item.dispatch_number} from WOPS-Outbound.`, 'info', 3500);
     await this.loadDispatches();
   },
   async applyAllWopsSyncItems() {
@@ -2618,7 +2618,6 @@ const App = {
       const { error } = await supabaseClient.from('dispatches').update(payload).eq('id', item.dispatchId);
       if (error) console.error(`WOPS sync failed for ${item.dispatch_number}:`, error.message);
     }
-    this.showToast(`Applied ${items.length} WOPS-Outbound sync update(s).`, 'info', 3500);
     await this.loadDispatches();
   },
   // One-click cleanup for dispatches that were already marked Checked before
@@ -2645,7 +2644,6 @@ const App = {
       if (!alreadyCorrect) fixes.push({ id: d.id, dispatch_number: d.dispatch_number, bay_location: matchedBays.join(', ') });
     });
     if (!fixes.length) {
-      if (!silent) this.showToast('Nothing to fix — every Checked dispatch already matches its Puller bay.', 'info', 4000);
       return;
     }
     // Silent (automatic) runs skip the confirm prompt entirely — this is
@@ -2659,7 +2657,6 @@ const App = {
       if (error) console.error(`Bay backfill failed for ${f.dispatch_number}:`, error.message);
       else okCount++;
     }
-    if (okCount) this.showToast(`✓ Bay auto-filled for ${okCount} dispatch(es) from Puller data.`, 'info', 4500);
     // Re-pull dispatches so the row display picks up the corrected bay
     // immediately, without needing a manual page refresh.
     const { data, error: reloadErr } = await supabaseClient.from('dispatches').select('*')
@@ -3526,7 +3523,6 @@ const App = {
       const scopeLabel = rddId === 'all' ? 'all-rdd' : (rddMap[rddId] || 'rdd');
       this.downloadCSV(lines.join('\r\n'), `${scopeLabel}-full-extraction.csv`);
       this.closeModal('extraction-modal');
-      this.showToast(`⬇ Extracted ${rowCount} dispatch${rowCount === 1 ? '' : 'es'}`, 'info', 3000);
     } catch (e) {
       console.error('runDataExtraction error:', e);
       alert('Extraction failed: ' + e.message);
@@ -4790,7 +4786,7 @@ const App = {
     await this.loadAppUsers();
   },
   // ═══════════════════════════════════════════════════════
-  // ALERT MESSAGE SETTINGS (admin-editable toast/banner text)
+  // ALERT MESSAGE SETTINGS (admin-editable banner text)
   // ═══════════════════════════════════════════════════════
   formatAlertTemplate(tpl, vars) {
     return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null ? vars[k] : m));
@@ -4860,12 +4856,10 @@ const App = {
       const templateEl = document.getElementById(`as-${key}-template`);
       const requireEl = document.getElementById(`as-${key}-require`);
       const bannerEl = document.getElementById(`as-${key}-banner`);
-      const popupEl = document.getElementById(`as-${key}-popup`);
       if (enabledEl) enabledEl.checked = !!s[key].enabled;
       if (templateEl) templateEl.value = s[key].template;
       if (requireEl) requireEl.checked = !!s[key].require_response;
       if (bannerEl) bannerEl.checked = !!(p[key] && p[key].banner);
-      if (popupEl) popupEl.checked = !!(p[key] && p[key].popup);
     });
     this.renderStuckPerStepInputs();
   },
@@ -4874,7 +4868,6 @@ const App = {
     const templateEl = document.getElementById(`as-${key}-template`);
     const requireEl = document.getElementById(`as-${key}-require`);
     const bannerEl = document.getElementById(`as-${key}-banner`);
-    const popupEl = document.getElementById(`as-${key}-popup`);
     const template = templateEl.value.trim();
     if (!template) return alert('Message text cannot be empty.');
     const payload = { key, enabled: enabledEl.checked, template, require_response: requireEl ? requireEl.checked : false };
@@ -4899,28 +4892,16 @@ const App = {
       const { error: perStepError } = await supabaseClient.from('alert_settings').upsert(perStepPayload, { onConflict: 'key' }).select();
       if (perStepError) return alert('Failed to save per-milestone thresholds: ' + perStepError.message);
     }
-    // Save this alert's banner/popup display prefs, merged into the single shared prefs row.
+    // Save this alert's banner display prefs, merged into the single shared prefs row.
     if (!this.state.alertDisplayPrefs) this.state.alertDisplayPrefs = JSON.parse(JSON.stringify(this.DEFAULT_ALERT_DISPLAY_PREFS));
     this.state.alertDisplayPrefs[key] = {
       ...(this.state.alertDisplayPrefs[key] || {}),
       ...(bannerEl ? { banner: bannerEl.checked } : {}),
-      ...(popupEl ? { popup: popupEl.checked } : {}),
     };
     const prefsPayload = { key: 'alert_display_prefs', enabled: true, template: JSON.stringify(this.state.alertDisplayPrefs), require_response: false };
     const { error: prefsError } = await supabaseClient.from('alert_settings').upsert(prefsPayload, { onConflict: 'key' }).select();
-    if (prefsError) return alert('Failed to save banner/pop-up display settings: ' + prefsError.message);
-    this.showToast('✓ Alert message updated', 'info', 3000);
-    // Clear this alert's dedupe cache so it re-evaluates immediately against the NEW
-    // wording/threshold instead of waiting for the underlying counts to change — otherwise
-    // an already-fired toast/banner just sits there showing stale numbers until the
-    // dispatch data itself shifts, which looks like "my save didn't take effect."
-    if (key === 'stuck' || key === 'urgent') {
-      [...this._alertedStuck].forEach(k => { if (k.startsWith(`${key}-`)) this._alertedStuck.delete(k); });
-    } else if (key === 'no_truck') {
-      this._alertedNoTruck.clear();
-    }
+    if (prefsError) return alert('Failed to save banner display settings: ' + prefsError.message);
     this.renderAlertBanner();
-    this.checkStuckAlerts();
   },
   // ── WOPS-Outbound auto-check approval toggle ──
   // Reuses the same key-value alert_settings table (key = 'wops_auto_apply')
@@ -4946,11 +4927,10 @@ const App = {
     if (!this.hasPerm('tab_users')) return; // this control only renders inside the admin-gated User Management tab anyway
     const el = document.getElementById('wops-auto-apply-toggle');
     const enabled = !!(el && el.checked);
-    const payload = { key: 'wops_auto_apply', enabled, template: 'WOPS-Outbound auto-check approval toggle (not a chat/toast alert — used by User Management only).', require_response: false };
+    const payload = { key: 'wops_auto_apply', enabled, template: 'WOPS-Outbound auto-check approval toggle (not a chat alert — used by User Management only).', require_response: false };
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) return alert('Failed to save: ' + error.message);
     this.state.wopsAutoApply = enabled;
-    this.showToast(enabled ? '✓ WOPS auto-check will now apply without approval' : '✓ WOPS auto-check now requires manual approval', 'info', 4000);
     this.renderWopsSyncPanel();
     if (enabled) this.autoApplyWopsSyncQueue();
   },
@@ -4973,7 +4953,6 @@ const App = {
         else applied++;
       }
       if (applied) {
-        this.showToast(`Auto-applied ${applied} WOPS-Outbound update(s) — no approval required.`, 'info', 3500);
         await this.loadDispatches();
       }
     } finally {
@@ -4987,12 +4966,10 @@ const App = {
     const templateEl = document.getElementById(`as-${key}-template`);
     const requireEl = document.getElementById(`as-${key}-require`);
     const bannerEl = document.getElementById(`as-${key}-banner`);
-    const popupEl = document.getElementById(`as-${key}-popup`);
     if (enabledEl) enabledEl.checked = d.enabled;
     if (templateEl) templateEl.value = d.template;
     if (requireEl) requireEl.checked = d.require_response;
     if (bannerEl) bannerEl.checked = !!dp.banner;
-    if (popupEl) popupEl.checked = !!dp.popup;
     if (key === 'stuck') {
       this.STUCK_STEPS.forEach(step => {
         const dStep = this.DEFAULT_STUCK_PER_STEP[step];
@@ -5064,23 +5041,53 @@ const App = {
       this.state.chartRemarks[rddId][row.bucket] = { text: row.remark, seriesKey: row.series_key || null };
     });
   },
+  formatPendingDuration(ms) {
+    if (ms === null || ms === undefined || isNaN(ms) || ms < 0) return '';
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h > 0 ? `${h}h${m > 0 ? ' ' + m + 'm' : ''} max` : `${m}m max`;
+  },
   updateFilterBadgeCounts() {
     const list = this.state.dispatches || [];
-    const notStartedCount = list.filter(d => !d.pick_start_checked).length;
+    const now = Date.now();
+    const notStartedList = list.filter(d => !d.pick_start_checked);
+    const notStartedCount = notStartedList.length;
     const notStartedBadge = document.getElementById('filter-badge-at_not_started');
     if (notStartedBadge) {
       notStartedBadge.textContent = notStartedCount;
       notStartedBadge.style.opacity = notStartedCount > 0 ? '1' : '0.45';
     }
+    const notStartedMaxEl = document.getElementById('filter-maxpending-at_not_started');
+    if (notStartedMaxEl) {
+      const maxMs = notStartedList.reduce((max, d) => {
+        const ts = d.created_at;
+        if (!ts) return max;
+        const ms = now - new Date(ts).getTime();
+        return (ms > 0 && (max === null || ms > max)) ? ms : max;
+      }, null);
+      notStartedMaxEl.textContent = this.formatPendingDuration(maxMs);
+    }
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
-      const count = step === 'pick'
-        ? list.filter(d => d.pick_checked && !d.pgi_checked).length
-        : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`])).length;
+      const atStepList = step === 'pick'
+        ? list.filter(d => d.pick_checked && !d.pgi_checked)
+        : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
+      const count = atStepList.length;
       const badge = document.getElementById(`filter-badge-at_${step}`);
       if (badge) {
         badge.textContent = count;
         badge.style.opacity = count > 0 ? '1' : '0.45';
+      }
+      const maxEl = document.getElementById(`filter-maxpending-at_${step}`);
+      if (maxEl) {
+        const maxMs = atStepList.reduce((max, d) => {
+          const ts = d[`${step}_timestamp`];
+          if (!ts) return max;
+          const ms = now - new Date(ts).getTime();
+          return (ms > 0 && (max === null || ms > max)) ? ms : max;
+        }, null);
+        maxEl.textContent = this.formatPendingDuration(maxMs);
       }
     });
   },
@@ -5485,7 +5492,6 @@ const App = {
     };
     const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
     if (error) { alert('Failed to save: ' + error.message); return; }
-    this.showToast(this.state.excludedPersonnelNames.has(key) ? `✓ ${name} excluded from time-based stats` : `✓ ${name} re-included in time-based stats`, 'info', 3000);
     this.renderPersonnel();
   },
   // ── Admin: exclude a specific dispatch/shipment from all Delay/Gap Log computations ──
@@ -5550,7 +5556,6 @@ const App = {
     } catch (e) { console.error('log exclusion remark error:', e); }
     this.state.pendingExcludeDispatchId = null;
     this.closeModal('exclude-dispatch-modal');
-    this.showToast('🚫 Dispatch excluded from Delay/Gap computation', 'info', 3500);
     await this.renderGapLogTab();
     await this.loadDispatches();
     if (!document.getElementById('gap-record-detail-modal')?.classList.contains('hidden')) this.openGapRecordDetail(dispatchId);
@@ -5569,7 +5574,6 @@ const App = {
         created_by: this.state.currentUser.username,
       });
     } catch (e) { console.error('log re-inclusion remark error:', e); }
-    this.showToast('✓ Dispatch re-included in Delay/Gap computation', 'info', 3000);
     await this.renderGapLogTab();
     await this.loadDispatches();
     if (!document.getElementById('gap-record-detail-modal')?.classList.contains('hidden')) this.openGapRecordDetail(dispatchId);
@@ -5617,124 +5621,6 @@ const App = {
     input.value = '';
     await this.loadRemarksList(dispatchId);
     await this.loadDispatches();
-  },
-
-  // ═══════════════════════════════════════════════════════
-  // TOAST NOTIFICATIONS + SOUND ALERTS
-  // ═══════════════════════════════════════════════════════
-  _alertedStuck: new Set(),
-  _alertedNoTruck: new Set(),
-  showToast(msg, type = 'info', duration = 6000) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const el = document.createElement('div');
-    const icon = type === 'alert' ? '🔴' : type === 'warn' ? '🟠' : 'ℹ️';
-    el.className = `toast ${type}`;
-    el.innerHTML = `<span style="font-size:1.1em">${icon}</span><span class="flex-1">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-size:1rem;opacity:.7;padding:0 0 0 8px">✕</button>`;
-    container.appendChild(el);
-    this.playAlertSound(type);
-    setTimeout(() => {
-      el.classList.add('removing');
-      setTimeout(() => el.remove(), 260);
-    }, duration);
-  },
-  playAlertSound(type) {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      if (type === 'alert') {
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.30);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.6);
-      } else if (type === 'warn') {
-        osc.frequency.setValueAtTime(660, ctx.currentTime);
-        osc.frequency.setValueAtTime(550, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.4);
-      } else {
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        gain.gain.setValueAtTime(0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.25);
-      }
-    } catch(e) {}
-  },
-  checkStuckAlerts() {
-    if (!this.state.currentRddId) return;
-    const settings = this.state.alertSettings || this.DEFAULT_ALERT_SETTINGS;
-    const stuckPerStep = this.state.stuckPerStepThresholds || this.DEFAULT_STUCK_PER_STEP;
-    const displayPrefs = this.state.alertDisplayPrefs || this.DEFAULT_ALERT_DISPLAY_PREFS;
-    const now = Date.now();
-    const stuckCfg = settings.stuck;
-    const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
-    const stepCounts = {};
-    this.state.dispatches.forEach(d => {
-      if (d.loaded_checked) return;
-      for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
-        const step = STEPS_FLOW[i];
-        if (d[`${step}_checked`]) {
-          // Use this step's own configured wait time (matches the per-step
-          // thresholds set in Alerts & Notification Settings), not a single
-          // global minutes value shared by every milestone.
-          const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
-          const stuckMs = ((cfg && cfg.threshold_minutes) || 30) * 60 * 1000;
-          const ts = d[`${step}_timestamp`];
-          if (ts && (now - new Date(ts).getTime()) > stuckMs) stepCounts[step] = (stepCounts[step] || 0) + 1;
-          break;
-        }
-      }
-    });
-    if (stuckCfg.enabled && displayPrefs.stuck.popup) {
-      Object.entries(stepCounts).forEach(([step, count]) => {
-        const cfg = stuckPerStep[step] || this.DEFAULT_STUCK_PER_STEP[step];
-        const stuckThreshold = (cfg && cfg.threshold_count) || 3;
-        const key = `stuck-${step}-${count}`;
-        if (count >= stuckThreshold && !this._alertedStuck.has(key)) {
-          this._alertedStuck.add(key);
-          const msg = this.formatAlertTemplate(stuckCfg.template, { count, step: PENDING_LABELS[step], minutes: (cfg && cfg.threshold_minutes) || 30 });
-          this.showToast(msg, 'alert', 10000);
-        }
-      });
-    }
-    // No-truck alert
-    const noTruckCfg = settings.no_truck;
-    const checkingTypes = new Set(this.state.dispatches.filter(d => d.checking_checked && !d.loaded_checked).map(d => d.truck_type));
-    checkingTypes.forEach(type => {
-      const avail = this.state.trucks.filter(t => t.truck_type === type && t.status === 'Available').length;
-      const key = `notruck-${type}`;
-      if (noTruckCfg.enabled && displayPrefs.no_truck.popup && avail === 0 && !this._alertedNoTruck.has(key)) {
-        this._alertedNoTruck.add(key);
-        const msg = this.formatAlertTemplate(noTruckCfg.template, { type });
-        this.showToast(msg, 'warn', 10000);
-      } else if (avail > 0) {
-        this._alertedNoTruck.delete(key);
-      }
-    });
-    // Urgent priority reminder
-    const urgentCfg = settings.urgent;
-    const urgent = this.state.dispatches.filter(d => d.priority === 'urgent' && !d.loaded_checked);
-    if (urgentCfg.enabled && displayPrefs.urgent.popup && urgent.length > 0) {
-      const key = `urgent-${urgent.map(d => d.id).join(',')}`;
-      if (!this._alertedStuck.has(key)) {
-        this._alertedStuck.add(key);
-        const msg = this.formatAlertTemplate(urgentCfg.template, { count: urgent.length });
-        this.showToast(msg, 'alert', 8000);
-      }
-    }
-  },
-  startStuckAlertTimer() {
-    if (this._stuckAlertTimer) clearInterval(this._stuckAlertTimer);
-    this._stuckAlertTimer = setInterval(() => this.checkStuckAlerts(), 5 * 60 * 1000); // every 5 min
   },
 
   // ═══════════════════════════════════════════════════════
@@ -6069,7 +5955,6 @@ const App = {
     this.state.gapThresholds = thresholds;
     this.state.minIncidentsPerHour = minIncidentsPerHour;
     this.state.recommendationThreshold = recommendationThreshold;
-    this.showToast('✓ Delay thresholds updated', 'info', 3000);
     this.renderGapLogTab();
   },
   resetGapThresholds() {
