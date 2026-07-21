@@ -2416,20 +2416,30 @@ const App = {
         const earliestStartedLog = logsForStep
           .filter(l => l)
           .reduce((earliest, l) => (!earliest || new Date(l.start_time) < new Date(earliest.start_time)) ? l : earliest, null);
+        // Rows that have started but NOT finished yet (their own end_time is
+        // still empty) — this is the only thing that counts as someone
+        // genuinely, actively working right now. A row that already has
+        // both a start AND an end is done-and-idle, not active, no matter
+        // how recently it happened to start.
+        const activeLogs = logsForStep.filter(l => l && l.status && l.status !== 'Completed');
+        const hasActiveWork = activeLogs.length > 0;
+        const latestActiveLog = activeLogs.reduce((latest, l) => (!latest || new Date(l.start_time) > new Date(latest.start_time)) ? l : latest, null);
         // If the representative row already has its OWN start+end (i.e. it
         // finished) but the group as a whole isn't allDone, that row is not
         // "Ongoing" — nobody is actively working on it right now. Call it
         // "Partial": one or more rows finished while the rest haven't
         // started/finished yet. Only a row that is genuinely mid-flight
         // (no end_time yet — real 'Ongoing'/'Paused' from WOPS) keeps its
-        // real in-progress status.
+        // real in-progress status. Prefer an actually-active row over the
+        // merely-most-recently-started one, so a finished row that happens
+        // to be the newest never hides genuine ongoing work elsewhere.
         const repLog = allDone
           ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
-          : (latestStartedLog ? { ...latestStartedLog, status: latestStartedLog.status === 'Completed' ? 'Partial' : latestStartedLog.status } : null);
+          : (latestActiveLog || (latestStartedLog ? { ...latestStartedLog, status: 'Partial' } : null));
         // Rows that don't even have a log yet for this role — i.e. haven't
         // started at all (as opposed to a row that started but isn't done).
         const notStartedCount = soNumbersInGroup.length - logsForStep.filter(Boolean).length;
-        return { ...step, log: repLog, earliestLog: earliestStartedLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length, notStartedCount };
+        return { ...step, log: repLog, earliestLog: earliestStartedLog, hasActiveWork, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length, notStartedCount };
       });
       // Bay is only trusted once every row under this dispatch has
       // actually been pulled — otherwise a bay shown here could belong to
@@ -2531,7 +2541,7 @@ const App = {
       const pullLog = pullStep?.log;
       const checkLog = checkStep?.log;
 
-      if (pickLog && (pickLog.status === 'Ongoing' || pickLog.status === 'Partial' || pickStep.allDone)) {
+      if (pickLog && (pickStep.hasActiveWork || pickStep.allDone)) {
         const needsStart = !d.pick_start_checked;
         // Only queue End Pick once EVERY SO row under this dispatch shows
         // Picker Completed in WOPS-Outbound — one row still Ongoing/Pending
@@ -2556,6 +2566,14 @@ const App = {
         if (needsStart || needsEnd || needsStartRefresh) {
           queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, needsStartRefresh, log: pickLog, startLog });
         }
+      } else if (d.pick_start_checked && !d.pick_checked) {
+        // Correction case: Start Pick is ticked here, but WOPS-Outbound
+        // shows no one is actually working right now — just one or more
+        // rows that finished in isolation while the rest of the group
+        // hasn't started ("Partial"). That's not the same as picking
+        // being underway, so offer to un-tick it rather than let the
+        // dispatch sit flagged as started when nothing is actually moving.
+        queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsUndoStart: true, log: pickLog });
       }
       // Puller Completed in WOPS-Outbound -> queue a 'pulling' item, but
       // ONLY if this app's own chronology is already satisfied (DS Printed
@@ -2616,13 +2634,13 @@ const App = {
     }
     list.innerHTML = banner + this.wopsChronoWarningListHtml() + queue.map(item => {
       const stepLabel = item.kind === 'pick'
-        ? [item.needsStart ? 'Start Pick' : (item.needsStartRefresh ? 'Start Pick (update)' : null), item.needsEnd ? 'End Pick' : null].filter(Boolean).join(' + ')
+        ? (item.needsUndoStart ? 'Undo Start Pick (nothing actually active)' : [item.needsStart ? 'Start Pick' : (item.needsStartRefresh ? 'Start Pick (update)' : null), item.needsEnd ? 'End Pick' : null].filter(Boolean).join(' + '))
         : item.kind === 'pulling' ? 'Pulling' : 'Checking';
-      const when = item.log.end_time ? new Date(item.log.end_time).toLocaleString() : (item.log.start_time ? new Date(item.log.start_time).toLocaleString() : '—');
+      const when = item.log ? (item.log.end_time ? new Date(item.log.end_time).toLocaleString() : (item.log.start_time ? new Date(item.log.start_time).toLocaleString() : '—')) : '—';
       return `<div class="flex items-center justify-between gap-2 p-2.5 border-b dark:border-slate-800 text-xs">
                 <div>
                   <div class="font-semibold">${this.escapeHtml(String(item.dispatch_number))} <span class="font-normal text-slate-400">— ${stepLabel}</span></div>
-                  <div class="text-slate-500 dark:text-slate-400">${this.escapeHtml(item.log.personnel_name || '—')} · ${when}</div>
+                  <div class="text-slate-500 dark:text-slate-400">${item.log ? this.escapeHtml(item.log.personnel_name || '—') + ' · ' + when : 'Rest of the group hasn\'t started yet'}</div>
                 </div>
                 <button onclick="App.applyWopsSyncItem('${item.id}')" class="shrink-0 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">Apply</button>
               </div>`;
@@ -2700,6 +2718,15 @@ const App = {
   buildWopsSyncPayload(item) {
     const payload = {};
     if (item.kind === 'pick') {
+      if (item.needsUndoStart) {
+        // Nothing currently active in WOPS-Outbound for this dispatch —
+        // just a stray finished row while the rest of the group hasn't
+        // started. Revert the checkbox/timestamp rather than leave it
+        // claiming picking is underway.
+        payload.pick_start_checked = false;
+        payload.pick_start_timestamp = null;
+        return payload;
+      }
       if (item.needsStart) {
         payload.pick_start_checked = true;
         // Use the EARLIEST-started SO row for this dispatch, not just
@@ -2996,6 +3023,19 @@ const App = {
         const ts = d[`${step}_timestamp`];
         return { done: false, label: PENDING_LABELS[step] || '', elapsed: ts ? this.adjustedDurationMs(ts, Date.now()) : null };
       }
+    }
+    // Nothing checked yet in this app. Before falling back to "Pending to
+    // Start Picking" with no timer, check whether WOPS-Outbound shows
+    // picking already underway for this dispatch — e.g. one SO row already
+    // started (and maybe even finished) while the rest of the group hasn't.
+    // That's real elapsed time the dispatch has been sitting in the Picking
+    // stage, even though this app's own Start Pick checkbox is deliberately
+    // left unticked until picking is genuinely active/complete across every
+    // row (see computeWopsSyncQueue's needsUndoStart / hasActiveWork).
+    const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+    const pickStep = wopsInfo && wopsInfo.steps.find(s => s.role === 'Picker');
+    if (pickStep && pickStep.earliestLog && pickStep.earliestLog.start_time) {
+      return { done: false, label: 'Pending to End Picking', elapsed: this.adjustedDurationMs(pickStep.earliestLog.start_time, Date.now()) };
     }
     // Nothing checked yet — no milestone timestamp to measure from.
     return { done: false, label: 'Pending to Start Picking', elapsed: null };
