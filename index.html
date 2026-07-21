@@ -320,8 +320,7 @@
         </div>
       </div>
       <!-- Quick Filter Pills -->
-      <div id="dispatch-filter-bar" class="hidden mb-4 flex flex-col gap-2">
-        <div class="flex items-start gap-2 flex-wrap">
+      <div id="dispatch-filter-bar" class="hidden mb-4 flex items-start gap-2 flex-wrap">
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Show All</button>
           <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
@@ -369,28 +368,6 @@
           <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
         </div>
         <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2 self-center"></span>
-        </div>
-        <!-- Time Pending quick filters (separate row, under the pill row above)
-             — filter dispatches by how long they've been sitting at their
-             current stage (Time Pending column). -->
-        <div class="flex items-start gap-2 flex-wrap">
-        <div class="flex flex-col items-center">
-          <button onclick="App.setDispatchFilter('pending_gt_1h')" id="filter-pending_gt_1h" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending &gt;1h<span id="filter-badge-pending_gt_1h" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#f59e0b">0</span></button>
-          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
-        </div>
-        <div class="flex flex-col items-center">
-          <button onclick="App.setDispatchFilter('pending_gt_2h')" id="filter-pending_gt_2h" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending &gt;2h<span id="filter-badge-pending_gt_2h" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#f97316">0</span></button>
-          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
-        </div>
-        <div class="flex flex-col items-center">
-          <button onclick="App.setDispatchFilter('pending_gt_3h')" id="filter-pending_gt_3h" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending &gt;3h<span id="filter-badge-pending_gt_3h" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
-          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
-        </div>
-        <div class="flex flex-col items-center">
-          <button onclick="App.setDispatchFilter('pending_gt_3h_more')" id="filter-pending_gt_3h_more" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending &gt;3h<span id="filter-badge-pending_gt_3h_more" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#991b1b">0</span></button>
-          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
-        </div>
-        </div>
       </div>
       <div class="mb-4">
         <div class="relative w-full sm:w-80">
@@ -1524,12 +1501,6 @@ const MILESTONE_COLORS = { pick_start: '#0284c7', pick: '#16a34a', pgi: '#ec4899
 // Keyed by the last-completed step, resolves to the pending-on label (matches the filter pill wording).
 const NOT_STARTED_LABEL = 'Pending to Start Picking';
 const PENDING_LABELS = { pick_start: 'Pending to End Picking', pick: 'Pending to PGI', pgi: 'Pending to Invoice', invoiced: 'Pending to DS Print', ds_printed: 'Pending to Pull', pulling: 'Pending to Check', checking: 'Pending to Load' };
-// Time Pending quick-filter thresholds (hours). Matches the "Time Pending"
-// column (dispatchPendingInfo): a dispatch qualifies once it has been
-// sitting at its current stage for MORE than this many hours. Note
-// pending_gt_3h and pending_gt_3h_more use the same 3h threshold — both
-// pills were requested explicitly as separate ">3h" filters.
-const PENDING_TIME_FILTER_HOURS = { pending_gt_1h: 1, pending_gt_2h: 2, pending_gt_3h: 3, pending_gt_3h_more: 3 };
 const App = {
   DEFAULT_ALERT_SETTINGS: {
     stuck:    { enabled: true, template: '{count} dispatches {step} for {minutes}mins+', threshold_count: 3, threshold_minutes: 30, require_response: false },
@@ -3010,13 +2981,6 @@ const App = {
     else if (filter === 'stuck') visible = searched.filter(d => this.isDispatchStuck(d));
     else if (filter === 'done') visible = searched.filter(d => d.loaded_checked);
     else if (filter === 'priority') visible = searched.filter(d => d.priority === 'urgent' || d.priority === 'high');
-    else if (PENDING_TIME_FILTER_HOURS[filter] !== undefined) {
-      const thresholdMs = PENDING_TIME_FILTER_HOURS[filter] * 60 * 60 * 1000;
-      visible = searched.filter(d => {
-        const info = this.dispatchPendingInfo(d);
-        return !info.done && info.elapsed !== null && info.elapsed > thresholdMs;
-      });
-    }
     else if (filter === 'at_not_started') visible = searched.filter(d => !d.pick_start_checked);
     else if (filter.startsWith('at_')) {
       const step = filter.slice(3);
@@ -5099,18 +5063,6 @@ const App = {
   updateFilterBadgeCounts() {
     const list = this.state.dispatches || [];
     const now = Date.now();
-    Object.keys(PENDING_TIME_FILTER_HOURS).forEach(key => {
-      const thresholdMs = PENDING_TIME_FILTER_HOURS[key] * 60 * 60 * 1000;
-      const matchCount = list.filter(d => {
-        const info = this.dispatchPendingInfo(d);
-        return !info.done && info.elapsed !== null && info.elapsed > thresholdMs;
-      }).length;
-      const badge = document.getElementById(`filter-badge-${key}`);
-      if (badge) {
-        badge.textContent = matchCount;
-        badge.style.opacity = matchCount > 0 ? '1' : '0.45';
-      }
-    });
     const notStartedList = list.filter(d => !d.pick_start_checked);
     const notStartedCount = notStartedList.length;
     const notStartedBadge = document.getElementById('filter-badge-at_not_started');
@@ -5149,7 +5101,7 @@ const App = {
     });
   },
   updateFilterPillStyles(filter) {
-    ['all', 'pending_gt_1h', 'pending_gt_2h', 'pending_gt_3h', 'pending_gt_3h_more', 'priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_pulling', 'at_checking', 'at_loaded'].forEach(f => {
+    ['all', 'priority', 'at_not_started', 'at_pick_start', 'at_pick', 'at_pgi', 'at_invoiced', 'at_ds_printed', 'at_pulling', 'at_checking', 'at_loaded'].forEach(f => {
       const btn = document.getElementById(`filter-${f}`);
       if (!btn) return;
       if (f === filter) {
