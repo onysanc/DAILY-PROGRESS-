@@ -320,45 +320,54 @@
         </div>
       </div>
       <!-- Quick Filter Pills -->
-      <div id="dispatch-filter-bar" class="hidden mb-4 flex items-center gap-2 flex-wrap">
-        <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Show All</button>
-        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
-        <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
-        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></span>
+      <div id="dispatch-filter-bar" class="hidden mb-4 flex items-start gap-2 flex-wrap">
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('all')" id="filter-all" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Show All</button>
+          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
+        </div>
+        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1 self-center"></span>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('priority')" id="filter-priority" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">⚑ Priority</button>
+          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
+        </div>
+        <span class="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1 self-center"></span>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_not_started')" id="filter-at_not_started" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Start Picking<span id="filter-badge-at_not_started" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#64748b">0</span></button>
-          <span id="filter-maxpending-at_not_started" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_not_started" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_pick_start')" id="filter-at_pick_start" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to End Picking<span id="filter-badge-at_pick_start" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0284c7">0</span></button>
-          <span id="filter-maxpending-at_pick_start" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_pick_start" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_pick')" id="filter-at_pick" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to PGI<span id="filter-badge-at_pick" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#16a34a">0</span></button>
-          <span id="filter-maxpending-at_pick" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_pick" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_pgi')" id="filter-at_pgi" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Invoice<span id="filter-badge-at_pgi" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#ec4899">0</span></button>
-          <span id="filter-maxpending-at_pgi" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_pgi" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_invoiced')" id="filter-at_invoiced" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to DS Print<span id="filter-badge-at_invoiced" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#dc2626">0</span></button>
-          <span id="filter-maxpending-at_invoiced" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_invoiced" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_ds_printed')" id="filter-at_ds_printed" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Pull<span id="filter-badge-at_ds_printed" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#c46262">0</span></button>
-          <span id="filter-maxpending-at_ds_printed" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_ds_printed" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_pulling')" id="filter-at_pulling" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Check<span id="filter-badge-at_pulling" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#0ea5e9">0</span></button>
-          <span id="filter-maxpending-at_pulling" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_pulling" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
         <div class="flex flex-col items-center">
           <button onclick="App.setDispatchFilter('at_checking')" id="filter-at_checking" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Pending to Load<span id="filter-badge-at_checking" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#2563eb">0</span></button>
-          <span id="filter-maxpending-at_checking" class="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 leading-none"></span>
+          <span id="filter-maxpending-at_checking" class="text-[11px] font-bold mt-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"></span>
         </div>
-        <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
-        <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2"></span>
+        <div class="flex flex-col items-center">
+          <button onclick="App.setDispatchFilter('at_loaded')" id="filter-at_loaded" class="filter-pill px-3 py-1 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-1.5">Loaded<span id="filter-badge-at_loaded" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white" style="background:#7c3aed">0</span></button>
+          <span class="invisible text-[11px] font-bold mt-1 px-1.5 py-0.5">0h 0m max</span>
+        </div>
+        <span id="dispatch-filter-count" class="text-xs text-slate-400 dark:text-slate-500 ml-2 self-center"></span>
       </div>
       <div class="mb-4">
         <div class="relative w-full sm:w-80">
@@ -5041,12 +5050,15 @@ const App = {
       this.state.chartRemarks[rddId][row.bucket] = { text: row.remark, seriesKey: row.series_key || null };
     });
   },
-  formatPendingDuration(ms) {
-    if (ms === null || ms === undefined || isNaN(ms) || ms < 0) return '';
-    const totalMin = Math.floor(ms / 60000);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return h > 0 ? `${h}h${m > 0 ? ' ' + m + 'm' : ''} max` : `${m}m max`;
+  setMaxPendingLabel(el, maxMs) {
+    if (!el) return;
+    if (maxMs === null) {
+      el.textContent = '0h 0m max';
+      el.classList.add('invisible');
+    } else {
+      el.textContent = `${this.fmtDuration(maxMs)} max`;
+      el.classList.remove('invisible');
+    }
   },
   updateFilterBadgeCounts() {
     const list = this.state.dispatches || [];
@@ -5061,12 +5073,10 @@ const App = {
     const notStartedMaxEl = document.getElementById('filter-maxpending-at_not_started');
     if (notStartedMaxEl) {
       const maxMs = notStartedList.reduce((max, d) => {
-        const ts = d.created_at;
-        if (!ts) return max;
-        const ms = now - new Date(ts).getTime();
-        return (ms > 0 && (max === null || ms > max)) ? ms : max;
+        const ms = d.created_at ? this.adjustedDurationMs(d.created_at, now) : null;
+        return (ms !== null && (max === null || ms > max)) ? ms : max;
       }, null);
-      notStartedMaxEl.textContent = this.formatPendingDuration(maxMs);
+      this.setMaxPendingLabel(notStartedMaxEl, maxMs);
     }
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
@@ -5083,11 +5093,10 @@ const App = {
       if (maxEl) {
         const maxMs = atStepList.reduce((max, d) => {
           const ts = d[`${step}_timestamp`];
-          if (!ts) return max;
-          const ms = now - new Date(ts).getTime();
-          return (ms > 0 && (max === null || ms > max)) ? ms : max;
+          const ms = ts ? this.adjustedDurationMs(ts, now) : null;
+          return (ms !== null && (max === null || ms > max)) ? ms : max;
         }, null);
-        maxEl.textContent = this.formatPendingDuration(maxMs);
+        this.setMaxPendingLabel(maxEl, maxMs);
       }
     });
   },
