@@ -398,7 +398,7 @@
               <th class="p-3 text-center cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('loaded')">Loaded <span id="sort-loaded" class="sort-arrow"></span></th>
               <th class="p-3">Loaded Truck</th>
               <th class="p-3">Remarks</th>
-              <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('status')">Status <span id="sort-status" class="sort-arrow"></span></th>
+              <th class="p-3" title="Time elapsed at the dispatch's current stage — since its last completed milestone, with configured Break Times excluded">Time Pending</th>
               <th class="p-3 w-40 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('progress')">Progress <span id="sort-progress" class="sort-arrow"></span></th>
               <th id="actions-col-header" class="p-3 hidden">Actions</th>
             </tr>
@@ -2934,6 +2934,25 @@ const App = {
     }
     return false;
   },
+  // Time Pending column (Dispatch Activity table) — the dispatch's current
+  // stage and how long it's been sitting there: now minus the timestamp of
+  // its last COMPLETED milestone, with configured Break Times excluded (via
+  // adjustedDurationMs — same "10am PGI, 1pm now, 12–1pm is lunch -> 2h
+  // pending" convention). Walks MILESTONE_FLOW backward to find that last
+  // completed milestone — identical logic to isDispatchStuck() above and the
+  // pending-dispatches export, just returning the info instead of a boolean.
+  dispatchPendingInfo(d) {
+    if (d.loaded_checked) return { done: true };
+    for (let i = MILESTONE_FLOW.length - 1; i >= 0; i--) {
+      const step = MILESTONE_FLOW[i];
+      if (d[`${step}_checked`]) {
+        const ts = d[`${step}_timestamp`];
+        return { done: false, label: PENDING_LABELS[step] || '', elapsed: ts ? this.adjustedDurationMs(ts, Date.now()) : null };
+      }
+    }
+    // Nothing checked yet — no milestone timestamp to measure from.
+    return { done: false, label: 'Pending to Start Picking', elapsed: null };
+  },
   renderDispatches() {
     const syncBaysBtn = document.getElementById('sync-bays-btn');
     if (syncBaysBtn) syncBaysBtn.classList.toggle('hidden', !(this.hasPerm('apply_wops_sync') || this.hasPerm('admin_override')));
@@ -3116,7 +3135,20 @@ const App = {
                       : `<span class="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Add remark</span>`}
                   </button>
                 </td>`;
-      html += `<td class="p-3 align-top"><span class="px-2 py-1 text-xs font-bold rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">${d.status}</span></td>
+      const pendingInfo = this.dispatchPendingInfo(d);
+      const stuckMs = 30 * 60 * 1000; // same "stuck" threshold isDispatchStuck() and the stuck alerts use
+      let pendingCellHtml;
+      if (pendingInfo.done) {
+        pendingCellHtml = `<span class="px-2 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">✓ Completed</span>`;
+      } else if (pendingInfo.elapsed === null) {
+        // No milestone checked yet, so no timestamp to measure "pending" from — just show the stage label.
+        pendingCellHtml = `<span class="text-xs text-slate-400 dark:text-slate-500 italic">${this.escapeHtml(pendingInfo.label)}</span>`;
+      } else {
+        const isStuck = pendingInfo.elapsed > stuckMs;
+        pendingCellHtml = `<span class="px-2 py-1 text-xs font-bold rounded ${isStuck ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}" title="Break Times are excluded from this duration">${this.fmtDuration(pendingInfo.elapsed)} pending${isStuck ? ' ⚠' : ''}</span>
+                              <div class="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">${this.escapeHtml(pendingInfo.label)}</div>`;
+      }
+      html += `<td class="p-3 align-top">${pendingCellHtml}</td>
                 <td class="p-3 align-top">
                   <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div class="bg-blue-600 h-2.5 rounded-full transition-all" style="width:${d.progress || 0}%"></div>
