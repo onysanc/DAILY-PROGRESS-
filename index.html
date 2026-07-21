@@ -3017,26 +3017,46 @@ const App = {
   // pending-dispatches export, just returning the info instead of a boolean.
   dispatchPendingInfo(d) {
     if (d.loaded_checked) return { done: true };
+    const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+    const pickStep = wopsInfo && wopsInfo.steps.find(s => s.role === 'Picker');
+    // Live WOPS-Outbound read for the Picker stage, used both below (Start
+    // Pick already ticked here) and in the "nothing checked yet" fallback
+    // further down. Picking is the one stage where several SO rows can be
+    // moving independently under a single Start Pick checkbox, so the
+    // stored pick_start_timestamp (anchored to the EARLIEST row, for
+    // accurate final Pick Duration once everything's done) isn't always
+    // the right thing to measure "how long has this actually been
+    // pending" from while picking is still in progress:
+    //   • someone actively picking a row right now -> measure from THAT
+    //     row's start, not an earlier already-finished row's.
+    //   • only a stray finished row, nothing else moving -> this isn't
+    //     picking "underway" at all; treat it like a not-started
+    //     dispatch and measure from when it was entered.
+    const livePickPending = () => {
+      if (!pickStep || pickStep.allDone) return null;
+      if (pickStep.hasActiveWork && pickStep.log && pickStep.log.start_time) {
+        return { done: false, label: 'Pending to End Picking', elapsed: this.adjustedDurationMs(pickStep.log.start_time, Date.now()) };
+      }
+      if (pickStep.completedCount > 0 && d.created_at) {
+        return { done: false, label: 'Pending to Start Picking', elapsed: this.adjustedDurationMs(d.created_at, Date.now()) };
+      }
+      return null;
+    };
     for (let i = MILESTONE_FLOW.length - 1; i >= 0; i--) {
       const step = MILESTONE_FLOW[i];
       if (d[`${step}_checked`]) {
+        if (step === 'pick_start') {
+          const live = livePickPending();
+          if (live) return live;
+        }
         const ts = d[`${step}_timestamp`];
         return { done: false, label: PENDING_LABELS[step] || '', elapsed: ts ? this.adjustedDurationMs(ts, Date.now()) : null };
       }
     }
-    // Nothing checked yet in this app. Before falling back to "Pending to
-    // Start Picking" with no timer, check whether WOPS-Outbound shows
-    // picking already underway for this dispatch — e.g. one SO row already
-    // started (and maybe even finished) while the rest of the group hasn't.
-    // That's real elapsed time the dispatch has been sitting in the Picking
-    // stage, even though this app's own Start Pick checkbox is deliberately
-    // left unticked until picking is genuinely active/complete across every
-    // row (see computeWopsSyncQueue's needsUndoStart / hasActiveWork).
-    const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
-    const pickStep = wopsInfo && wopsInfo.steps.find(s => s.role === 'Picker');
-    if (pickStep && pickStep.earliestLog && pickStep.earliestLog.start_time) {
-      return { done: false, label: 'Pending to End Picking', elapsed: this.adjustedDurationMs(pickStep.earliestLog.start_time, Date.now()) };
-    }
+    // Nothing checked yet in this app — fall back to the live WOPS read
+    // above, or the plain "no timestamp to measure from" default.
+    const live = livePickPending();
+    if (live) return live;
     // Nothing checked yet — no milestone timestamp to measure from.
     return { done: false, label: 'Pending to Start Picking', elapsed: null };
   },
