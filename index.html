@@ -2406,10 +2406,20 @@ const App = {
         const latestStartedLog = logsForStep
           .filter(l => l)
           .reduce((latest, l) => (!latest || new Date(l.start_time) > new Date(latest.start_time)) ? l : latest, null);
+        // If the representative row already has its OWN start+end (i.e. it
+        // finished) but the group as a whole isn't allDone, that row is not
+        // "Ongoing" — nobody is actively working on it right now. Call it
+        // "Partial": one or more rows finished while the rest haven't
+        // started/finished yet. Only a row that is genuinely mid-flight
+        // (no end_time yet — real 'Ongoing'/'Paused' from WOPS) keeps its
+        // real in-progress status.
         const repLog = allDone
           ? completedLogs.reduce((latest, l) => (!latest || new Date(l.end_time) > new Date(latest.end_time)) ? l : latest, null)
-          : (latestStartedLog ? { ...latestStartedLog, status: latestStartedLog.status === 'Completed' ? 'Ongoing' : latestStartedLog.status } : null);
-        return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length };
+          : (latestStartedLog ? { ...latestStartedLog, status: latestStartedLog.status === 'Completed' ? 'Partial' : latestStartedLog.status } : null);
+        // Rows that don't even have a log yet for this role — i.e. haven't
+        // started at all (as opposed to a row that started but isn't done).
+        const notStartedCount = soNumbersInGroup.length - logsForStep.filter(Boolean).length;
+        return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length, notStartedCount };
       });
       // Bay is only trusted once every row under this dispatch has
       // actually been pulled — otherwise a bay shown here could belong to
@@ -2511,7 +2521,7 @@ const App = {
       const pullLog = pullStep?.log;
       const checkLog = checkStep?.log;
 
-      if (pickLog && (pickLog.status === 'Ongoing' || pickStep.allDone)) {
+      if (pickLog && (pickLog.status === 'Ongoing' || pickLog.status === 'Partial' || pickStep.allDone)) {
         const needsStart = !d.pick_start_checked;
         // Only queue End Pick once EVERY SO row under this dispatch shows
         // Picker Completed in WOPS-Outbound — one row still Ongoing/Pending
@@ -2784,13 +2794,23 @@ const App = {
         <div class="space-y-2">
           ${info.steps.map(step => {
             const log = step.log;
-            const stateLabel = step.allDone ? 'Completed' : (log ? log.status : 'Not started');
+            const isPartial = !step.allDone && log && log.status === 'Partial';
+            const stateLabel = step.allDone ? 'Completed' : (isPartial ? `Partially ${step.label}` : (log ? log.status : 'Not started'));
             const fraction = info.rowCount > 1 ? ` <span class="font-normal text-slate-400 text-xs">(${step.completedCount}/${step.totalCount} rows)</span>` : '';
+            // Partial = at least one row finished (has its own start+end)
+            // while the rest of the group hasn't. That's not the same as
+            // someone actively working right now, so spell out the split
+            // instead of letting it read like live progress.
+            const partialNote = isPartial
+              ? `<div class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Partially ${step.label.toLowerCase()} — ${step.completedCount}/${step.totalCount} row(s) done` +
+                (step.notStartedCount > 0 ? `, ${step.notStartedCount} not yet started` : '') + `.</div>`
+              : '';
             return `<div class="flex items-start gap-3 p-2 rounded-lg border dark:border-slate-700">
                       <span style="display:inline-block;margin-top:3px;width:10px;height:10px;border-radius:50%;background:${log ? step.dot : '#cbd5e1'}"></span>
                       <div class="flex-1">
                         <div class="text-sm font-semibold">${step.role} <span class="font-normal text-slate-400 text-xs">— ${stateLabel}</span>${fraction}</div>
                         ${log ? `<div class="text-xs text-slate-500 dark:text-slate-400">${this.escapeHtml(log.personnel_name || '—')} · ${log.start_time ? new Date(log.start_time).toLocaleString() : '—'}${log.end_time ? ' → ' + new Date(log.end_time).toLocaleString() : ''}</div>` : ''}
+                        ${partialNote}
                         ${step.role === 'Puller' && log && log.bay ? `<div class="text-xs font-semibold" style="color:#0ea5e9">🅱 Bay: ${this.escapeHtml(log.bay)}</div>` : ''}
                       </div>
                     </div>`;
