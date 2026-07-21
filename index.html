@@ -22,6 +22,10 @@
   .scrollbar-none::-webkit-scrollbar{display:none}
   .disabled-checkbox{opacity:.35;cursor:not-allowed;filter:grayscale(100%)}
   input[type=checkbox]{accent-color:#2563eb}
+  /* Mass Edit mode: rows with a staged, unsaved change get a soft amber
+     highlight so it's obvious what still needs Save Changes. */
+  #dispatch-tbody tr.mass-edit-dirty{background:rgba(251,191,36,.14);}
+  #dispatch-tbody tr.mass-edit-dirty:hover{background:rgba(251,191,36,.22);}
   /* Sidebar: fixed width on desktop, collapses to 0; becomes a fixed overlay drawer on
      narrow/mobile viewports so it doesn't push the page content around. Toggled purely via
      the .sidebar-closed class from App.toggleSidebar() — see JS "Sidebar / hamburger" section. */
@@ -352,6 +356,24 @@
                  class="pl-8 pr-3 py-2 border rounded-lg shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm w-full">
         </div>
       </div>
+      <div class="mb-4">
+        <button id="mass-edit-toggle-btn" onclick="App.toggleMassEditMode()" class="hidden px-3 py-2 text-xs font-semibold rounded-lg border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">✎ Mass Edit</button>
+        <div id="mass-edit-toolbar" class="hidden mt-2 items-center gap-2 flex-wrap bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg px-3 py-2.5">
+          <span class="text-xs font-extrabold text-amber-800 dark:text-amber-300 tracking-wide uppercase">Mass Edit mode</span>
+          <span class="text-xs text-slate-400">|</span>
+          <span id="mass-edit-selected-count" class="text-xs text-slate-600 dark:text-slate-300">0 selected</span>
+          <select id="mass-edit-bulk-type" class="p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+            <option value="">Set Truck Type…</option>
+            <option>AUV</option><option>4W</option><option>6W</option><option>10W</option><option>20F</option><option>40F</option>
+          </select>
+          <button onclick="App.applyBulkTruckType()" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-700 hover:bg-slate-800 text-white">Apply to Selected</button>
+          <span class="text-xs text-slate-400 ml-1">|</span>
+          <span id="mass-edit-pending-count" class="text-xs font-semibold text-amber-700 dark:text-amber-400">0 unsaved</span>
+          <button id="mass-edit-save-btn" onclick="App.saveMassEdits()" disabled class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:cursor-not-allowed">💾 Save Changes</button>
+          <button id="mass-edit-discard-btn" onclick="App.discardMassEdits()" disabled class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">Discard Changes</button>
+          <button onclick="App.toggleMassEditMode()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 ml-auto">Exit Mass Edit</button>
+        </div>
+      </div>
       <div id="add-dispatch-panel" class="hidden bg-white dark:bg-slate-900 p-5 rounded-xl shadow mb-5 border dark:border-slate-800">
         <div class="flex justify-between items-center mb-3">
           <h2 class="font-bold">Add Dispatches</h2>
@@ -384,6 +406,7 @@
         <table class="w-full text-sm text-left whitespace-nowrap">
           <thead class="text-slate-500 dark:text-slate-400 text-xs uppercase">
             <tr>
+              <th id="mass-select-col-header" class="p-3 w-8 hidden"><input type="checkbox" id="mass-select-all-checkbox" onchange="App.toggleSelectAllMassEdit(this.checked)" title="Select all visible rows"></th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('truck_type')">Type <span id="sort-truck_type" class="sort-arrow"></span></th>
               <th class="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700" onclick="App.sortDispatches('dispatch_number')">Dispatch No. <span id="sort-dispatch_number" class="sort-arrow"></span></th>
               <th class="p-3 text-center" title="Live status from WOPS-Outbound (matched on Dispatch No. = Shipment No.)">Outbound Status</th>
@@ -1451,6 +1474,17 @@
     </div>
   </div>
 </div>
+<div id="mass-edit-leave-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[420px] border dark:border-slate-800">
+    <h2 class="text-lg font-bold mb-1">Unsaved Changes</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">You have <span id="mass-edit-leave-count" class="font-semibold"></span> unsaved row edit(s) in Mass Edit mode. What would you like to do?</p>
+    <div class="flex flex-col gap-2">
+      <button onclick="App.resolveMassEditLeave('save')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm">💾 Save Changes &amp; Continue</button>
+      <button onclick="App.resolveMassEditLeave('discard')" class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-900/50">Discard Changes &amp; Continue</button>
+      <button onclick="App.resolveMassEditLeave('cancel')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-sm hover:bg-slate-300 dark:hover:bg-slate-600">Stay &amp; Keep Editing</button>
+    </div>
+  </div>
+</div>
 <script>
 const SUPABASE_URL = 'https://dgkvgzwqkyzdgplwvmzz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_NHibu1NmgsNiwl9PPmrn6g_TC2MaCKP';
@@ -1527,6 +1561,11 @@ const App = {
     appUsers: [],        // for User Management tab
     pendingMilestoneUpdate: null,
     pendingRowEdit: null,
+    massEditMode: false,          // dispatch table: inline multi-row edit mode
+    massEditSelected: new Set(),  // row ids checked for bulk "Apply to Selected"
+    pendingEdits: {},             // { [dispatchId]: { truck_type?, dispatch_number? } } — staged, unsaved
+    pendingTabSwitch: null,       // tabId waiting on the unsaved-changes modal
+    pendingMassEditExitOnly: false, // true when the unsaved-changes modal was triggered by exiting Mass Edit (not a tab switch)
     pendingUserId: null,
     pendingPriorityId: null,
     chartInstance: null,
@@ -1855,7 +1894,17 @@ const App = {
     this.applyNavVisibility();
     if (canEditDispatch) {
       document.getElementById('actions-col-header').classList.remove('hidden');
+      const massEditBtn = document.getElementById('mass-edit-toggle-btn');
+      if (massEditBtn) massEditBtn.classList.remove('hidden');
     }
+    // Warn on browser close/refresh/navigate-away if there are unsaved Mass
+    // Edit changes staged locally (they haven't been sent to Supabase yet).
+    window.addEventListener('beforeunload', (e) => {
+      if (Object.keys(this.state.pendingEdits).length) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
     if (isAdmin) {
       document.getElementById('add-picker-form').classList.remove('hidden');
       document.getElementById('add-checker-form').classList.remove('hidden');
@@ -1942,6 +1991,11 @@ const App = {
     if (note) note.textContent = `${checked} bay(s) selected — no limit, pick at least 1`;
   },
   switchTab(tabId) {
+    if (tabId !== 'tab-dispatch' && Object.keys(this.state.pendingEdits).length) {
+      this.state.pendingTabSwitch = tabId;
+      this.openMassEditLeaveModal();
+      return;
+    }
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('bg-blue-600'); b.classList.add('hover:bg-slate-800'); });
@@ -2984,7 +3038,23 @@ const App = {
       const priorityCell = canSetPriority
         ? `<td class="p-3 text-center align-top"><button onclick="App.openPriorityModal('${d.id}')" class="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition" title="Set priority">${this.priorityBadge(d.priority)}</button></td>`
         : `<td class="p-3 text-center align-top">${this.priorityBadge(d.priority)}</td>`;
-      let html = `<td class="p-3 font-semibold align-top">${d.truck_type}</td><td class="p-3 cursor-help align-top" title="${this.escapeHtml(this.wopsHoverTitle(d.dispatch_number))}">${d.dispatch_number}</td><td class="p-3 text-center align-top">${this.wopsStatusCellHtml(d.dispatch_number)}${this.wopsChronoWarningHtml(d.id)}</td>${priorityCell}`;
+      // Mass Edit mode: Type/Dispatch# become inline inputs whose changes are
+      // staged in state.pendingEdits (see stageEdit) instead of firing a
+      // Supabase update + reload per keystroke/row.
+      const massEdit = this.state.massEditMode;
+      const rowEdits = this.state.pendingEdits[d.id];
+      tr.dataset.dispatchId = d.id;
+      if (rowEdits) tr.classList.add('mass-edit-dirty');
+      const selectCellHtml = massEdit
+        ? `<td class="p-3 align-top"><input type="checkbox" class="mass-row-select w-4 h-4 cursor-pointer" ${this.state.massEditSelected.has(d.id) ? 'checked' : ''} onchange="App.toggleSelectRow('${d.id}', this.checked)"></td>`
+        : '';
+      const typeCellHtml = massEdit
+        ? `<td class="p-3 align-top"><select class="me-truck-type p-1.5 text-xs border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" onchange="App.stageEdit('${d.id}','truck_type', this.value)">${['AUV','4W','6W','10W','20F','40F'].map(t => `<option ${((rowEdits && rowEdits.truck_type) || d.truck_type) === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>`
+        : `<td class="p-3 font-semibold align-top">${d.truck_type}</td>`;
+      const numberCellHtml = massEdit
+        ? `<td class="p-3 align-top"><input type="text" class="me-dispatch-number p-1.5 text-xs border rounded-lg w-28 bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white" value="${this.escapeHtml(String((rowEdits && rowEdits.dispatch_number) ?? d.dispatch_number))}" oninput="App.stageEdit('${d.id}','dispatch_number', this.value)"></td>`
+        : `<td class="p-3 cursor-help align-top" title="${this.escapeHtml(this.wopsHoverTitle(d.dispatch_number))}">${d.dispatch_number}</td>`;
+      let html = `${selectCellHtml}${typeCellHtml}${numberCellHtml}<td class="p-3 text-center align-top">${this.wopsStatusCellHtml(d.dispatch_number)}${this.wopsChronoWarningHtml(d.id)}</td>${priorityCell}`;
       MILESTONE_FLOW.forEach((step, idx) => {
         const isChecked = d[`${step}_checked`];
         const prevStep = idx === 0 ? null : MILESTONE_FLOW[idx - 1];
@@ -3133,6 +3203,168 @@ const App = {
       tr.innerHTML = html;
       tbody.appendChild(tr);
     });
+  },
+  // ═══════════════════════════════════════════════════════
+  // MASS EDIT MODE — inline, multi-row editing for the dispatch table.
+  // Every field edit is staged in state.pendingEdits purely in memory
+  // (stageEdit below never calls renderDispatches()/loadDispatches(), so
+  // typing never triggers a network round-trip or rebuilds the table and
+  // steals input focus). Nothing reaches Supabase until "Save Changes" is
+  // clicked, at which point every staged row is sent in a single batched
+  // upsert() request — one request no matter how many rows were touched —
+  // followed by exactly one loadDispatches() refresh. Leaving the tab (or
+  // closing the browser) with staged edits still pending prompts the user
+  // to save or discard first.
+  // ═══════════════════════════════════════════════════════
+  toggleMassEditMode() {
+    if (!this.hasPerm('edit_dispatch')) return alert('You do not have permission to edit dispatch rows.');
+    if (this.state.massEditMode && Object.keys(this.state.pendingEdits).length) {
+      this.state.pendingMassEditExitOnly = true;
+      this.openMassEditLeaveModal();
+      return;
+    }
+    this.state.massEditMode = !this.state.massEditMode;
+    this.state.massEditSelected.clear();
+    this.renderDispatches();
+    this.updateMassEditUI();
+  },
+  updateMassEditUI() {
+    const on = this.state.massEditMode;
+    const toggleBtn = document.getElementById('mass-edit-toggle-btn');
+    const toolbar = document.getElementById('mass-edit-toolbar');
+    const selCol = document.getElementById('mass-select-col-header');
+    if (toggleBtn) toggleBtn.textContent = on ? '✎ Mass Edit (on)' : '✎ Mass Edit';
+    if (toolbar) { toolbar.classList.toggle('hidden', !on); toolbar.classList.toggle('flex', on); }
+    if (selCol) selCol.classList.toggle('hidden', !on);
+    const selectAll = document.getElementById('mass-select-all-checkbox');
+    if (selectAll) selectAll.checked = false;
+    this.updateMassEditBar();
+  },
+  updateMassEditBar() {
+    const selCount = this.state.massEditSelected.size;
+    const pendingCount = Object.keys(this.state.pendingEdits).length;
+    const selEl = document.getElementById('mass-edit-selected-count');
+    const pendEl = document.getElementById('mass-edit-pending-count');
+    const saveBtn = document.getElementById('mass-edit-save-btn');
+    const discardBtn = document.getElementById('mass-edit-discard-btn');
+    if (selEl) selEl.textContent = `${selCount} selected`;
+    if (pendEl) pendEl.textContent = `${pendingCount} unsaved`;
+    if (saveBtn) saveBtn.disabled = pendingCount === 0;
+    if (discardBtn) discardBtn.disabled = pendingCount === 0;
+  },
+  toggleSelectRow(id, checked) {
+    if (checked) this.state.massEditSelected.add(id);
+    else this.state.massEditSelected.delete(id);
+    this.updateMassEditBar();
+  },
+  toggleSelectAllMassEdit(checked) {
+    document.querySelectorAll('#dispatch-tbody tr[data-dispatch-id]').forEach(tr => {
+      const id = tr.dataset.dispatchId;
+      const cb = tr.querySelector('.mass-row-select');
+      if (cb) cb.checked = checked;
+      if (checked) this.state.massEditSelected.add(id);
+      else this.state.massEditSelected.delete(id);
+    });
+    this.updateMassEditBar();
+  },
+  // Stages one field's edit for one row, purely in local state. Deliberately
+  // does NOT re-render the table or touch Supabase — only the affected
+  // row's dirty highlight and the toolbar counters are patched directly.
+  stageEdit(id, field, value) {
+    const dispatch = this.state.dispatches.find(d => d.id === id);
+    if (!dispatch) return;
+    const current = dispatch[field] == null ? '' : String(dispatch[field]);
+    if (!this.state.pendingEdits[id]) this.state.pendingEdits[id] = {};
+    if (value === current) {
+      delete this.state.pendingEdits[id][field];
+      if (!Object.keys(this.state.pendingEdits[id]).length) delete this.state.pendingEdits[id];
+    } else {
+      this.state.pendingEdits[id][field] = value;
+    }
+    const tr = document.querySelector(`#dispatch-tbody tr[data-dispatch-id="${id}"]`);
+    if (tr) tr.classList.toggle('mass-edit-dirty', !!this.state.pendingEdits[id]);
+    this.updateMassEditBar();
+  },
+  applyBulkTruckType() {
+    const sel = document.getElementById('mass-edit-bulk-type');
+    const value = sel ? sel.value : '';
+    if (!value) return alert('Pick a truck type to apply first.');
+    if (!this.state.massEditSelected.size) return alert('Select at least one row first (checkbox on the left).');
+    this.state.massEditSelected.forEach(id => {
+      this.stageEdit(id, 'truck_type', value);
+      const input = document.querySelector(`#dispatch-tbody tr[data-dispatch-id="${id}"] .me-truck-type`);
+      if (input) input.value = value;
+    });
+    sel.value = '';
+  },
+  discardMassEdits() {
+    const count = Object.keys(this.state.pendingEdits).length;
+    if (!count) return;
+    if (!confirm(`Discard ${count} unsaved row edit(s)?`)) return;
+    this.state.pendingEdits = {};
+    this.renderDispatches();
+    this.updateMassEditBar();
+  },
+  async saveMassEdits() {
+    const ids = Object.keys(this.state.pendingEdits);
+    if (!ids.length) return;
+    if (!this.hasPerm('edit_dispatch')) return alert('You do not have permission to edit dispatch rows.');
+    const payload = [];
+    for (const id of ids) {
+      const dispatch = this.state.dispatches.find(d => d.id === id);
+      if (!dispatch) continue;
+      const edits = this.state.pendingEdits[id];
+      const dispatch_number = String(edits.dispatch_number ?? dispatch.dispatch_number ?? '').trim();
+      if (!dispatch_number) return alert(`Dispatch number cannot be empty (row currently ${dispatch.truck_type} ${dispatch.dispatch_number}).`);
+      // Full row (cached from the last select('*')) + staged overrides — sent
+      // via upsert so every touched row round-trips in ONE request instead
+      // of one update() call per row.
+      payload.push({ ...dispatch, ...edits, dispatch_number });
+    }
+    if (!payload.length) return;
+    const saveBtn = document.getElementById('mass-edit-save-btn');
+    const origLabel = saveBtn ? saveBtn.textContent : '';
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+    const { error } = await supabaseClient.from('dispatches').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origLabel; }
+      return alert(error.message.includes('duplicate') ? 'One or more dispatch numbers already exist in this RDD.' : error.message);
+    }
+    this.state.pendingEdits = {};
+    this.state.massEditSelected.clear();
+    this.showToast(`✔ Saved ${payload.length} row${payload.length === 1 ? '' : 's'} in one request.`, 'info', 3000);
+    await this.loadDispatches(); // single refresh for the whole batch, not one per row
+    if (saveBtn) saveBtn.textContent = origLabel;
+    this.updateMassEditBar();
+  },
+  openMassEditLeaveModal() {
+    const el = document.getElementById('mass-edit-leave-count');
+    if (el) el.textContent = Object.keys(this.state.pendingEdits).length;
+    this.openModal('mass-edit-leave-modal');
+  },
+  resolveMassEditLeave(action) {
+    this.closeModal('mass-edit-leave-modal');
+    if (action === 'cancel') { this.state.pendingTabSwitch = null; this.state.pendingMassEditExitOnly = false; return; }
+    const finish = () => {
+      const targetTab = this.state.pendingTabSwitch;
+      const exitOnly = this.state.pendingMassEditExitOnly;
+      this.state.pendingTabSwitch = null;
+      this.state.pendingMassEditExitOnly = false;
+      if (exitOnly) {
+        this.state.massEditMode = false;
+        this.state.massEditSelected.clear();
+        this.renderDispatches();
+        this.updateMassEditUI();
+      } else if (targetTab) {
+        this.switchTab(targetTab);
+      }
+    };
+    if (action === 'save') {
+      this.saveMassEdits().then(finish);
+    } else if (action === 'discard') {
+      this.state.pendingEdits = {};
+      finish();
+    }
   },
   exportDispatchesCSV() {
     if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
