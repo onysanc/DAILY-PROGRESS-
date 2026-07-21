@@ -2406,6 +2406,16 @@ const App = {
         const latestStartedLog = logsForStep
           .filter(l => l)
           .reduce((latest, l) => (!latest || new Date(l.start_time) > new Date(latest.start_time)) ? l : latest, null);
+        // Earliest-started row for this step — this is what "Start Pick"
+        // (and Time Pending, which measures from it) should be anchored to.
+        // The group's picking stage genuinely BEGAN the moment the FIRST
+        // row's picker clocked in, not whenever the most recently-active
+        // row happened to start. Used below so a second/third row starting
+        // days later never makes an already-stuck dispatch look freshly
+        // started.
+        const earliestStartedLog = logsForStep
+          .filter(l => l)
+          .reduce((earliest, l) => (!earliest || new Date(l.start_time) < new Date(earliest.start_time)) ? l : earliest, null);
         // If the representative row already has its OWN start+end (i.e. it
         // finished) but the group as a whole isn't allDone, that row is not
         // "Ongoing" — nobody is actively working on it right now. Call it
@@ -2419,7 +2429,7 @@ const App = {
         // Rows that don't even have a log yet for this role — i.e. haven't
         // started at all (as opposed to a row that started but isn't done).
         const notStartedCount = soNumbersInGroup.length - logsForStep.filter(Boolean).length;
-        return { ...step, log: repLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length, notStartedCount };
+        return { ...step, log: repLog, earliestLog: earliestStartedLog, allDone, completedCount: completedLogs.length, totalCount: soNumbersInGroup.length, notStartedCount };
       });
       // Bay is only trusted once every row under this dispatch has
       // actually been pulled — otherwise a bay shown here could belong to
@@ -2527,19 +2537,24 @@ const App = {
         // Picker Completed in WOPS-Outbound — one row still Ongoing/Pending
         // means picking for the dispatch as a whole isn't done yet.
         const needsEnd = pickStep.allDone && !d.pick_checked;
-        // Start Pick can already be ticked (from whichever row started
-        // first) while OTHER SO rows under the same dispatch keep starting
-        // picking later. pickLog here is already the latest-started row
-        // (see buildWopsStatusMap's latestStartedLog) — if that's newer
-        // than what's currently stored, refresh the saved timestamp so it
-        // always reflects the latest start across every row, not just
-        // whichever row happened to sync first. Only while picking is
-        // still in progress; once every row is done the End Pick sync
-        // above takes over.
-        const needsStartRefresh = !needsStart && !pickStep.allDone && pickLog.start_time
-          && d.pick_start_timestamp && new Date(pickLog.start_time) > new Date(d.pick_start_timestamp);
+        // Start Pick — and therefore Time Pending, which counts elapsed
+        // time from it — should reflect when picking began for the
+        // dispatch as a WHOLE: the earliest row to start, not whichever
+        // row is currently most active. pickStep.earliestLog is that
+        // earliest-started row across every SO line in this group.
+        //
+        // Only correct the stored timestamp EARLIER (e.g. an earlier row's
+        // start synced in late) — never push it forward just because a
+        // different row started more recently. Pushing it forward used to
+        // make a dispatch that's genuinely been sitting since day 1 look
+        // like picking "just started," understating Time Pending. Only
+        // while picking is still in progress; once every row is done the
+        // End Pick sync above takes over.
+        const startLog = pickStep.earliestLog || pickLog;
+        const needsStartRefresh = !needsStart && !pickStep.allDone && startLog.start_time
+          && d.pick_start_timestamp && new Date(startLog.start_time) < new Date(d.pick_start_timestamp);
         if (needsStart || needsEnd || needsStartRefresh) {
-          queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, needsStartRefresh, log: pickLog });
+          queue.push({ id: `${d.id}-pick`, dispatchId: d.id, dispatch_number: d.dispatch_number, kind: 'pick', needsStart, needsEnd, needsStartRefresh, log: pickLog, startLog });
         }
       }
       // Puller Completed in WOPS-Outbound -> queue a 'pulling' item, but
@@ -2687,12 +2702,18 @@ const App = {
     if (item.kind === 'pick') {
       if (item.needsStart) {
         payload.pick_start_checked = true;
-        payload.pick_start_timestamp = item.log.start_time || item.log.end_time || new Date().toISOString();
+        // Use the EARLIEST-started SO row for this dispatch, not just
+        // whichever row's log happens to be "current" — Start Pick (and
+        // the Time Pending clock it drives) should mark when picking began
+        // for the dispatch as a whole.
+        const startLog = item.startLog || item.log;
+        payload.pick_start_timestamp = startLog.start_time || startLog.end_time || item.log.start_time || item.log.end_time || new Date().toISOString();
       } else if (item.needsStartRefresh) {
-        // Already ticked — just move the stored timestamp forward to match
-        // whichever SO row most recently started picking. Checkbox state,
-        // picker names, etc. are untouched.
-        payload.pick_start_timestamp = item.log.start_time;
+        // Already ticked — only correct the stored timestamp EARLIER, if
+        // WOPS-Outbound shows a row that actually started before what's
+        // currently saved (e.g. it synced in late). Never move it forward;
+        // Checkbox state, picker names, etc. are untouched.
+        payload.pick_start_timestamp = item.startLog.start_time;
       }
       if (item.needsEnd) {
         payload.pick_checked = true;
