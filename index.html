@@ -1218,6 +1218,25 @@
       </div>
     </div>
 
+    <!-- ══ STOP DISPATCH MODAL (permission-gated, reason required) — pauses a dispatch so it
+         no longer counts as pending toward its next milestone, and is auto-excluded from
+         Delay/Gap computation for as long as it's on hold (reuses the Exclude pattern above) ══ -->
+    <div id="stop-dispatch-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800">
+        <div class="flex justify-between items-start mb-1">
+          <h2 class="text-lg font-bold text-amber-600 dark:text-amber-400">⏸ Stop Dispatch</h2>
+          <button onclick="App.closeModal('stop-dispatch-modal')" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl leading-none">×</button>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Dispatch <span id="stop-dispatch-label" class="font-semibold"></span> will be put on hold — its next process is paused, it no longer counts toward that step's Pending total or stuck alerts, and it's automatically excluded from Delay/Gap stats while stopped. It stays visible in the table tagged <b>⏸ On Hold</b>, and can be resumed anytime.</p>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Reason for stopping (required)</label>
+        <textarea id="stop-dispatch-remark" rows="3" placeholder="e.g. Awaiting customer confirmation, damaged goods on hold, documentation issue…" class="w-full p-2.5 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-sm mb-4"></textarea>
+        <div class="flex justify-end gap-2">
+          <button onclick="App.closeModal('stop-dispatch-modal')" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+          <button onclick="App.confirmStopDispatch()" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-700">Confirm Stop</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ DATA EXTRACTION MODAL — full-detail CSV, All RDDs or a single RDD ══ -->
     <div id="extraction-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[440px] border dark:border-slate-800">
@@ -1557,6 +1576,8 @@ const App = {
     breakTimes: [], // admin-configured recurring daily break windows [{id,label,start:'HH:MM',end:'HH:MM'}] excluded from all time computations
     excludedDispatches: {}, // dispatchId -> { remark, username, created_at } — dispatches an admin has excluded from Delay/Gap computation
     pendingExcludeDispatchId: null,
+    stoppedDispatches: {}, // dispatchId -> { remark, username, created_at } — dispatches put "on hold": next process paused, not counted as pending, auto-excluded from Delay/Gap while stopped
+    pendingStopDispatchId: null,
     gapLogRddManuallySet: false, // true once the admin manually picks an RDD in the Delay/Gap Log filter — otherwise it follows the Dispatch Activity selected RDD
     chartYStep: 1,
     dispatchFilter: 'all',
@@ -1823,6 +1844,7 @@ const App = {
     admin_override: ['admin'],
     apply_wops_sync: ['admin'], // apply WOPS-Outbound auto-fill suggestions (Pick/Checking) — admin by default, grantable to specific users
     export_data: ['admin'], // export/print/download buttons (CSV, PNG, PDF) anywhere in the app — admin by default, grantable to specific users
+    stop_dispatch: ['admin'], // stop/resume a dispatch's next process (reason required) — admin by default, grantable to specific users
   },
   isTrueAdmin() {
     return this.state.currentUser?.role === 'admin';
@@ -1868,7 +1890,7 @@ const App = {
     const isAdmin = this.isTrueAdmin();
     const canEditDispatch = this.hasPerm('edit_dispatch');
     this.applyNavVisibility();
-    if (canEditDispatch) {
+    if (canEditDispatch || this.hasPerm('delete_dispatch') || this.hasPerm('stop_dispatch')) {
       document.getElementById('actions-col-header').classList.remove('hidden');
     }
     if (isAdmin) {
@@ -1886,6 +1908,7 @@ const App = {
     await this.loadWopsAutoApplySetting();
     await this.loadExcludedPersonnel();
     await this.loadBreakTimes();
+    await this.loadStoppedDispatches();
     this.setupRealtimeSubscriptions();
     this.startAutoRefresh();
     this.populateCompareSelects();
@@ -2144,6 +2167,7 @@ const App = {
     const stepStuckCounts = {};
     this.state.dispatches.forEach(d => {
       if (d.loaded_checked) return;
+      if (this.isDispatchStopped(d.id)) return;
       for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
         const step = STEPS_FLOW[i];
         if (d[`${step}_checked`]) {
@@ -2998,6 +3022,7 @@ const App = {
   },
   isDispatchStuck(d) {
     if (d.loaded_checked) return false;
+    if (this.isDispatchStopped(d.id)) return false;
     const STEPS_FLOW = ['pick_start','pick','pgi','invoiced','ds_printed','pulling','checking','loaded'];
     for (let i = STEPS_FLOW.length - 1; i >= 0; i--) {
       const step = STEPS_FLOW[i];
@@ -3017,6 +3042,10 @@ const App = {
   // pending-dispatches export, just returning the info instead of a boolean.
   dispatchPendingInfo(d) {
     if (d.loaded_checked) return { done: true };
+    if (this.isDispatchStopped(d.id)) {
+      const info = this.state.stoppedDispatches[d.id] || {};
+      return { done: false, onHold: true, elapsed: null, label: 'On Hold', remark: info.remark || '' };
+    }
     const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
     const pickStep = wopsInfo && wopsInfo.steps.find(s => s.role === 'Picker');
     // Live WOPS-Outbound read for the Picker stage, used both below (Start
@@ -3247,6 +3276,8 @@ const App = {
       let pendingCellHtml;
       if (pendingInfo.done) {
         pendingCellHtml = `<span class="px-2 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">✓ Completed</span>`;
+      } else if (pendingInfo.onHold) {
+        pendingCellHtml = `<span class="px-2 py-1 text-xs font-bold rounded bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200" title="${this.escapeHtml(pendingInfo.remark || '')}">⏸ On Hold</span>`;
       } else if (pendingInfo.elapsed === null) {
         // No milestone checked yet, so no timestamp to measure "pending" from — just show the stage label.
         pendingCellHtml = `<span class="text-xs text-slate-400 dark:text-slate-500 italic">${this.escapeHtml(pendingInfo.label)}</span>`;
@@ -3263,10 +3294,17 @@ const App = {
                 </td>`;
       const canEditDispatch = this.hasPerm('edit_dispatch');
       const canDeleteDispatch = this.hasPerm('delete_dispatch');
-      if (canEditDispatch || canDeleteDispatch) {
+      const canStopDispatch = this.hasPerm('stop_dispatch');
+      const isStopped = this.isDispatchStopped(d.id);
+      if (canEditDispatch || canDeleteDispatch || canStopDispatch) {
         html += `<td class="p-3 align-top">
                     ${canEditDispatch ? `<button onclick="App.openRowEditModal('${d.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-xs font-semibold mr-3">Edit</button>` : ''}
-                    ${canDeleteDispatch ? `<button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold">Delete</button>` : ''}
+                    ${canDeleteDispatch ? `<button onclick="App.quickDeleteDispatch('${d.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-xs font-semibold mr-3">Delete</button>` : ''}
+                    ${canStopDispatch
+                      ? (isStopped
+                          ? `<button onclick="App.resumeDispatch('${d.id}')" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 text-xs font-semibold" title="${this.escapeHtml((this.state.stoppedDispatches[d.id]||{}).remark || '')}">▶ Resume</button>`
+                          : (!d.loaded_checked ? `<button onclick="App.openStopDispatchModal('${d.id}')" class="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-xs font-semibold">⏸ Stop</button>` : ''))
+                      : ''}
                   </td>`;
       }
       tr.innerHTML = html;
@@ -4785,8 +4823,8 @@ const App = {
     }).join('') || '<tr><td colspan="12" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','pulling','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
-  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data','stop_dispatch'],
+  SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data','stop_dispatch'],
   openAddUserModal() {
     this.state.pendingUserId = null;
     document.getElementById('user-modal-title').textContent = 'Add User';
@@ -5164,7 +5202,7 @@ const App = {
   updateFilterBadgeCounts() {
     const list = this.state.dispatches || [];
     const now = Date.now();
-    const notStartedList = list.filter(d => !d.pick_start_checked);
+    const notStartedList = list.filter(d => !d.pick_start_checked && !this.isDispatchStopped(d.id));
     const notStartedCount = notStartedList.length;
     const notStartedBadge = document.getElementById('filter-badge-at_not_started');
     if (notStartedBadge) {
@@ -5182,8 +5220,8 @@ const App = {
     MILESTONE_FLOW.forEach((step, idx) => {
       const nextStep = idx < MILESTONE_FLOW.length - 1 ? MILESTONE_FLOW[idx + 1] : null;
       const atStepList = step === 'pick'
-        ? list.filter(d => d.pick_checked && !d.pgi_checked)
-        : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]));
+        ? list.filter(d => d.pick_checked && !d.pgi_checked && !this.isDispatchStopped(d.id))
+        : list.filter(d => d[`${step}_checked`] && (!nextStep || !d[`${nextStep}_checked`]) && !this.isDispatchStopped(d.id));
       const count = atStepList.length;
       const badge = document.getElementById(`filter-badge-at_${step}`);
       if (badge) {
@@ -5529,7 +5567,12 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, () => { this.loadAlertSettings(); this.loadExcludedPersonnel(); this.loadBreakTimes(); this.renderAlertBanner(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, async () => {
+        this.loadAlertSettings(); this.loadExcludedPersonnel(); this.loadBreakTimes(); this.renderAlertBanner();
+        await this.loadStoppedDispatches();
+        this.renderDispatches();
+        this.updateFilterBadgeCounts();
+      })
       .subscribe(status => {
         const el = document.getElementById('connection-status');
         el.textContent = status === 'SUBSCRIBED' ? '●  live' : '●  ' + status.toLowerCase();
@@ -5687,6 +5730,108 @@ const App = {
     await this.renderGapLogTab();
     await this.loadDispatches();
     if (!document.getElementById('gap-record-detail-modal')?.classList.contains('hidden')) this.openGapRecordDetail(dispatchId);
+  },
+  // ── Stop / Resume Dispatch — permission-gated ('stop_dispatch', grantable to specific users by
+  // an admin in User Management). Puts a dispatch "on hold": its next process is paused, it no
+  // longer counts toward that step's Pending badge/filter or stuck alerts, and — reusing the
+  // Delay/Gap Exclude pattern above — it's automatically excluded from Delay/Gap computation for
+  // as long as it's stopped. A written reason is required to stop (not required to resume).
+  // Reuses the same alert_settings key-value table (key = 'stopped_dispatches'); a map of
+  // dispatchId -> {remark, username, created_at} is JSON-encoded into the 'template' column.
+  async loadStoppedDispatches() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'stopped_dispatches').maybeSingle();
+      if (error) { console.error('loadStoppedDispatches error:', error); return; }
+      let map = {};
+      if (data && data.template) { try { map = JSON.parse(data.template) || {}; } catch { map = {}; } }
+      this.state.stoppedDispatches = map;
+    } catch (e) { console.error('loadStoppedDispatches error:', e); }
+  },
+  async saveStoppedDispatches() {
+    const payload = {
+      key: 'stopped_dispatches',
+      enabled: true,
+      template: JSON.stringify(this.state.stoppedDispatches || {}),
+      require_response: false,
+    };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) { alert('Failed to save: ' + error.message); return false; }
+    return true;
+  },
+  isDispatchStopped(dispatchId) {
+    return !!(this.state.stoppedDispatches && this.state.stoppedDispatches[dispatchId]);
+  },
+  openStopDispatchModal(dispatchId) {
+    if (!this.hasPerm('stop_dispatch')) return alert('You do not have permission to stop a dispatch. Ask an admin to grant it in User Management.');
+    const d = this.state.dispatches.find(x => x.id === dispatchId);
+    this.state.pendingStopDispatchId = dispatchId;
+    const label = document.getElementById('stop-dispatch-label');
+    if (label) label.textContent = d ? `${d.truck_type} · ${d.dispatch_number}` : '';
+    const ta = document.getElementById('stop-dispatch-remark');
+    if (ta) ta.value = '';
+    this.openModal('stop-dispatch-modal');
+  },
+  async confirmStopDispatch() {
+    if (!this.hasPerm('stop_dispatch')) return alert('You do not have permission to stop a dispatch. Ask an admin to grant it in User Management.');
+    const dispatchId = this.state.pendingStopDispatchId;
+    if (!dispatchId) return;
+    const remark = (document.getElementById('stop-dispatch-remark')?.value || '').trim();
+    if (!remark) return alert('A reason is required before this dispatch can be stopped.');
+    if (!this.state.stoppedDispatches) this.state.stoppedDispatches = {};
+    this.state.stoppedDispatches[dispatchId] = {
+      remark,
+      username: this.state.currentUser?.username || 'Unknown',
+      created_at: new Date().toISOString(),
+    };
+    const ok = await this.saveStoppedDispatches();
+    if (!ok) return;
+    // Reload before touching excludedDispatches so we never overwrite exclusions saved by
+    // someone who reached this feature from the Delay/Gap Log tab first.
+    await this.loadExcludedDispatches();
+    if (!this.state.excludedDispatches[dispatchId]) {
+      this.state.excludedDispatches[dispatchId] = {
+        remark: `[Auto — Stopped] ${remark}`,
+        username: this.state.currentUser?.username || 'Unknown',
+        created_at: new Date().toISOString(),
+        linkedToStop: true,
+      };
+      await this.saveExcludedDispatches();
+    }
+    try {
+      await supabaseClient.from('dispatch_remarks').insert({
+        dispatch_id: dispatchId,
+        remark_text: `[Stopped] Next process paused — ${remark}`,
+        created_by: this.state.currentUser.username,
+      });
+    } catch (e) { console.error('log stop remark error:', e); }
+    this.state.pendingStopDispatchId = null;
+    this.closeModal('stop-dispatch-modal');
+    await this.loadDispatches();
+    this.renderDispatches();
+    this.updateFilterBadgeCounts();
+  },
+  async resumeDispatch(dispatchId) {
+    if (!this.hasPerm('stop_dispatch')) return alert('You do not have permission to resume a dispatch. Ask an admin to grant it in User Management.');
+    if (!this.state.stoppedDispatches || !this.state.stoppedDispatches[dispatchId]) return;
+    if (!confirm("Resume this dispatch? It will count toward its next milestone's Pending total again.")) return;
+    delete this.state.stoppedDispatches[dispatchId];
+    const ok = await this.saveStoppedDispatches();
+    if (!ok) return;
+    await this.loadExcludedDispatches();
+    if (this.state.excludedDispatches[dispatchId]?.linkedToStop) {
+      delete this.state.excludedDispatches[dispatchId];
+      await this.saveExcludedDispatches();
+    }
+    try {
+      await supabaseClient.from('dispatch_remarks').insert({
+        dispatch_id: dispatchId,
+        remark_text: `[Stopped] Resumed — no longer on hold`,
+        created_by: this.state.currentUser.username,
+      });
+    } catch (e) { console.error('log resume remark error:', e); }
+    await this.loadDispatches();
+    this.renderDispatches();
+    this.updateFilterBadgeCounts();
   },
   escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -7535,6 +7680,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_users" class="accent-red-600"> User Management access (view/edit other users)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-apply_wops_sync" class="accent-red-600"> Apply WOPS-Outbound Sync (check off Pick/Pulling/Checking using live WOPS-Outbound data)</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-export_data" class="accent-red-600"> Export / Download (CSV exports, chart PNG) — printing is allowed for all users regardless of this setting</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-amber-300 dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-stop_dispatch" class="accent-red-600"> Stop / Resume Dispatch (pause a dispatch's next process with a reason — excluded from Pending counts + Delay/Gap stats while on hold)</label>
       </div>
       <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-2">⚠ These grant elevated control. Only users with the Admin role can assign these to others.</p>
     </div>
