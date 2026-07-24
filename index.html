@@ -2470,9 +2470,13 @@ const App = {
       // a line that finished early while others are still pending, which
       // isn't the bay Checking should rely on yet.
       const pullerDone = steps.find(s => s.role === 'Puller').allDone;
-      const pullerBays = pullerDone
-        ? [...new Set(soNumbersInGroup.map(so => (logMap[`${so}||Puller`] || {}).bay).filter(Boolean))]
-        : [];
+      // All bays logged so far for this dispatch's rows, regardless of
+      // whether every row is done — used ONLY for early, unconfirmed
+      // dashboard visibility (see pullerBayPartial below). The
+      // fully-gated pullerBay (below) is still what Checking auto-fills
+      // from, so nothing about that trust boundary changes.
+      const allLoggedBays = [...new Set(soNumbersInGroup.map(so => (logMap[`${so}||Puller`] || {}).bay).filter(Boolean))];
+      const pullerBays = pullerDone ? allLoggedBays : [];
       map[shipmentNo] = {
         so_number: soNumbersInGroup.join(', '),
         shipment_status: [...new Set(rows.map(r => r.status).filter(Boolean))].join(', '),
@@ -2483,6 +2487,11 @@ const App = {
         quantity: rows.reduce((sum, r) => sum + (Number(r.quantity ?? r.qty) || 0), 0) || null,
         target_minutes: rows[0].target_minutes ?? rows[0].target_time ?? rows[0].target ?? null,
         pullerBay: pullerBays.length === 1 ? pullerBays[0] : (pullerBays.length > 1 ? pullerBays.join(', ') : null),
+        // Early/unconfirmed bay(s) — set as soon as ANY row has a bay
+        // logged, even while Pulling is still ongoing. Dashboard-display
+        // only (see renderDashboardSummary); never used to auto-fill
+        // Checking's bay_location.
+        pullerBayPartial: (!pullerDone && allLoggedBays.length) ? allLoggedBays.join(', ') : null,
         rowCount: rows.length,
         steps
       };
@@ -4122,11 +4131,25 @@ const App = {
       if (pctEl)  pctEl.textContent  = pct + '%';
     });
 
-    const bayMap = {};
+    const bayMap = {};        // confirmed — Checking already started, bay_location set
+    const bayMapPending = {}; // early/unconfirmed — Pulling still ongoing, WOPS already shows a bay
     this.state.dispatches.forEach(d => {
-      if (d.checking_checked && !d.loaded_checked && d.bay_location) {
-        String(d.bay_location).split(',').map(b => b.trim()).forEach(bay => {
-          if (bay && bay !== 'Extended') bayMap[bay] = d.dispatch_number;
+      if (this.isDispatchStopped(d.id) || d.loaded_checked) return;
+      if (d.checking_checked && d.bay_location) {
+        String(d.bay_location).split(',').map(b => this.normalizeBay(b)).forEach(bay => {
+          if (bay && bay !== 'EXTENDED') bayMap[bay] = d.dispatch_number;
+        });
+        return;
+      }
+      // Checking hasn't started yet — if Pulling is ongoing and WOPS-Outbound
+      // already has a bay logged for at least one row, surface it early so
+      // the bay shows as occupied before Pulling is officially done. This is
+      // display-only: bay_location itself is still only written once every
+      // row is confirmed pulled (see backfillMissingCheckingBays / Checking modal).
+      const wopsInfo = this.state.wopsStatusMap[String(d.dispatch_number).trim()];
+      if (wopsInfo && wopsInfo.pullerBayPartial) {
+        wopsInfo.pullerBayPartial.split(',').map(b => this.normalizeBay(b)).forEach(bay => {
+          if (bay && bay !== 'EXTENDED') bayMapPending[bay] = d.dispatch_number;
         });
       }
     });
@@ -4139,9 +4162,14 @@ const App = {
         for (let bay = 1; bay <= 8; bay++) {
           const key = `${bay}${letter}`;
           const occupied = bayMap[key];
-          html += occupied
-            ? `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-800 dark:text-blue-300 font-bold text-[11px] bg-blue-100 dark:bg-blue-900/40">${occupied}</td>`
-            : `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-slate-300 dark:text-slate-600 text-[10px]">VACANT</td>`;
+          const pending = !occupied ? bayMapPending[key] : null;
+          if (occupied) {
+            html += `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-blue-800 dark:text-blue-300 font-bold text-[11px] bg-blue-100 dark:bg-blue-900/40">${occupied}</td>`;
+          } else if (pending) {
+            html += `<td class="border border-dashed border-blue-300 dark:border-blue-700 px-1 py-1.5 text-center text-blue-500/80 dark:text-blue-300/60 font-semibold text-[11px] bg-blue-50/50 dark:bg-blue-900/10" title="Pulling in progress — bay not yet confirmed">${pending}</td>`;
+          } else {
+            html += `<td class="border border-slate-200 dark:border-slate-700 px-1 py-1.5 text-center text-slate-300 dark:text-slate-600 text-[10px]">VACANT</td>`;
+          }
         }
         tr.innerHTML = html;
         tbody.appendChild(tr);
