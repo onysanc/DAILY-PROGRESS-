@@ -5231,8 +5231,22 @@ const App = {
       const maxEl = document.getElementById(`filter-maxpending-at_${step}`);
       if (maxEl) {
         const maxMs = atStepList.reduce((max, d) => {
-          const ts = d[`${step}_timestamp`];
-          const ms = ts ? this.adjustedDurationMs(ts, now) : null;
+          // 'pick_start' (Pending to End Picking) must use the same
+          // live-WOPS-aware elapsed time as the row's Time Pending column
+          // (dispatchPendingInfo/livePickPending), not the raw stored
+          // pick_start_timestamp — that timestamp is anchored to the
+          // EARLIEST SO row (for final duration reporting) and can be
+          // far older than what's actually still pending right now,
+          // which previously made this max badge wildly overstate the
+          // real longest wait.
+          let ms;
+          if (step === 'pick_start') {
+            const info = this.dispatchPendingInfo(d);
+            ms = (info && info.elapsed != null) ? info.elapsed : null;
+          } else {
+            const ts = d[`${step}_timestamp`];
+            ms = ts ? this.adjustedDurationMs(ts, now) : null;
+          }
           return (ms !== null && (max === null || ms > max)) ? ms : max;
         }, null);
         this.setMaxPendingLabel(maxEl, maxMs);
