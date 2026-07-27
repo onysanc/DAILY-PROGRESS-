@@ -1785,6 +1785,29 @@ const App = {
       return { ta, saveBtn, span, prevTaDisplay, prevBtnDisplay };
     });
 
+    // Floating-shape text: html2canvas (v1.4.1) doesn't reliably reproduce
+    // flex/table vertical-centering — the shape looks correctly centered
+    // live but renders text top-anchored in the exported image. Since the
+    // LIVE layout is already correct, measure exactly where the text
+    // glyphs actually sit (via Range, not the container box) and bake
+    // that gap in as plain padding-top on a plain block element — basic
+    // box-model padding is something html2canvas renders accurately,
+    // unlike table-cell vertical-align.
+    const shapeTexts = Array.from(target.querySelectorAll('.dash-shape-text'));
+    const shapeTextFreeze = shapeTexts.map(txt => {
+      const range = document.createRange();
+      range.selectNodeContents(txt);
+      const textRect = range.getBoundingClientRect();
+      const boxRect = txt.getBoundingClientRect();
+      const padTop = textRect.height > 0 ? Math.max(0, textRect.top - boxRect.top) : 0;
+      const prev = { display: txt.style.display, verticalAlign: txt.style.verticalAlign, paddingTop: txt.style.paddingTop, boxSizing: txt.style.boxSizing };
+      txt.style.boxSizing = 'border-box';
+      txt.style.display = 'block';
+      txt.style.verticalAlign = '';
+      txt.style.paddingTop = padTop + 'px';
+      return { txt, prev };
+    });
+
     try {
       await new Promise(r => setTimeout(r, 50)); // let layout settle after hiding elements
 
@@ -1816,6 +1839,10 @@ const App = {
     } finally {
       hiddenEls.forEach((el, i) => { el.style.display = prevDisplay[i]; });
       restoreStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.height = s.height; s.el.style.overflowY = s.overflowY; });
+      shapeTextFreeze.forEach(({ txt, prev }) => {
+        txt.style.display = prev.display; txt.style.verticalAlign = prev.verticalAlign;
+        txt.style.paddingTop = prev.paddingTop; txt.style.boxSizing = prev.boxSizing;
+      });
       remarkSwap.forEach(r => {
         r.span.remove();
         r.ta.style.display = r.prevTaDisplay;
