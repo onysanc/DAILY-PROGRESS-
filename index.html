@@ -188,6 +188,8 @@
   .dash-shape-del-btn{background:#ef4444;color:#fff}
   .dash-shape-pin-btn{background:#fff;color:#64748b}
   .dash-shape-pin-btn.pinned{background:#0891b2;color:#fff}
+  .dash-shape-record-btn{background:#fff;color:#64748b}
+  .dash-shape-record-btn:hover{background:#fef3c7}
   .dash-shape-edit-btn{background:#fff;color:#64748b}
   .dash-shape-edit-btn.active{background:#0891b2;color:#fff}
   .dash-shape.pinned{border-color:rgba(8,145,178,.55)}
@@ -4253,6 +4255,34 @@ const App = {
     }, 500);
   },
 
+  // Records a floating shape's text content as a Chart Remark, so it's
+  // permanently logged (chart_remarks table) and shows up under
+  // "CHART REMARKS LOGGED THIS RDD" in Graph Recap — same as remarks added
+  // via the "Add remark" button on the live chart. Shapes are visual/loose
+  // annotations that can be dragged/deleted anytime, so this gives ONY a
+  // one-click way to also lock a shape's note into the permanent RDD record.
+  // If the shape is pinned to the Activity Timeline chart, its horizontal
+  // position is used to guess which hour bucket it's calling out; otherwise
+  // it falls back to the current hour, same default the remark modal itself uses.
+  recordDashboardShapeAsRemark(id) {
+    const shape = this.state.dashboardShapes.find(s => s.id === id);
+    if (!shape) return;
+    if (!this.state.currentRddId) { alert('Select/open an RDD first — remarks are logged per RDD.'); return; }
+    const text = (shape.text || '').trim();
+    if (!text) { alert('This shape has no text to record yet.'); return; }
+    let bucket = null;
+    if (shape.anchor_id === this.DASH_SHAPE_ANCHOR.id) {
+      const centerXPct = shape.x + (shape.w / 2);
+      bucket = Math.max(0, Math.min(23, Math.floor((centerXPct / 100) * 24)));
+    }
+    this.openChartRemarkModal(bucket, null);
+    // openChartRemarkModal pre-fills from any existing saved remark for that
+    // hour; overwrite with the shape's own text as the starting point — ONY
+    // can still edit/adjust before hitting Save.
+    const input = document.getElementById('chart-remark-input');
+    if (input) input.value = text.toUpperCase();
+  },
+
   buildShapeEl(shape) {
     const layer = document.getElementById('dashboard-shapes-layer');
     const preset = this.DASH_SHAPE_POLYGON_PRESETS[shape.shape_type];
@@ -4328,6 +4358,13 @@ const App = {
     pinBtn.textContent = '📌';
     pinBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleDashboardShapePin(shape.id); });
     controls.appendChild(pinBtn);
+
+    const recordBtn = document.createElement('div');
+    recordBtn.className = 'dash-shape-ctrl-btn dash-shape-record-btn';
+    recordBtn.title = 'Record this shape\'s text as a Chart Remark (logged for reporting)';
+    recordBtn.textContent = '📋';
+    recordBtn.addEventListener('click', e => { e.stopPropagation(); this.recordDashboardShapeAsRemark(shape.id); });
+    controls.appendChild(recordBtn);
 
     let editBtn = null;
     if (isPolygon) {
