@@ -188,7 +188,22 @@
   .dash-shape-del-btn{background:#ef4444;color:#fff}
   .dash-shape-pin-btn{background:#fff;color:#64748b}
   .dash-shape-pin-btn.pinned{background:#0891b2;color:#fff}
+  .dash-shape-edit-btn{background:#fff;color:#64748b}
+  .dash-shape-edit-btn.active{background:#0891b2;color:#fff}
   .dash-shape.pinned{border-color:rgba(8,145,178,.55)}
+  /* Polygon shapes (diamond/pentagon/chevron/flag/trapezoid): the SVG polygon
+     itself is the visible shape, so the plain rectangular box/border/shadow
+     used by note/rect/circle is turned off. */
+  .dash-shape.dash-shape-polygon{border:none;box-shadow:none;background:transparent!important;overflow:visible}
+  .dash-shape-polygon-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+  .dash-shape.dash-shape-polygon .dash-shape-text{position:relative;z-index:1;background:transparent}
+  /* Per-point "bend" editing: small draggable handles at each vertex, shown
+     only while a shape's edit-points mode is on. */
+  .dash-shape-vertex-layer{position:absolute;inset:0;display:none;pointer-events:none}
+  .dash-shape.editing-points .dash-shape-vertex-layer{display:block}
+  .dash-shape.editing-points .dash-shape-polygon-svg polygon{stroke-dasharray:4 3}
+  .dash-shape-vertex{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#0891b2;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:move;pointer-events:auto}
+  .dash-shape-vertex:hover{background:#0e7490;transform:scale(1.15)}
   .dash-shape-color-btn{background:#fff;padding:0;overflow:hidden}
   .dash-shape-color-btn input[type=color]{width:26px;height:26px;margin:-3px;cursor:pointer;border:none;padding:0}
   .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none}
@@ -504,6 +519,13 @@
               <button onclick="App.addDashboardShape('note')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">🗒️ Sticky Note</button>
               <button onclick="App.addDashboardShape('rect')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">▭ Rectangle</button>
               <button onclick="App.addDashboardShape('circle')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◯ Circle</button>
+              <div class="h-px bg-slate-200 dark:bg-slate-700 my-1"></div>
+              <button onclick="App.addDashboardShape('diamond')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◇ Diamond</button>
+              <button onclick="App.addDashboardShape('pentagon')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">⬠ Pentagon</button>
+              <button onclick="App.addDashboardShape('chevron')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">▷ Chevron</button>
+              <button onclick="App.addDashboardShape('flag')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◁ Flag</button>
+              <button onclick="App.addDashboardShape('trapezoid')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">⏢ Trapezoid</button>
+              <button onclick="App.addDashboardShape('callout')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">💬 Callout</button>
             </div>
           </div>
           <button id="dashboard-capture-btn" data-capture-hide="true" onclick="App.captureDashboard()" title="Copy dashboard as image" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
@@ -4049,7 +4071,28 @@ const App = {
   // page. See dashboard_shapes_migration.sql for the table + RLS; the
   // anchor_id text column is added there too.
   // ============================================================
-  DASH_SHAPE_DEFAULT_COLORS: { note: '#fde68a', rect: '#93c5fd', circle: '#86efac' },
+  DASH_SHAPE_DEFAULT_COLORS: {
+    note: '#fde68a', rect: '#93c5fd', circle: '#86efac',
+    diamond: '#fca5a5', pentagon: '#c4b5fd', chevron: '#fdba74', flag: '#67e8f9', trapezoid: '#d9f99d',
+    callout: '#fbcfe8',
+  },
+  // Preset vertex points (% of the shape's own box, x,y from 0-100) for each
+  // polygon shape type. A shape's actual `points` (persisted per-shape) start
+  // as a copy of this and can be dragged per-vertex afterwards to bend/stretch
+  // the outline — the bounding-box resize handle still scales all points
+  // together, but each point can also be moved independently.
+  DASH_SHAPE_POLYGON_PRESETS: {
+    diamond: [[50, 0], [100, 50], [50, 100], [0, 50]],
+    pentagon: [[0, 0], [70, 0], [100, 50], [70, 100], [0, 100]],
+    chevron: [[0, 0], [60, 0], [100, 50], [60, 100], [0, 100], [30, 50]],
+    flag: [[100, 0], [30, 0], [0, 50], [30, 100], [100, 100]],
+    trapezoid: [[20, 0], [80, 0], [100, 100], [0, 100]],
+    // Speech-bubble callout: a rectangular body (0,0)-(100,70) with a
+    // pointer tail dropping down-left from the body to (20,100). Drag the
+    // tail's tip point (in ✎ edit-points mode) to aim it at whatever it's
+    // calling out.
+    callout: [[0, 0], [100, 0], [100, 70], [35, 70], [20, 100], [20, 70], [0, 70]],
+  },
   // Anchor a shape can be pinned to, and how it's labeled in the UI.
   DASH_SHAPE_ANCHOR: { id: 'chart-card', label: 'Activity Timeline chart' },
 
@@ -4134,12 +4177,18 @@ const App = {
 
   async addDashboardShape(shapeType) {
     document.getElementById('dashboard-shapes-menu').classList.add('hidden');
+    const preset = this.DASH_SHAPE_POLYGON_PRESETS[shapeType];
     const payload = {
       shape_type: shapeType,
-      x: 38, y: 38, w: shapeType === 'circle' ? 14 : 20, h: shapeType === 'circle' ? 14 : 12,
+      x: 38, y: 38,
+      w: preset ? 22 : (shapeType === 'circle' ? 14 : 20),
+      h: preset ? 16 : (shapeType === 'circle' ? 14 : 12),
       text: shapeType === 'note' ? 'Note...' : '',
       color: this.DASH_SHAPE_DEFAULT_COLORS[shapeType] || '#fde68a',
       anchor_id: null,
+      // Each shape gets its own independent copy of the preset so dragging
+      // one shape's points never mutates another shape's (or the preset's) points.
+      points: preset ? JSON.parse(JSON.stringify(preset)) : null,
       created_by: this.state.currentUser ? this.state.currentUser.username : null,
     };
     const { data, error } = await supabaseClient.from('dashboard_shapes').insert(payload).select().single();
@@ -4206,11 +4255,44 @@ const App = {
 
   buildShapeEl(shape) {
     const layer = document.getElementById('dashboard-shapes-layer');
+    const preset = this.DASH_SHAPE_POLYGON_PRESETS[shape.shape_type];
+    const isPolygon = !!preset;
+    // Points are stored per-shape (so editing one shape's vertices never
+    // touches another); fall back to the type's preset for older rows.
+    if (isPolygon && (!Array.isArray(shape.points) || !shape.points.length)) {
+      shape.points = JSON.parse(JSON.stringify(preset));
+    }
     const el = document.createElement('div');
-    el.className = `dash-shape dash-shape-${shape.shape_type}${shape.anchor_id ? ' pinned' : ''}`;
-    el.style.background = shape.color || '#fde68a';
+    el.className = `dash-shape dash-shape-${shape.shape_type}${isPolygon ? ' dash-shape-polygon' : ''}${shape.anchor_id ? ' pinned' : ''}`;
     el.dataset.shapeId = shape.id;
+    if (isPolygon) {
+      el.style.background = 'transparent';
+    } else {
+      el.style.background = shape.color || '#fde68a';
+    }
     this.positionShapeEl(el, shape);
+
+    let svg = null, polygonEl = null, vertexLayer = null;
+    const svgNS = 'http://www.w3.org/2000/svg';
+    if (isPolygon) {
+      svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.classList.add('dash-shape-polygon-svg');
+      polygonEl = document.createElementNS(svgNS, 'polygon');
+      polygonEl.setAttribute('vector-effect', 'non-scaling-stroke');
+      polygonEl.style.stroke = 'rgba(0,0,0,.35)';
+      polygonEl.style.strokeWidth = '2';
+      svg.appendChild(polygonEl);
+      el.appendChild(svg);
+    }
+
+    const redrawPolygon = () => {
+      if (!polygonEl) return;
+      polygonEl.setAttribute('points', shape.points.map(p => `${p[0]},${p[1]}`).join(' '));
+      polygonEl.style.fill = shape.color || '#fde68a';
+    };
+    redrawPolygon();
 
     const text = document.createElement('div');
     text.className = 'dash-shape-text';
@@ -4247,6 +4329,20 @@ const App = {
     pinBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleDashboardShapePin(shape.id); });
     controls.appendChild(pinBtn);
 
+    let editBtn = null;
+    if (isPolygon) {
+      editBtn = document.createElement('div');
+      editBtn.className = 'dash-shape-ctrl-btn dash-shape-edit-btn';
+      editBtn.title = 'Edit points — drag a corner to bend/stretch the shape';
+      editBtn.textContent = '✎';
+      editBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const on = el.classList.toggle('editing-points');
+        editBtn.classList.toggle('active', on);
+      });
+      controls.appendChild(editBtn);
+    }
+
     const colorBtn = document.createElement('label');
     colorBtn.className = 'dash-shape-ctrl-btn dash-shape-color-btn';
     colorBtn.title = 'Color';
@@ -4255,7 +4351,8 @@ const App = {
     colorInput.type = 'color';
     colorInput.value = shape.color || '#fde68a';
     colorInput.addEventListener('input', () => {
-      el.style.background = colorInput.value;
+      if (isPolygon) { shape.color = colorInput.value; redrawPolygon(); }
+      else el.style.background = colorInput.value;
       const local = this.state.dashboardShapes.find(s => s.id === shape.id);
       if (local) local.color = colorInput.value;
       this.saveDashboardShape(shape.id, { color: colorInput.value });
@@ -4276,12 +4373,53 @@ const App = {
     resizeHandle.setAttribute('data-capture-hide', 'true');
     el.appendChild(resizeHandle);
 
+    // --- Per-vertex "bend" handles (polygon shapes only) ---
+    // Each handle sits at a point's stored %,% position within the shape's
+    // own box; dragging one only moves that vertex, so the outline can be
+    // bent/stretched unevenly instead of just scaled as a whole rectangle.
+    if (isPolygon) {
+      vertexLayer = document.createElement('div');
+      vertexLayer.className = 'dash-shape-vertex-layer';
+      vertexLayer.setAttribute('data-capture-hide', 'true');
+      shape.points.forEach((pt, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'dash-shape-vertex';
+        dot.style.left = pt[0] + '%';
+        dot.style.top = pt[1] + '%';
+        dot.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          this._shapeGestureActive = true;
+          const onMove = ev => {
+            const rect = el.getBoundingClientRect();
+            const xPct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+            const yPct = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
+            shape.points[i] = [xPct, yPct];
+            dot.style.left = xPct + '%';
+            dot.style.top = yPct + '%';
+            redrawPolygon();
+          };
+          const onUp = () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            this._shapeGestureActive = false;
+            this.saveDashboardShape(shape.id, { points: shape.points });
+          };
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp);
+        });
+        vertexLayer.appendChild(dot);
+      });
+      el.appendChild(vertexLayer);
+    }
+
     // --- Drag to move ---
     // Movement is tracked in px (screen space) but saved back as % of the
     // shape's base rect — its pinned anchor's box when pinned, otherwise
     // the full layer — so pinned shapes stay correctly anchor-relative.
     el.addEventListener('pointerdown', e => {
       if (e.target === resizeHandle || e.target === text || controls.contains(e.target)) return;
+      if (vertexLayer && vertexLayer.contains(e.target)) return;
       e.preventDefault();
       this._shapeGestureActive = true;
       el.classList.add('dragging');
@@ -4310,7 +4448,8 @@ const App = {
       document.addEventListener('pointerup', onUp);
     });
 
-    // --- Drag handle to resize ---
+    // --- Drag handle to resize (stretches the whole shape, including all
+    // polygon points together since they're %-based) ---
     resizeHandle.addEventListener('pointerdown', e => {
       e.preventDefault();
       e.stopPropagation();
