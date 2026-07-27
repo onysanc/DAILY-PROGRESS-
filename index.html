@@ -210,6 +210,15 @@
   .dash-shape-color-btn input[type=color]{width:26px;height:26px;margin:-3px;cursor:pointer;border:none;padding:0}
   .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none;z-index:2}
   .dash-shape:hover .dash-shape-resize-handle{display:block}
+  /* Callout tail handle: a dedicated always-reachable-on-hover grip at the
+     tip of the speech-bubble tail, so ONY can stretch/aim the tail directly
+     without first toggling the ✎ edit-points mode (that mode still works
+     too, and exposes every vertex, but this is the fast path for the one
+     point people actually drag). */
+  .dash-shape-tail-handle{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);cursor:crosshair;display:none;z-index:6;pointer-events:auto}
+  .dash-shape-tail-handle:hover{background:#d97706;transform:scale(1.15)}
+  .dash-shape:hover .dash-shape-tail-handle{display:block}
+  .dash-shape.editing-points .dash-shape-tail-handle{display:none}
   #dashboard-shapes-toolbar{position:relative}
   #dashboard-shapes-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:30;min-width:150px}
 </style>
@@ -522,12 +531,9 @@
               <button onclick="App.addDashboardShape('rect')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">▭ Rectangle</button>
               <button onclick="App.addDashboardShape('circle')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◯ Circle</button>
               <div class="h-px bg-slate-200 dark:bg-slate-700 my-1"></div>
-              <button onclick="App.addDashboardShape('diamond')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◇ Diamond</button>
-              <button onclick="App.addDashboardShape('pentagon')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">⬠ Pentagon</button>
-              <button onclick="App.addDashboardShape('chevron')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">▷ Chevron</button>
-              <button onclick="App.addDashboardShape('flag')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◁ Flag</button>
-              <button onclick="App.addDashboardShape('trapezoid')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">⏢ Trapezoid</button>
-              <button onclick="App.addDashboardShape('callout')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">💬 Callout</button>
+              <button onclick="App.addDashboardShape('callout')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">💬 Callout ↙ (tail left)</button>
+              <button onclick="App.addDashboardShape('callout_right')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">💬 Callout ↘ (tail right)</button>
+              <button onclick="App.addDashboardShape('callout_top')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">💬 Callout ↑ (tail up)</button>
             </div>
           </div>
           <button id="dashboard-capture-btn" data-capture-hide="true" onclick="App.captureDashboard()" title="Copy dashboard as image" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
@@ -4076,25 +4082,39 @@ const App = {
   DASH_SHAPE_DEFAULT_COLORS: {
     note: '#fde68a', rect: '#93c5fd', circle: '#86efac',
     diamond: '#fca5a5', pentagon: '#c4b5fd', chevron: '#fdba74', flag: '#67e8f9', trapezoid: '#d9f99d',
-    callout: '#fbcfe8',
+    callout: '#fbcfe8', callout_right: '#fda4af', callout_top: '#f9a8d4',
   },
   // Preset vertex points (% of the shape's own box, x,y from 0-100) for each
   // polygon shape type. A shape's actual `points` (persisted per-shape) start
   // as a copy of this and can be dragged per-vertex afterwards to bend/stretch
   // the outline — the bounding-box resize handle still scales all points
   // together, but each point can also be moved independently.
+  // NOTE: diamond/pentagon/chevron/flag/trapezoid were removed from the "add
+  // shape" menu (kept here only so any already-placed shapes of those types
+  // still render correctly) and replaced with 3 speech-bubble callout
+  // variants aimed in different directions.
   DASH_SHAPE_POLYGON_PRESETS: {
     diamond: [[50, 0], [100, 50], [50, 100], [0, 50]],
     pentagon: [[0, 0], [70, 0], [100, 50], [70, 100], [0, 100]],
     chevron: [[0, 0], [60, 0], [100, 50], [60, 100], [0, 100], [30, 50]],
     flag: [[100, 0], [30, 0], [0, 50], [30, 100], [100, 100]],
     trapezoid: [[20, 0], [80, 0], [100, 100], [0, 100]],
-    // Speech-bubble callout: a rectangular body (0,0)-(100,70) with a
-    // pointer tail dropping down-left from the body to (20,100). Drag the
-    // tail's tip point (in ✎ edit-points mode) to aim it at whatever it's
-    // calling out.
+    // Speech-bubble callout: a rectangular body with a pointer tail. The
+    // tail tip is always points[4] — see DASH_SHAPE_TAIL_INDEX — and is
+    // draggable directly (no edit-points mode needed) via the dedicated
+    // amber tail handle, so the tail can be freely stretched/aimed at
+    // whatever it's calling out.
     callout: [[0, 0], [100, 0], [100, 70], [35, 70], [20, 100], [20, 70], [0, 70]],
+    // Same body, tail dropping from the bottom-RIGHT instead of bottom-left.
+    callout_right: [[100, 0], [0, 0], [0, 70], [65, 70], [80, 100], [80, 70], [100, 70]],
+    // Same body, tail pointing UP from the top edge instead of down.
+    callout_top: [[0, 100], [100, 100], [100, 30], [35, 30], [20, 0], [20, 30], [0, 30]],
   },
+  // Index into a shape's `points` array of the tail tip — the one vertex
+  // people actually want to drag to aim/stretch the callout. Only callout
+  // variants have one; shapes absent from this map just don't get the
+  // dedicated tail handle (they still have full edit-points ✎ mode).
+  DASH_SHAPE_TAIL_INDEX: { callout: 4, callout_right: 4, callout_top: 4 },
   // Anchor a shape can be pinned to, and how it's labeled in the UI.
   DASH_SHAPE_ANCHOR: { id: 'chart-card', label: 'Activity Timeline chart' },
 
@@ -4410,10 +4430,43 @@ const App = {
     resizeHandle.setAttribute('data-capture-hide', 'true');
     el.appendChild(resizeHandle);
 
+    // Shared drag behavior for a single polygon vertex. `allowOverflow` lets
+    // the point be dragged outside the shape's own 0-100% box (the SVG has
+    // overflow:visible, so it still draws correctly) — used for the callout
+    // tail tip so it can be stretched out far past the bubble body, not just
+    // nudged around inside it.
+    const attachPointDrag = (handleEl, i, allowOverflow) => {
+      const MIN = allowOverflow ? -150 : 0, MAX = allowOverflow ? 250 : 100;
+      handleEl.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._shapeGestureActive = true;
+        const onMove = ev => {
+          const rect = el.getBoundingClientRect();
+          const xPct = Math.max(MIN, Math.min(MAX, ((ev.clientX - rect.left) / rect.width) * 100));
+          const yPct = Math.max(MIN, Math.min(MAX, ((ev.clientY - rect.top) / rect.height) * 100));
+          shape.points[i] = [xPct, yPct];
+          handleEl.style.left = xPct + '%';
+          handleEl.style.top = yPct + '%';
+          if (handleEl !== dotRefs[i]) { dotRefs[i].style.left = xPct + '%'; dotRefs[i].style.top = yPct + '%'; }
+          redrawPolygon();
+        };
+        const onUp = () => {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          this._shapeGestureActive = false;
+          this.saveDashboardShape(shape.id, { points: shape.points });
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    };
+
     // --- Per-vertex "bend" handles (polygon shapes only) ---
     // Each handle sits at a point's stored %,% position within the shape's
     // own box; dragging one only moves that vertex, so the outline can be
     // bent/stretched unevenly instead of just scaled as a whole rectangle.
+    const dotRefs = [];
     if (isPolygon) {
       vertexLayer = document.createElement('div');
       vertexLayer.className = 'dash-shape-vertex-layer';
@@ -4423,31 +4476,28 @@ const App = {
         dot.className = 'dash-shape-vertex';
         dot.style.left = pt[0] + '%';
         dot.style.top = pt[1] + '%';
-        dot.addEventListener('pointerdown', e => {
-          e.preventDefault();
-          e.stopPropagation();
-          this._shapeGestureActive = true;
-          const onMove = ev => {
-            const rect = el.getBoundingClientRect();
-            const xPct = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
-            const yPct = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
-            shape.points[i] = [xPct, yPct];
-            dot.style.left = xPct + '%';
-            dot.style.top = yPct + '%';
-            redrawPolygon();
-          };
-          const onUp = () => {
-            document.removeEventListener('pointermove', onMove);
-            document.removeEventListener('pointerup', onUp);
-            this._shapeGestureActive = false;
-            this.saveDashboardShape(shape.id, { points: shape.points });
-          };
-          document.addEventListener('pointermove', onMove);
-          document.addEventListener('pointerup', onUp);
-        });
+        dotRefs[i] = dot;
+        attachPointDrag(dot, i, true);
         vertexLayer.appendChild(dot);
       });
       el.appendChild(vertexLayer);
+
+      // Dedicated tail-stretch handle (callout shapes only) — a small amber
+      // grip at the tail tip, visible on hover without needing to toggle
+      // ✎ edit-points mode first. Drags the same point as its matching
+      // vertex dot above, just reachable faster for the one point people
+      // actually want to pull around.
+      const tailIdx = this.DASH_SHAPE_TAIL_INDEX[shape.shape_type];
+      if (tailIdx !== undefined && shape.points[tailIdx]) {
+        const tailHandle = document.createElement('div');
+        tailHandle.className = 'dash-shape-tail-handle';
+        tailHandle.setAttribute('data-capture-hide', 'true');
+        tailHandle.title = 'Drag to stretch/aim the callout tail';
+        tailHandle.style.left = shape.points[tailIdx][0] + '%';
+        tailHandle.style.top = shape.points[tailIdx][1] + '%';
+        attachPointDrag(tailHandle, tailIdx, true);
+        el.appendChild(tailHandle);
+      }
     }
 
     // --- Drag to move ---
