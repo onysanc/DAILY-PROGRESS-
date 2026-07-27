@@ -4417,25 +4417,38 @@ const App = {
     // Movement is tracked in px (screen space) but saved back as % of the
     // shape's base rect — its pinned anchor's box when pinned, otherwise
     // the full layer — so pinned shapes stay correctly anchor-relative.
+    // Starts from ANYWHERE on the shape (including the text label, which
+    // usually covers most of it) — only bailing out while the label is
+    // actively being edited, or over the resize handle / point handles /
+    // toolbar. A small pixel threshold before it "counts" as a drag keeps
+    // plain clicks and double-click-to-edit from nudging the shape.
     el.addEventListener('pointerdown', e => {
-      if (e.target === resizeHandle || e.target === text || controls.contains(e.target)) return;
+      if (e.target === resizeHandle || controls.contains(e.target)) return;
       if (vertexLayer && vertexLayer.contains(e.target)) return;
-      e.preventDefault();
+      if (text.isContentEditable) return;
       this._shapeGestureActive = true;
-      el.classList.add('dragging');
       const baseRect = this._shapeBaseRect(shape);
       const startX = e.clientX, startY = e.clientY;
       const startLeftPx = parseFloat(el.style.left), startTopPx = parseFloat(el.style.top);
+      const DRAG_THRESHOLD = 4;
+      let moved = false;
       const onMove = ev => {
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        if (!moved) {
+          if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+          moved = true;
+          el.classList.add('dragging');
+        }
+        ev.preventDefault();
         el.style.left = (startLeftPx + dx) + 'px';
         el.style.top = (startTopPx + dy) + 'px';
       };
       const onUp = () => {
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
-        el.classList.remove('dragging');
         this._shapeGestureActive = false;
+        el.classList.remove('dragging');
+        if (!moved) return; // was just a click — leave it to text-edit/dblclick handling
         const layerRect = layer.getBoundingClientRect();
         const leftPx = parseFloat(el.style.left), topPx = parseFloat(el.style.top);
         const x = Math.max(0, Math.min(97, ((layerRect.left + leftPx - baseRect.left) / baseRect.width) * 100));
