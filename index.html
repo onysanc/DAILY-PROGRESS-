@@ -4148,10 +4148,16 @@ const App = {
   },
 
   // Sets up listeners (once) that keep pinned shapes glued to their anchor:
-  // window resize, and a ResizeObserver on the chart card itself (catches
-  // layout shifts a plain resize event would miss, e.g. an alert banner
-  // appearing above it, or the sidebar's width transition).
+  // window resize, a ResizeObserver on the chart card itself, and a light
+  // poll as a catch-all. The ResizeObserver only fires when the chart
+  // card's own WIDTH/HEIGHT changes — it does NOT fire when something
+  // above it (like the dispatch alert banner showing/hiding) pushes the
+  // card down or up without resizing it, so pinned shapes were staying put
+  // while the chart moved out from under them. The poll below catches that
+  // and anything else a resize/RO event would miss, by comparing the
+  // anchor's rect each tick and only touching the DOM when it actually moved.
   _shapeReflowWatchersReady: false,
+  _lastAnchorRectKey: null,
   _ensureShapeReflowWatchers() {
     if (this._shapeReflowWatchersReady) return;
     this._shapeReflowWatchersReady = true;
@@ -4160,6 +4166,17 @@ const App = {
     if (anchorEl && window.ResizeObserver) {
       new ResizeObserver(() => this.reflowDashboardShapes()).observe(anchorEl);
     }
+    setInterval(() => {
+      if (!this.state.dashboardShapes || !this.state.dashboardShapes.some(s => s.anchor_id)) return;
+      const el = document.getElementById(this.DASH_SHAPE_ANCHOR.id);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const key = `${r.left.toFixed(1)},${r.top.toFixed(1)},${r.width.toFixed(1)},${r.height.toFixed(1)}`;
+      if (key !== this._lastAnchorRectKey) {
+        this._lastAnchorRectKey = key;
+        this.reflowDashboardShapes();
+      }
+    }, 250);
   },
 
   // Computes the box a shape's x/y/w/h percentages are relative to:
