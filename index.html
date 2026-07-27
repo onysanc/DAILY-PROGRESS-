@@ -186,6 +186,9 @@
   .dash-shape:hover .dash-shape-controls{display:flex}
   .dash-shape-ctrl-btn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);border:1px solid rgba(0,0,0,.15)}
   .dash-shape-del-btn{background:#ef4444;color:#fff}
+  .dash-shape-pin-btn{background:#fff;color:#64748b}
+  .dash-shape-pin-btn.pinned{background:#0891b2;color:#fff}
+  .dash-shape.pinned{border-color:rgba(8,145,178,.55)}
   .dash-shape-color-btn{background:#fff;padding:0;overflow:hidden}
   .dash-shape-color-btn input[type=color]{width:26px;height:26px;margin:-3px;cursor:pointer;border:none;padding:0}
   .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none}
@@ -1683,7 +1686,7 @@ const App = {
     if (!this.isMobileViewport()) {
       try { localStorage.setItem('sidebarClosed', closed ? '1' : '0'); } catch {}
     }
-    setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } }, 310);
+    setTimeout(() => { if (this.state.chartInstance) { this.state.chartInstance.resize(); this.positionChartRemark(); } this.reflowDashboardShapes(); }, 310);
   },
   // Called once after login so the sidebar starts in the right state for the current device:
   // remembered collapsed/expanded state on desktop, always closed-by-default on mobile.
@@ -4036,11 +4039,19 @@ const App = {
   // (sticky notes / rectangles / circles) that anyone can drop onto the
   // Dashboard tab, drag anywhere, resize, recolor, and type text into.
   // Persisted in Supabase (`dashboard_shapes`) so everyone sees the same
-  // ones; x/y/w/h are stored as % of the dashboard's own box so placement
-  // stays sane across different screen sizes. See
-  // dashboard_shapes_migration.sql for the table + RLS.
+  // ones; x/y/w/h are stored as % of a "base box" so placement stays sane
+  // across different screen sizes. By default that base box is the whole
+  // dashboard layer. A shape can instead be PINNED to a specific element
+  // (e.g. the Activity Timeline chart card, #chart-card) via anchor_id —
+  // in that case x/y/w/h are % of THAT element's box, so the shape rides
+  // along with it if the chart moves/resizes (sidebar toggle, banners
+  // appearing, window resize, etc.) instead of drifting relative to the
+  // page. See dashboard_shapes_migration.sql for the table + RLS; the
+  // anchor_id text column is added there too.
   // ============================================================
   DASH_SHAPE_DEFAULT_COLORS: { note: '#fde68a', rect: '#93c5fd', circle: '#86efac' },
+  // Anchor a shape can be pinned to, and how it's labeled in the UI.
+  DASH_SHAPE_ANCHOR: { id: 'chart-card', label: 'Activity Timeline chart' },
 
   async loadDashboardShapes() {
     const { data, error } = await supabaseClient.from('dashboard_shapes').select('*').order('created_at', { ascending: true });
@@ -4054,6 +4065,67 @@ const App = {
     if (!layer) return;
     layer.innerHTML = '';
     this.state.dashboardShapes.forEach(shape => layer.appendChild(this.buildShapeEl(shape)));
+    this._ensureShapeReflowWatchers();
+  },
+
+  // Recomputes on-screen px position/size for every rendered shape from its
+  // stored %-of-anchor coordinates. Call this any time the layer or an
+  // anchor element (like the chart card) might have moved/resized, so
+  // pinned shapes stay glued to their anchor and everything stays correct
+  // after a reload, a window resize, or the sidebar opening/closing.
+  reflowDashboardShapes() {
+    const layer = document.getElementById('dashboard-shapes-layer');
+    if (!layer) return;
+    this.state.dashboardShapes.forEach(shape => {
+      const el = layer.querySelector(`[data-shape-id="${shape.id}"]`);
+      if (el) this.positionShapeEl(el, shape);
+    });
+  },
+
+  // Sets up listeners (once) that keep pinned shapes glued to their anchor:
+  // window resize, and a ResizeObserver on the chart card itself (catches
+  // layout shifts a plain resize event would miss, e.g. an alert banner
+  // appearing above it, or the sidebar's width transition).
+  _shapeReflowWatchersReady: false,
+  _ensureShapeReflowWatchers() {
+    if (this._shapeReflowWatchersReady) return;
+    this._shapeReflowWatchersReady = true;
+    window.addEventListener('resize', () => this.reflowDashboardShapes());
+    const anchorEl = document.getElementById(this.DASH_SHAPE_ANCHOR.id);
+    if (anchorEl && window.ResizeObserver) {
+      new ResizeObserver(() => this.reflowDashboardShapes()).observe(anchorEl);
+    }
+  },
+
+  // Computes the box a shape's x/y/w/h percentages are relative to:
+  // its pinned anchor element if it has one (and that element is currently
+  // on screen), otherwise the full dashboard shapes layer.
+  _shapeBaseRect(shape) {
+    const layer = document.getElementById('dashboard-shapes-layer');
+    const layerRect = layer.getBoundingClientRect();
+    if (shape.anchor_id) {
+      const anchorEl = document.getElementById(shape.anchor_id);
+      if (anchorEl) return anchorEl.getBoundingClientRect();
+    }
+    return layerRect;
+  },
+
+  // Applies a shape's stored %-of-base-box coordinates as absolute px
+  // placement inside the layer (px, not %, so pinned shapes track their
+  // anchor's exact box even when anchor and layer scale differently).
+  positionShapeEl(el, shape) {
+    const layer = document.getElementById('dashboard-shapes-layer');
+    if (!layer) return;
+    const layerRect = layer.getBoundingClientRect();
+    const baseRect = this._shapeBaseRect(shape);
+    const left = (baseRect.left - layerRect.left) + (shape.x / 100) * baseRect.width;
+    const top = (baseRect.top - layerRect.top) + (shape.y / 100) * baseRect.height;
+    const width = (shape.w / 100) * baseRect.width;
+    const height = (shape.h / 100) * baseRect.height;
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.width = width + 'px';
+    el.style.height = height + 'px';
   },
 
   toggleShapesMenu() {
@@ -4067,6 +4139,7 @@ const App = {
       x: 38, y: 38, w: shapeType === 'circle' ? 14 : 20, h: shapeType === 'circle' ? 14 : 12,
       text: shapeType === 'note' ? 'Note...' : '',
       color: this.DASH_SHAPE_DEFAULT_COLORS[shapeType] || '#fde68a',
+      anchor_id: null,
       created_by: this.state.currentUser ? this.state.currentUser.username : null,
     };
     const { data, error } = await supabaseClient.from('dashboard_shapes').insert(payload).select().single();
@@ -4083,6 +4156,44 @@ const App = {
     if (error) { alert('Could not delete: ' + error.message); this.loadDashboardShapes(); }
   },
 
+  // Pins/unpins a shape to the chart card. Converts its current on-screen
+  // box into %-of-new-base-box coordinates first, so toggling the pin
+  // never makes the shape visually jump.
+  toggleDashboardShapePin(id) {
+    const shape = this.state.dashboardShapes.find(s => s.id === id);
+    if (!shape) return;
+    const layer = document.getElementById('dashboard-shapes-layer');
+    const el = layer.querySelector(`[data-shape-id="${id}"]`);
+    if (!el) return;
+    const layerRect = layer.getBoundingClientRect();
+    const curLeft = parseFloat(el.style.left) || 0, curTop = parseFloat(el.style.top) || 0;
+    const curWidth = parseFloat(el.style.width) || 0, curHeight = parseFloat(el.style.height) || 0;
+    const willPin = !shape.anchor_id;
+    let newAnchorId = null, newBaseRect = layerRect;
+    if (willPin) {
+      const anchorEl = document.getElementById(this.DASH_SHAPE_ANCHOR.id);
+      if (!anchorEl) return alert('Could not find the chart to pin to.');
+      newAnchorId = this.DASH_SHAPE_ANCHOR.id;
+      newBaseRect = anchorEl.getBoundingClientRect();
+    }
+    // Re-express the shape's current absolute position as % of the new base box.
+    const absLeft = layerRect.left + curLeft, absTop = layerRect.top + curTop;
+    const x = Math.max(0, Math.min(97, ((absLeft - newBaseRect.left) / newBaseRect.width) * 100));
+    const y = Math.max(0, Math.min(97, ((absTop - newBaseRect.top) / newBaseRect.height) * 100));
+    const w = (curWidth / newBaseRect.width) * 100;
+    const h = (curHeight / newBaseRect.height) * 100;
+    shape.anchor_id = newAnchorId;
+    shape.x = x; shape.y = y; shape.w = w; shape.h = h;
+    this.positionShapeEl(el, shape);
+    el.classList.toggle('pinned', !!newAnchorId);
+    const pinBtn = el.querySelector('.dash-shape-pin-btn');
+    if (pinBtn) {
+      pinBtn.classList.toggle('pinned', !!newAnchorId);
+      pinBtn.title = newAnchorId ? `Pinned to ${this.DASH_SHAPE_ANCHOR.label} — click to unpin` : `Pin to ${this.DASH_SHAPE_ANCHOR.label}`;
+    }
+    this.saveDashboardShape(id, { anchor_id: newAnchorId, x, y, w, h });
+  },
+
   // Debounced per-shape save so dragging/resizing doesn't fire a write on every pixel.
   _shapeSaveTimers: {},
   saveDashboardShape(id, fields) {
@@ -4096,13 +4207,10 @@ const App = {
   buildShapeEl(shape) {
     const layer = document.getElementById('dashboard-shapes-layer');
     const el = document.createElement('div');
-    el.className = `dash-shape dash-shape-${shape.shape_type}`;
-    el.style.left = shape.x + '%';
-    el.style.top = shape.y + '%';
-    el.style.width = shape.w + '%';
-    el.style.height = shape.h + '%';
+    el.className = `dash-shape dash-shape-${shape.shape_type}${shape.anchor_id ? ' pinned' : ''}`;
     el.style.background = shape.color || '#fde68a';
     el.dataset.shapeId = shape.id;
+    this.positionShapeEl(el, shape);
 
     const text = document.createElement('div');
     text.className = 'dash-shape-text';
@@ -4131,6 +4239,13 @@ const App = {
     const controls = document.createElement('div');
     controls.className = 'dash-shape-controls';
     controls.setAttribute('data-capture-hide', 'true');
+
+    const pinBtn = document.createElement('div');
+    pinBtn.className = `dash-shape-ctrl-btn dash-shape-pin-btn${shape.anchor_id ? ' pinned' : ''}`;
+    pinBtn.title = shape.anchor_id ? `Pinned to ${this.DASH_SHAPE_ANCHOR.label} — click to unpin` : `Pin to ${this.DASH_SHAPE_ANCHOR.label}`;
+    pinBtn.textContent = '📌';
+    pinBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleDashboardShapePin(shape.id); });
+    controls.appendChild(pinBtn);
 
     const colorBtn = document.createElement('label');
     colorBtn.className = 'dash-shape-ctrl-btn dash-shape-color-btn';
@@ -4162,30 +4277,33 @@ const App = {
     el.appendChild(resizeHandle);
 
     // --- Drag to move ---
+    // Movement is tracked in px (screen space) but saved back as % of the
+    // shape's base rect — its pinned anchor's box when pinned, otherwise
+    // the full layer — so pinned shapes stay correctly anchor-relative.
     el.addEventListener('pointerdown', e => {
       if (e.target === resizeHandle || e.target === text || controls.contains(e.target)) return;
       e.preventDefault();
       this._shapeGestureActive = true;
       el.classList.add('dragging');
-      const layerRect = layer.getBoundingClientRect();
+      const baseRect = this._shapeBaseRect(shape);
       const startX = e.clientX, startY = e.clientY;
-      const startLeftPct = parseFloat(el.style.left), startTopPct = parseFloat(el.style.top);
+      const startLeftPx = parseFloat(el.style.left), startTopPx = parseFloat(el.style.top);
       const onMove = ev => {
-        const dxPct = ((ev.clientX - startX) / layerRect.width) * 100;
-        const dyPct = ((ev.clientY - startY) / layerRect.height) * 100;
-        const newLeft = Math.min(97, Math.max(0, startLeftPct + dxPct));
-        const newTop = Math.min(97, Math.max(0, startTopPct + dyPct));
-        el.style.left = newLeft + '%';
-        el.style.top = newTop + '%';
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        el.style.left = (startLeftPx + dx) + 'px';
+        el.style.top = (startTopPx + dy) + 'px';
       };
       const onUp = () => {
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         el.classList.remove('dragging');
         this._shapeGestureActive = false;
-        const x = parseFloat(el.style.left), y = parseFloat(el.style.top);
-        const local = this.state.dashboardShapes.find(s => s.id === shape.id);
-        if (local) { local.x = x; local.y = y; }
+        const layerRect = layer.getBoundingClientRect();
+        const leftPx = parseFloat(el.style.left), topPx = parseFloat(el.style.top);
+        const x = Math.max(0, Math.min(97, ((layerRect.left + leftPx - baseRect.left) / baseRect.width) * 100));
+        const y = Math.max(0, Math.min(97, ((layerRect.top + topPx - baseRect.top) / baseRect.height) * 100));
+        shape.x = x; shape.y = y;
+        this.positionShapeEl(el, shape);
         this.saveDashboardShape(shape.id, { x, y });
       };
       document.addEventListener('pointermove', onMove);
@@ -4197,22 +4315,23 @@ const App = {
       e.preventDefault();
       e.stopPropagation();
       this._shapeGestureActive = true;
-      const layerRect = layer.getBoundingClientRect();
+      const baseRect = this._shapeBaseRect(shape);
       const startX = e.clientX, startY = e.clientY;
-      const startWPct = parseFloat(el.style.width), startHPct = parseFloat(el.style.height);
+      const startWPx = parseFloat(el.style.width), startHPx = parseFloat(el.style.height);
       const onMove = ev => {
-        const dwPct = ((ev.clientX - startX) / layerRect.width) * 100;
-        const dhPct = ((ev.clientY - startY) / layerRect.height) * 100;
-        el.style.width = Math.max(6, startWPct + dwPct) + '%';
-        el.style.height = Math.max(4, startHPct + dhPct) + '%';
+        const dw = ev.clientX - startX, dh = ev.clientY - startY;
+        el.style.width = Math.max(24, startWPx + dw) + 'px';
+        el.style.height = Math.max(18, startHPx + dh) + 'px';
       };
       const onUp = () => {
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         this._shapeGestureActive = false;
-        const w = parseFloat(el.style.width), h = parseFloat(el.style.height);
-        const local = this.state.dashboardShapes.find(s => s.id === shape.id);
-        if (local) { local.w = w; local.h = h; }
+        const widthPx = parseFloat(el.style.width), heightPx = parseFloat(el.style.height);
+        const w = Math.max(6, (widthPx / baseRect.width) * 100);
+        const h = Math.max(4, (heightPx / baseRect.height) * 100);
+        shape.w = w; shape.h = h;
+        this.positionShapeEl(el, shape);
         this.saveDashboardShape(shape.id, { w, h });
       };
       document.addEventListener('pointermove', onMove);
