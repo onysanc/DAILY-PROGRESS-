@@ -171,6 +171,27 @@
   .copy-btn.copy-btn-ok{color:#16a34a!important}
   .copy-btn.copy-btn-err{color:#dc2626!important}
   canvas + .copy-btn, .copy-btn.chart-copy-btn{backdrop-filter:blur(2px)}
+
+  /* Floating Dashboard Shapes — freely-placed annotation shapes with editable text */
+  #dashboard-shapes-layer{position:absolute;inset:0;z-index:25;pointer-events:none}
+  .dash-shape{position:absolute;pointer-events:auto;cursor:grab;display:flex;align-items:stretch;justify-content:stretch;box-shadow:0 2px 8px rgba(0,0,0,.18);border:2px solid rgba(0,0,0,.15);min-width:60px;min-height:36px}
+  .dash-shape.dragging{cursor:grabbing;opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+  .dash-shape.dash-shape-circle{border-radius:50%}
+  .dash-shape.dash-shape-note{border-radius:8px;box-shadow:3px 4px 10px rgba(0,0,0,.3)}
+  .dash-shape.dash-shape-rect{border-radius:10px}
+  .dash-shape-text{width:100%;flex:1;outline:none;overflow:auto;padding:6px 10px;font-size:13px;font-weight:600;line-height:1.3;text-align:center;color:#1e293b;word-break:break-word;display:flex;align-items:center;justify-content:center;cursor:text}
+  .dash-shape.editing{cursor:text}
+  .dark .dash-shape-text{color:#0f172a}
+  .dash-shape-controls{position:absolute;top:-11px;right:-11px;display:none;gap:3px;z-index:2}
+  .dash-shape:hover .dash-shape-controls{display:flex}
+  .dash-shape-ctrl-btn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);border:1px solid rgba(0,0,0,.15)}
+  .dash-shape-del-btn{background:#ef4444;color:#fff}
+  .dash-shape-color-btn{background:#fff;padding:0;overflow:hidden}
+  .dash-shape-color-btn input[type=color]{width:26px;height:26px;margin:-3px;cursor:pointer;border:none;padding:0}
+  .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none}
+  .dash-shape:hover .dash-shape-resize-handle{display:block}
+  #dashboard-shapes-toolbar{position:relative}
+  #dashboard-shapes-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:30;min-width:150px}
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans h-screen overflow-hidden transition-colors duration-300">
@@ -458,7 +479,13 @@
       </div>
       <div class="grid grid-cols-3 gap-5" id="trucks-grid"></div>
     </section>
-    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3">
+    <section id="tab-analytics" class="tab-content hidden flex flex-col gap-3 relative">
+      <!-- Floating Shapes overlay — freely-placed, draggable/resizable annotation
+           shapes with editable text, rendered by App.renderDashboardShapes().
+           Sits above everything else in the tab; intentionally NOT
+           data-capture-hide, since annotations are meant to show up when the
+           dashboard is copied as an image. -->
+      <div id="dashboard-shapes-layer"></div>
       <div class="flex items-center justify-between gap-3">
         <h1 class="text-xl font-extrabold tracking-tight ml-2">
           PROGRESS FOR <span id="dashboard-heading-rdd" class="text-blue-700 dark:text-blue-400">RDD —</span>
@@ -466,6 +493,16 @@
           <span id="dashboard-heading-time" class="text-blue-700 dark:text-blue-400"></span>
         </h1>
         <div class="flex items-center gap-2 shrink-0">
+          <div id="dashboard-shapes-toolbar" data-capture-hide="true">
+            <button onclick="App.toggleShapesMenu()" title="Add a floating shape" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
+            </button>
+            <div id="dashboard-shapes-menu" class="hidden bg-white dark:bg-slate-900 rounded-lg shadow-lg border dark:border-slate-800 p-1.5 space-y-1">
+              <button onclick="App.addDashboardShape('note')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">🗒️ Sticky Note</button>
+              <button onclick="App.addDashboardShape('rect')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">▭ Rectangle</button>
+              <button onclick="App.addDashboardShape('circle')" class="w-full text-left text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">◯ Circle</button>
+            </div>
+          </div>
           <button id="dashboard-capture-btn" data-capture-hide="true" onclick="App.captureDashboard()" title="Copy dashboard as image" class="p-2 bg-white dark:bg-slate-900 rounded-lg shadow hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 focus:outline-none border dark:border-slate-800">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 17a4 4 0 100-8 4 4 0 000 8z"></path></svg>
           </button>
@@ -1584,6 +1621,7 @@ const App = {
     sortCol: null,
     sortDir: 1,
     customBays: [],
+    dashboardShapes: [], // floating annotation shapes on the Dashboard tab — see loadDashboardShapes()
   },
   initTheme() {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -1912,6 +1950,11 @@ const App = {
     this.setupRealtimeSubscriptions();
     this.startAutoRefresh();
     this.populateCompareSelects();
+    document.addEventListener('click', e => {
+      const toolbar = document.getElementById('dashboard-shapes-toolbar');
+      const menu = document.getElementById('dashboard-shapes-menu');
+      if (menu && !menu.classList.contains('hidden') && toolbar && !toolbar.contains(e.target)) menu.classList.add('hidden');
+    });
   },
   async loadCustomBays() {
     const { data, error } = await supabaseClient.from('custom_bays').select('*').order('name', { ascending: true });
@@ -1986,7 +2029,7 @@ const App = {
     document.getElementById(`btn-${tabId}`).classList.remove('hover:bg-slate-800');
     const globalToggleBar = document.getElementById('global-toggle-bar');
     if (globalToggleBar) globalToggleBar.classList.toggle('hidden', tabId === 'tab-analytics');
-    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); }
+    if (tabId === 'tab-analytics') { this.renderDashboardSummary(); this.renderChart(); this.startDashboardClock(); this.renderAlertBanner(); this.loadDashboardShapes(); }
     if (tabId === 'tab-users') {
       this.loadAppUsers(); this.renderAlertSettingsPanel(); this.loadAlertResponseLog(); this.renderBreakTimes();
       if (!this.state.gapThresholds) this.loadGapThresholds().then(() => this.renderGapThresholdInputs());
@@ -3987,6 +4030,197 @@ const App = {
       this.renderChart();
     }
   },
+
+  // ============================================================
+  // FLOATING DASHBOARD SHAPES — freely-placed annotation shapes
+  // (sticky notes / rectangles / circles) that anyone can drop onto the
+  // Dashboard tab, drag anywhere, resize, recolor, and type text into.
+  // Persisted in Supabase (`dashboard_shapes`) so everyone sees the same
+  // ones; x/y/w/h are stored as % of the dashboard's own box so placement
+  // stays sane across different screen sizes. See
+  // dashboard_shapes_migration.sql for the table + RLS.
+  // ============================================================
+  DASH_SHAPE_DEFAULT_COLORS: { note: '#fde68a', rect: '#93c5fd', circle: '#86efac' },
+
+  async loadDashboardShapes() {
+    const { data, error } = await supabaseClient.from('dashboard_shapes').select('*').order('created_at', { ascending: true });
+    if (error) return console.error(error);
+    this.state.dashboardShapes = data || [];
+    this.renderDashboardShapes();
+  },
+
+  renderDashboardShapes() {
+    const layer = document.getElementById('dashboard-shapes-layer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    this.state.dashboardShapes.forEach(shape => layer.appendChild(this.buildShapeEl(shape)));
+  },
+
+  toggleShapesMenu() {
+    document.getElementById('dashboard-shapes-menu').classList.toggle('hidden');
+  },
+
+  async addDashboardShape(shapeType) {
+    document.getElementById('dashboard-shapes-menu').classList.add('hidden');
+    const payload = {
+      shape_type: shapeType,
+      x: 38, y: 38, w: shapeType === 'circle' ? 14 : 20, h: shapeType === 'circle' ? 14 : 12,
+      text: shapeType === 'note' ? 'Note...' : '',
+      color: this.DASH_SHAPE_DEFAULT_COLORS[shapeType] || '#fde68a',
+      created_by: this.state.currentUser ? this.state.currentUser.username : null,
+    };
+    const { data, error } = await supabaseClient.from('dashboard_shapes').insert(payload).select().single();
+    if (error) return alert('Could not add shape: ' + error.message);
+    this.state.dashboardShapes.push(data);
+    this.renderDashboardShapes();
+  },
+
+  async deleteDashboardShape(id) {
+    if (!confirm('Remove this shape?')) return;
+    this.state.dashboardShapes = this.state.dashboardShapes.filter(s => s.id !== id);
+    this.renderDashboardShapes();
+    const { error } = await supabaseClient.from('dashboard_shapes').delete().eq('id', id);
+    if (error) { alert('Could not delete: ' + error.message); this.loadDashboardShapes(); }
+  },
+
+  // Debounced per-shape save so dragging/resizing doesn't fire a write on every pixel.
+  _shapeSaveTimers: {},
+  saveDashboardShape(id, fields) {
+    clearTimeout(this._shapeSaveTimers[id]);
+    this._shapeSaveTimers[id] = setTimeout(async () => {
+      const { error } = await supabaseClient.from('dashboard_shapes').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) console.error(error);
+    }, 500);
+  },
+
+  buildShapeEl(shape) {
+    const layer = document.getElementById('dashboard-shapes-layer');
+    const el = document.createElement('div');
+    el.className = `dash-shape dash-shape-${shape.shape_type}`;
+    el.style.left = shape.x + '%';
+    el.style.top = shape.y + '%';
+    el.style.width = shape.w + '%';
+    el.style.height = shape.h + '%';
+    el.style.background = shape.color || '#fde68a';
+    el.dataset.shapeId = shape.id;
+
+    const text = document.createElement('div');
+    text.className = 'dash-shape-text';
+    text.contentEditable = 'false';
+    text.textContent = shape.text || '';
+    text.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      text.contentEditable = 'true';
+      el.classList.add('editing');
+      text.focus();
+      document.execCommand('selectAll', false, null);
+    });
+    text.addEventListener('blur', () => {
+      text.contentEditable = 'false';
+      el.classList.remove('editing');
+      const newText = text.textContent;
+      const local = this.state.dashboardShapes.find(s => s.id === shape.id);
+      if (local) local.text = newText;
+      this.saveDashboardShape(shape.id, { text: newText });
+    });
+    text.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); text.blur(); }
+    });
+    el.appendChild(text);
+
+    const controls = document.createElement('div');
+    controls.className = 'dash-shape-controls';
+    controls.setAttribute('data-capture-hide', 'true');
+
+    const colorBtn = document.createElement('label');
+    colorBtn.className = 'dash-shape-ctrl-btn dash-shape-color-btn';
+    colorBtn.title = 'Color';
+    colorBtn.innerHTML = '🎨';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = shape.color || '#fde68a';
+    colorInput.addEventListener('input', () => {
+      el.style.background = colorInput.value;
+      const local = this.state.dashboardShapes.find(s => s.id === shape.id);
+      if (local) local.color = colorInput.value;
+      this.saveDashboardShape(shape.id, { color: colorInput.value });
+    });
+    colorBtn.appendChild(colorInput);
+    controls.appendChild(colorBtn);
+
+    const delBtn = document.createElement('div');
+    delBtn.className = 'dash-shape-ctrl-btn dash-shape-del-btn';
+    delBtn.title = 'Delete';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', e => { e.stopPropagation(); this.deleteDashboardShape(shape.id); });
+    controls.appendChild(delBtn);
+    el.appendChild(controls);
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'dash-shape-resize-handle';
+    resizeHandle.setAttribute('data-capture-hide', 'true');
+    el.appendChild(resizeHandle);
+
+    // --- Drag to move ---
+    el.addEventListener('pointerdown', e => {
+      if (e.target === resizeHandle || e.target === text || controls.contains(e.target)) return;
+      e.preventDefault();
+      this._shapeGestureActive = true;
+      el.classList.add('dragging');
+      const layerRect = layer.getBoundingClientRect();
+      const startX = e.clientX, startY = e.clientY;
+      const startLeftPct = parseFloat(el.style.left), startTopPct = parseFloat(el.style.top);
+      const onMove = ev => {
+        const dxPct = ((ev.clientX - startX) / layerRect.width) * 100;
+        const dyPct = ((ev.clientY - startY) / layerRect.height) * 100;
+        const newLeft = Math.min(97, Math.max(0, startLeftPct + dxPct));
+        const newTop = Math.min(97, Math.max(0, startTopPct + dyPct));
+        el.style.left = newLeft + '%';
+        el.style.top = newTop + '%';
+      };
+      const onUp = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        el.classList.remove('dragging');
+        this._shapeGestureActive = false;
+        const x = parseFloat(el.style.left), y = parseFloat(el.style.top);
+        const local = this.state.dashboardShapes.find(s => s.id === shape.id);
+        if (local) { local.x = x; local.y = y; }
+        this.saveDashboardShape(shape.id, { x, y });
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+
+    // --- Drag handle to resize ---
+    resizeHandle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._shapeGestureActive = true;
+      const layerRect = layer.getBoundingClientRect();
+      const startX = e.clientX, startY = e.clientY;
+      const startWPct = parseFloat(el.style.width), startHPct = parseFloat(el.style.height);
+      const onMove = ev => {
+        const dwPct = ((ev.clientX - startX) / layerRect.width) * 100;
+        const dhPct = ((ev.clientY - startY) / layerRect.height) * 100;
+        el.style.width = Math.max(6, startWPct + dwPct) + '%';
+        el.style.height = Math.max(4, startHPct + dhPct) + '%';
+      };
+      const onUp = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        this._shapeGestureActive = false;
+        const w = parseFloat(el.style.width), h = parseFloat(el.style.height);
+        const local = this.state.dashboardShapes.find(s => s.id === shape.id);
+        if (local) { local.w = w; local.h = h; }
+        this.saveDashboardShape(shape.id, { w, h });
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+
+    return el;
+  },
   async addTruck() {
     if (!this.state.currentRddId) return alert('Please select an RDD Plan first.');
     const truck_type = document.getElementById('truck-type-input').value;
@@ -5609,6 +5843,13 @@ const App = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'personnel' }, () => this.loadPersonnel())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_bays' }, () => this.loadCustomBays())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_users' }, () => { if (this.hasPerm('tab_users')) this.loadAppUsers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dashboard_shapes' }, () => {
+        // Only refetch while the Dashboard tab is actually visible, and never
+        // while someone's mid-drag/mid-resize/mid-edit locally — a refetch
+        // mid-gesture would yank the shape back to its last-saved position.
+        if (this._shapeGestureActive) return;
+        if (!document.getElementById('tab-analytics').classList.contains('hidden')) this.loadDashboardShapes();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_settings' }, async () => {
         this.loadAlertSettings(); this.loadExcludedPersonnel(); this.loadBreakTimes(); this.renderAlertBanner();
         await this.loadStoppedDispatches();
