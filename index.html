@@ -174,12 +174,12 @@
 
   /* Floating Dashboard Shapes — freely-placed annotation shapes with editable text */
   #dashboard-shapes-layer{position:absolute;inset:0;z-index:25;pointer-events:none}
-  .dash-shape{position:absolute;pointer-events:auto;cursor:grab;display:flex;align-items:stretch;justify-content:stretch;box-shadow:0 2px 8px rgba(0,0,0,.18);border:2px solid rgba(0,0,0,.15);min-width:60px;min-height:36px}
+  .dash-shape{position:absolute;pointer-events:auto;cursor:grab;display:table;box-shadow:0 2px 8px rgba(0,0,0,.18);border:2px solid rgba(0,0,0,.15);min-width:60px;min-height:36px}
   .dash-shape.dragging{cursor:grabbing;opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.28)}
   .dash-shape.dash-shape-circle{border-radius:50%}
   .dash-shape.dash-shape-note{border-radius:8px;box-shadow:3px 4px 10px rgba(0,0,0,.3)}
   .dash-shape.dash-shape-rect{border-radius:10px}
-  .dash-shape-text{width:100%;flex:1;outline:none;overflow:auto;padding:6px 10px;font-size:13px;font-weight:600;line-height:1.3;text-align:center;color:#1e293b;word-break:break-word;display:flex;align-items:center;justify-content:center;cursor:text}
+  .dash-shape-text{width:100%;height:100%;display:table-cell;vertical-align:middle;outline:none;overflow:hidden;padding:6px 10px;font-size:13px;font-weight:600;line-height:1.3;text-align:center;color:#1e293b;word-break:break-word;cursor:text}
   .dash-shape.editing{cursor:text}
   .dark .dash-shape-text{color:#0f172a}
   .dash-shape-controls{position:absolute;top:-11px;right:-11px;display:none;gap:3px;z-index:2}
@@ -188,8 +188,6 @@
   .dash-shape-del-btn{background:#ef4444;color:#fff}
   .dash-shape-pin-btn{background:#fff;color:#64748b}
   .dash-shape-pin-btn.pinned{background:#0891b2;color:#fff}
-  .dash-shape-record-btn{background:#fff;color:#64748b}
-  .dash-shape-record-btn:hover{background:#fef3c7}
   .dash-shape-edit-btn{background:#fff;color:#64748b}
   .dash-shape-edit-btn.active{background:#0891b2;color:#fff}
   .dash-shape.pinned{border-color:rgba(8,145,178,.55)}
@@ -4288,36 +4286,46 @@ const App = {
     clearTimeout(this._shapeSaveTimers[id]);
     this._shapeSaveTimers[id] = setTimeout(async () => {
       const { error } = await supabaseClient.from('dashboard_shapes').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id);
-      if (error) console.error(error);
+      if (error) { console.error(error); return; }
+      this.autoSyncShapeRemark(id);
     }, 500);
   },
 
-  // Records a floating shape's text content as a Chart Remark, so it's
-  // permanently logged (chart_remarks table) and shows up under
-  // "CHART REMARKS LOGGED THIS RDD" in Graph Recap — same as remarks added
-  // via the "Add remark" button on the live chart. Shapes are visual/loose
-  // annotations that can be dragged/deleted anytime, so this gives ONY a
-  // one-click way to also lock a shape's note into the permanent RDD record.
-  // If the shape is pinned to the Activity Timeline chart, its horizontal
-  // position is used to guess which hour bucket it's calling out; otherwise
-  // it falls back to the current hour, same default the remark modal itself uses.
-  recordDashboardShapeAsRemark(id) {
+  // Automatically keeps a floating shape's text mirrored into chart_remarks
+  // (chart_remarks table) so it's permanently logged and shows up under
+  // "CHART REMARKS LOGGED THIS RDD" in Graph Recap — no manual step needed.
+  // Called from saveDashboardShape() after every successful shape save
+  // (text edits, drags, pin/unpin, resize), so the log always reflects the
+  // shape's current text and — if pinned to the Activity Timeline chart —
+  // current position. If the shape is pinned, its horizontal position picks
+  // which hour bucket it's calling out; otherwise it falls back to the
+  // current hour. Silent by design (no alerts/modals) since this now runs
+  // on every keystroke-blur/drag, not just an explicit user action.
+  // Note: deleting a shape does NOT delete its already-recorded remark —
+  // once logged it's part of the permanent RDD record.
+  async autoSyncShapeRemark(id) {
     const shape = this.state.dashboardShapes.find(s => s.id === id);
     if (!shape) return;
-    if (!this.state.currentRddId) { alert('Select/open an RDD first — remarks are logged per RDD.'); return; }
+    const rddId = this.state.currentRddId;
+    if (!rddId) return;
     const text = (shape.text || '').trim();
-    if (!text) { alert('This shape has no text to record yet.'); return; }
-    let bucket = null;
+    if (!text) return;
+    let bucket;
     if (shape.anchor_id === this.DASH_SHAPE_ANCHOR.id) {
       const centerXPct = shape.x + (shape.w / 2);
       bucket = Math.max(0, Math.min(23, Math.floor((centerXPct / 100) * 24)));
+    } else {
+      const h = new Date().getHours();
+      bucket = (h - 5 + 24) % 24;
     }
-    this.openChartRemarkModal(bucket, null);
-    // openChartRemarkModal pre-fills from any existing saved remark for that
-    // hour; overwrite with the shape's own text as the starting point — ONY
-    // can still edit/adjust before hitting Save.
-    const input = document.getElementById('chart-remark-input');
-    if (input) input.value = text.toUpperCase();
+    const remark = text.toUpperCase();
+    const { error } = await supabaseClient.from('chart_remarks')
+      .upsert({ rdd_id: rddId, bucket, remark, series_key: null }, { onConflict: 'rdd_id,bucket' })
+      .select();
+    if (error) { console.error('autoSyncShapeRemark error:', error); return; }
+    if (!this.state.chartRemarks[rddId]) this.state.chartRemarks[rddId] = {};
+    this.state.chartRemarks[rddId][bucket] = { text: remark, seriesKey: null };
+    this.positionChartRemark();
   },
 
   buildShapeEl(shape) {
@@ -4395,13 +4403,6 @@ const App = {
     pinBtn.textContent = '📌';
     pinBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleDashboardShapePin(shape.id); });
     controls.appendChild(pinBtn);
-
-    const recordBtn = document.createElement('div');
-    recordBtn.className = 'dash-shape-ctrl-btn dash-shape-record-btn';
-    recordBtn.title = 'Record this shape\'s text as a Chart Remark (logged for reporting)';
-    recordBtn.textContent = '📋';
-    recordBtn.addEventListener('click', e => { e.stopPropagation(); this.recordDashboardShapeAsRemark(shape.id); });
-    controls.appendChild(recordBtn);
 
     let editBtn = null;
     if (isPolygon) {
