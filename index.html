@@ -182,7 +182,7 @@
   .dash-shape-text{width:100%;flex:1;outline:none;overflow:auto;padding:6px 10px;font-size:13px;font-weight:600;line-height:1.3;text-align:center;color:#1e293b;word-break:break-word;display:flex;align-items:center;justify-content:center;cursor:text}
   .dash-shape.editing{cursor:text}
   .dark .dash-shape-text{color:#0f172a}
-  .dash-shape-controls{position:absolute;top:-11px;right:-11px;display:none;gap:3px;z-index:2}
+  .dash-shape-controls{position:absolute;top:-26px;right:-4px;display:none;gap:3px;z-index:2}
   .dash-shape:hover .dash-shape-controls{display:flex}
   .dash-shape-ctrl-btn{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);border:1px solid rgba(0,0,0,.15)}
   .dash-shape-del-btn{background:#ef4444;color:#fff}
@@ -199,14 +199,14 @@
   .dash-shape.dash-shape-polygon .dash-shape-text{position:relative;z-index:1;background:transparent}
   /* Per-point "bend" editing: small draggable handles at each vertex, shown
      only while a shape's edit-points mode is on. */
-  .dash-shape-vertex-layer{position:absolute;inset:0;display:none;pointer-events:none}
+  .dash-shape-vertex-layer{position:absolute;inset:0;display:none;pointer-events:none;z-index:5}
   .dash-shape.editing-points .dash-shape-vertex-layer{display:block}
   .dash-shape.editing-points .dash-shape-polygon-svg polygon{stroke-dasharray:4 3}
   .dash-shape-vertex{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#0891b2;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:move;pointer-events:auto}
   .dash-shape-vertex:hover{background:#0e7490;transform:scale(1.15)}
   .dash-shape-color-btn{background:#fff;padding:0;overflow:hidden}
   .dash-shape-color-btn input[type=color]{width:26px;height:26px;margin:-3px;cursor:pointer;border:none;padding:0}
-  .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none}
+  .dash-shape-resize-handle{position:absolute;width:13px;height:13px;right:-6px;bottom:-6px;border-radius:3px;background:#334155;border:2px solid #fff;cursor:nwse-resize;display:none;z-index:2}
   .dash-shape:hover .dash-shape-resize-handle{display:block}
   #dashboard-shapes-toolbar{position:relative}
   #dashboard-shapes-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:30;min-width:150px}
