@@ -332,6 +332,11 @@
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Delay / Gap Log</span>
       </button>
+      <!-- 8c. GWP Report -->
+      <button onclick="App.tryTab('tab-gwp-report','tab_gwp_report')" id="btn-tab-gwp-report" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>GWP Report</span>
+      </button>
       <!-- User Management -->
       <button onclick="App.tryTab('tab-users','tab_users')" id="btn-tab-users" class="nav-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 flex items-center gap-2.5">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/></svg>
@@ -1233,6 +1238,197 @@
       </div>
     </section>
 
+    <!-- ══ GWP REPORT TAB ══ -->
+    <section id="tab-gwp-report" class="tab-content hidden">
+      <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 class="text-2xl font-bold">🧹 GWP Report</h1>
+        <div class="flex border dark:border-slate-800 rounded-lg overflow-hidden" id="gwp-subtab-nav">
+          <button id="gwp-subtab-btn-daily" onclick="App.switchGwpSubTab('daily')" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-blue-600 text-white">Daily GWP Checklist</button>
+          <button id="gwp-subtab-btn-forklift" onclick="App.switchGwpSubTab('forklift')" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Forklift Checklist</button>
+          <button id="gwp-subtab-btn-report" onclick="App.switchGwpSubTab('report')" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">Compliance Report</button>
+          <button id="gwp-subtab-btn-admin" onclick="App.switchGwpSubTab('admin')" class="px-3 py-2 text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">⚙ Manage Criteria</button>
+        </div>
+      </div>
+
+      <!-- ── Daily GWP Checklist ── -->
+      <div id="gwp-panel-daily">
+        <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
+          <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+          <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
+            <span class="font-semibold">Daily Good Warehousing Practice (GWP) checklist</span> — completed once per zone per day by the assigned checker/team leader. Rate each item <b>✓ Compliant</b>, <b>✗ Non-Compliant</b>, or <b>N/A</b>, add remarks for any non-compliant item, then submit. Zones: BST1, BST2, CRS1, CRS2.
+          </div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="flex flex-wrap gap-3 items-center mb-4">
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400">Zone:</label>
+            <div class="flex border dark:border-slate-800 rounded-lg overflow-hidden" id="gwp-daily-zone-tabs"></div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-2">Date:</label>
+            <input type="date" id="gwp-daily-date" onchange="App.renderGwpDailyForm()" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            <button onclick="App.refreshGwpDailyForm()" class="px-3 py-2 text-xs font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800">↻ Refresh</button>
+          </div>
+          <div id="gwp-daily-status-badge" class="mb-3"></div>
+          <div id="gwp-daily-items" class="space-y-2"></div>
+          <div class="mt-4">
+            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Overall Remarks (optional)</label>
+            <textarea id="gwp-daily-overall-remarks" rows="2" placeholder="Any additional notes for this zone/date…" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm"></textarea>
+          </div>
+          <div class="mt-4 flex items-center gap-3">
+            <button onclick="App.saveGwpDailyEntry()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">💾 Save / Submit Checklist</button>
+            <span id="gwp-daily-save-msg" class="text-sm font-semibold"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Forklift Checklist ── -->
+      <div id="gwp-panel-forklift" class="hidden">
+        <div class="mb-4 p-3 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 flex items-start gap-3">
+          <span class="text-blue-600 dark:text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+          <div class="text-sm text-blue-800 dark:text-blue-200 flex-1">
+            <span class="font-semibold">Forklift Pre-Operation Checklist</span> — completed by the operator before every shift, per unit. Any <b>✗</b> item should be explained in Remarks. If the overall assessment is <b>FAIL</b>, tag out the unit and report to the Supervisor/Maintenance Team immediately.
+          </div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Forklift Unit No.</label>
+              <input type="text" id="gwp-fk-unit" placeholder="e.g. FL-01" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Zone / Area</label>
+              <select id="gwp-fk-zone" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+                <option value="BST1">BST1</option><option value="BST2">BST2</option><option value="CRS1">CRS1</option><option value="CRS2">CRS2</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Operator</label>
+              <input type="text" id="gwp-fk-operator" placeholder="Operator name" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Date</label>
+              <input type="date" id="gwp-fk-date" onchange="App.renderGwpForkliftForm()" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            </div>
+          </div>
+          <div class="flex justify-end mb-2">
+            <button onclick="App.loadGwpForkliftIntoForm()" class="px-3 py-1.5 text-xs font-semibold bg-slate-700 text-white rounded-lg hover:bg-slate-800">↻ Load Existing Entry for this Unit/Date</button>
+          </div>
+          <div id="gwp-fk-status-badge" class="mb-3"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b dark:border-slate-800">
+                  <th class="p-2">Inspection Item</th>
+                  <th class="p-2 text-center w-14">✓</th>
+                  <th class="p-2 text-center w-14">✗</th>
+                  <th class="p-2 text-center w-14">N/A</th>
+                  <th class="p-2">Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="gwp-fk-items"></tbody>
+            </table>
+          </div>
+          <div class="mt-5 p-4 rounded-xl border-2 border-dashed dark:border-slate-700">
+            <div class="font-bold text-sm mb-2">Overall Assessment</div>
+            <div class="flex gap-6">
+              <label class="flex items-center gap-2 text-sm"><input type="radio" name="gwp-fk-overall" value="pass" class="accent-emerald-600"> <span class="font-semibold text-emerald-600 dark:text-emerald-400">PASS — Forklift is safe to operate.</span></label>
+              <label class="flex items-center gap-2 text-sm"><input type="radio" name="gwp-fk-overall" value="fail" class="accent-red-600"> <span class="font-semibold text-red-600 dark:text-red-400">FAIL — Forklift is unsafe. Tag out and report immediately.</span></label>
+            </div>
+            <div id="gwp-fk-fail-warning" class="hidden mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-sm text-red-700 dark:text-red-300 font-semibold">
+              ⚠ Unit flagged FAIL — tag out the forklift now and notify the Supervisor/Maintenance Team before it is used.
+            </div>
+          </div>
+          <div class="mt-4 flex items-center gap-3">
+            <button onclick="App.saveGwpForkliftEntry()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">💾 Save / Submit Checklist</button>
+            <span id="gwp-fk-save-msg" class="text-sm font-semibold"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Compliance Report ── -->
+      <div id="gwp-panel-report" class="hidden">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4 mb-5">
+          <div class="flex flex-wrap gap-3 items-end mb-4">
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">From</label>
+              <input type="date" id="gwp-report-from" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">To</label>
+              <input type="date" id="gwp-report-to" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Zone</label>
+              <select id="gwp-report-zone" class="p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm">
+                <option value="all">All Zones</option>
+                <option value="BST1">BST1</option><option value="BST2">BST2</option><option value="CRS1">CRS1</option><option value="CRS2">CRS2</option>
+              </select>
+            </div>
+            <button onclick="App.renderGwpComplianceReport()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Run Report</button>
+            <button id="gwp-report-export-btn" onclick="App.exportGwpReportCSV()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">⬇ Export CSV</button>
+            <button id="gwp-report-print-btn" onclick="App.printGwpReport()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-800">🖨 Print / Save PDF</button>
+          </div>
+        </div>
+        <div id="gwp-report-summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 mb-5">
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Daily GWP Compliance Trend</h2>
+          <div style="height:260px"><canvas id="gwpTrendChart"></canvas></div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b dark:border-slate-800">
+                <th class="p-3">Date</th><th class="p-3 text-center">BST1</th><th class="p-3 text-center">BST2</th><th class="p-3 text-center">CRS1</th><th class="p-3 text-center">CRS2</th>
+              </tr>
+            </thead>
+            <tbody id="gwp-report-daily-tbody"></tbody>
+          </table>
+          <div id="gwp-report-daily-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No GWP checklist data for this selection.</div>
+        </div>
+        <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800">
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">🚜 Forklift Checklist Summary</h2>
+          <div id="gwp-fk-report-cards" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b dark:border-slate-800">
+                  <th class="p-3">Date</th><th class="p-3">Unit</th><th class="p-3">Zone</th><th class="p-3">Operator</th><th class="p-3 text-center">Assessment</th>
+                </tr>
+              </thead>
+              <tbody id="gwp-fk-report-tbody"></tbody>
+            </table>
+            <div id="gwp-fk-report-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No forklift checklist data for this selection.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Manage Criteria (admin) ── -->
+      <div id="gwp-panel-admin" class="hidden">
+        <div id="gwp-admin-noaccess" class="hidden p-8 text-center text-slate-400 dark:text-slate-500 text-sm">You do not have permission to manage GWP checklist criteria. Ask an admin to grant <b>Admin Override</b>.</div>
+        <div id="gwp-admin-content">
+          <div class="mb-4 p-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-200">
+            ⚠ Add or remove inspection items for the <b>Daily GWP Checklist</b> and the <b>Forklift Checklist</b>. Changes apply to every zone/unit going forward and are saved for all users.
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+              <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Daily GWP Checklist Items</h2>
+              <div id="gwp-admin-daily-list" class="space-y-2 mb-3"></div>
+              <div class="flex gap-2">
+                <input type="text" id="gwp-admin-daily-new" placeholder="New inspection item…" class="flex-1 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm">
+                <button onclick="App.adminAddGwpCriteriaItem('daily')" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">+ Add</button>
+              </div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 p-4">
+              <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Forklift Checklist Items</h2>
+              <div id="gwp-admin-forklift-list" class="space-y-2 mb-3 max-h-[420px] overflow-y-auto pr-1"></div>
+              <div class="flex gap-2">
+                <input type="text" id="gwp-admin-forklift-new" placeholder="New inspection item…" class="flex-1 p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm">
+                <button onclick="App.adminAddGwpCriteriaItem('forklift')" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ══ GAP LOG — FULL RECORD DETAIL MODAL ══ -->
     <div id="gap-record-detail-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-xl w-[600px] max-h-[90vh] overflow-y-auto border dark:border-slate-800">
@@ -1910,6 +2106,7 @@ const App = {
     tab_graph_recap: ['admin','outbound'],
     tab_assignment_history: ['admin','outbound'],
     tab_gap_log: ['admin','outbound'],
+    tab_gwp_report: ['admin','outbound'],
     tab_users: ['admin'],
   },
   ACTION_ROLE_DEFAULTS: {
@@ -2077,6 +2274,7 @@ const App = {
     if (tabId === 'tab-graph-recap') { this.initGraphRecapTab(); }
     if (tabId === 'tab-assignment-history') { this.renderAssignmentHistory(); }
     if (tabId === 'tab-gap-log') { this.initGapLogTab(); }
+    if (tabId === 'tab-gwp-report') { this.initGwpReportTab(); }
     this.closeMobileSidebarIfNeeded();
   },
   tryTab(tabId, permKey) {
@@ -5221,7 +5419,7 @@ const App = {
       tab_trucks: 'Trucks', tab_personnel: 'Personnel', tab_reports: 'Reports',
       tab_shift_compare: 'RDD Compare', tab_rdd_summary: 'RDD Summary',
       tab_graph_recap: 'Graph Recap',
-      tab_assignment_history: 'Assign. History', tab_gap_log: 'Gap Log', tab_users: 'User Mgmt',
+      tab_assignment_history: 'Assign. History', tab_gap_log: 'Gap Log', tab_gwp_report: 'GWP Report', tab_users: 'User Mgmt',
       edit_dispatch: 'Edit', delete_dispatch: 'Delete', admin_override: 'Admin Override',
       apply_wops_sync: 'WOPS Sync Apply', export_data: 'Export',
     };
@@ -5256,7 +5454,7 @@ const App = {
     }).join('') || '<tr><td colspan="12" class="p-6 text-center text-slate-400">No users yet.</td></tr>';
   },
   MILESTONE_PERM_KEYS: ['pick','pgi','invoiced','ds_printed','pulling','checking','loaded'],
-  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data','stop_dispatch'],
+  EXTRA_PERM_KEYS: ['tab_trucks','tab_personnel','tab_reports','tab_shift_compare','tab_rdd_summary','tab_graph_recap','tab_assignment_history','tab_gap_log','tab_gwp_report','edit_dispatch','delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data','stop_dispatch'],
   SENSITIVE_PERM_KEYS: ['delete_dispatch','admin_override','tab_users','apply_wops_sync','export_data','stop_dispatch'],
   openAddUserModal() {
     this.state.pendingUserId = null;
@@ -8049,6 +8247,464 @@ const App = {
     panel.classList.remove('hidden');
     panel.scrollIntoView({ behavior: 'smooth' });
   },
+
+  // ═══════════════════════════════════════════════════════
+  // GWP REPORT TAB
+  // Storage: reuses the existing generic key/value 'alert_settings' table
+  // (same pattern as gap_thresholds / excluded_personnel / break_times — no
+  // new Supabase tables/columns required).
+  //   key = 'gwp_criteria'                                  → { daily:[{id,text}], forklift:[{id,text}] }
+  //   key = 'gwp_entry::daily::{zone}::{date}'               → one Daily GWP checklist submission
+  //   key = 'gwp_entry::forklift::{unit(encoded)}::{date}'   → one Forklift pre-op checklist submission
+  // ═══════════════════════════════════════════════════════
+  GWP_ZONES: ['BST1', 'BST2', 'CRS1', 'CRS2'],
+  GWP_DEFAULT_DAILY_ITEMS: [
+    { id: 'pallet_arrangement', text: 'Pallet Arrangement' },
+    { id: 'cleanliness', text: 'Warehouse Cleanliness and Housekeeping' },
+    { id: 'repalletizing', text: 'Proper Repalletizing' },
+  ],
+  GWP_DEFAULT_FORKLIFT_ITEMS: [
+    { id: 'fk_clean_damage', text: 'Forklift is clean and free from visible damage' },
+    { id: 'fk_tires', text: 'Tires/Wheels are in good condition (no excessive wear or damage)' },
+    { id: 'fk_forks', text: 'Forks are not bent, cracked, or damaged' },
+    { id: 'fk_mast_chains', text: 'Mast and lift chains are properly lubricated and undamaged' },
+    { id: 'fk_hydraulic', text: 'Hydraulic hoses and cylinders have no leaks' },
+    { id: 'fk_engine_battery', text: 'Engine/Battery condition is normal' },
+    { id: 'fk_fuel_charge', text: 'Fuel/Battery charge level is sufficient for the shift' },
+    { id: 'fk_oil_levels', text: 'Engine oil, coolant, and hydraulic oil levels are adequate (if applicable)' },
+    { id: 'fk_parking_brake', text: 'Parking brake is functioning properly' },
+    { id: 'fk_service_brake', text: 'Service brake is functioning properly' },
+    { id: 'fk_steering', text: 'Steering operates smoothly' },
+    { id: 'fk_horn', text: 'Horn is operational' },
+    { id: 'fk_reverse_alarm', text: 'Reverse alarm is working' },
+    { id: 'fk_lights', text: 'Headlights, taillights, beacon, and warning lights are functional' },
+    { id: 'fk_seatbelt', text: 'Seat belt is in good condition and functional' },
+    { id: 'fk_overhead_guard', text: 'Overhead guard is secure and undamaged' },
+    { id: 'fk_mirrors', text: 'Mirrors provide clear visibility' },
+    { id: 'fk_fire_extinguisher', text: 'Fire extinguisher is available and within inspection date (if required)' },
+    { id: 'fk_startup_noise', text: 'No unusual noise, vibration, or warning indicators during start-up' },
+    { id: 'fk_functions', text: 'Forward, reverse, lifting, lowering, tilt, and side-shift functions operate normally' },
+  ],
+  gwpTodayISO() { return new Date().toISOString().slice(0, 10); },
+  gwpDailyKey(zone, date) { return `gwp_entry::daily::${zone}::${date}`; },
+  gwpForkliftKey(unit, date) { return `gwp_entry::forklift::${encodeURIComponent(unit)}::${date}`; },
+  gwpCanManageCriteria() { return this.hasPerm('admin_override'); },
+
+  async initGwpReportTab() {
+    const dEl = document.getElementById('gwp-daily-date');
+    if (dEl && !dEl.value) dEl.value = this.gwpTodayISO();
+    const fkEl = document.getElementById('gwp-fk-date');
+    if (fkEl && !fkEl.value) fkEl.value = this.gwpTodayISO();
+    const rf = document.getElementById('gwp-report-from');
+    const rt = document.getElementById('gwp-report-to');
+    if (rt && !rt.value) rt.value = this.gwpTodayISO();
+    if (rf && !rf.value) { const d = new Date(); d.setDate(d.getDate() - 6); rf.value = d.toISOString().slice(0, 10); }
+    if (!this.state.gwpDailyZone) this.state.gwpDailyZone = this.GWP_ZONES[0];
+    this.renderGwpDailyZoneTabs();
+    if (!this.state.gwpCriteria) await this.loadGwpCriteria();
+    this.switchGwpSubTab(this.state.gwpActiveSubTab || 'daily');
+  },
+
+  switchGwpSubTab(tab) {
+    this.state.gwpActiveSubTab = tab;
+    ['daily', 'forklift', 'report', 'admin'].forEach(t => {
+      const panel = document.getElementById(`gwp-panel-${t}`);
+      const btn = document.getElementById(`gwp-subtab-btn-${t}`);
+      if (panel) panel.classList.toggle('hidden', t !== tab);
+      if (btn) {
+        btn.classList.toggle('bg-blue-600', t === tab);
+        btn.classList.toggle('text-white', t === tab);
+        btn.classList.toggle('bg-white', t !== tab);
+        btn.classList.toggle('dark:bg-slate-900', t !== tab);
+        btn.classList.toggle('text-slate-600', t !== tab);
+        btn.classList.toggle('dark:text-slate-300', t !== tab);
+      }
+    });
+    if (tab === 'daily') this.renderGwpDailyForm();
+    if (tab === 'forklift') this.renderGwpForkliftForm();
+    if (tab === 'report') this.renderGwpComplianceReport();
+    if (tab === 'admin') this.renderGwpAdminPanel();
+  },
+
+  async loadGwpCriteria() {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', 'gwp_criteria').maybeSingle();
+      if (error) { console.error('loadGwpCriteria error:', error); }
+      let parsed = null;
+      if (data && data.template) { try { parsed = JSON.parse(data.template); } catch { parsed = null; } }
+      this.state.gwpCriteria = {
+        daily: (parsed && Array.isArray(parsed.daily) && parsed.daily.length) ? parsed.daily : this.GWP_DEFAULT_DAILY_ITEMS.slice(),
+        forklift: (parsed && Array.isArray(parsed.forklift) && parsed.forklift.length) ? parsed.forklift : this.GWP_DEFAULT_FORKLIFT_ITEMS.slice(),
+      };
+    } catch (e) {
+      console.error('loadGwpCriteria error:', e);
+      this.state.gwpCriteria = { daily: this.GWP_DEFAULT_DAILY_ITEMS.slice(), forklift: this.GWP_DEFAULT_FORKLIFT_ITEMS.slice() };
+    }
+  },
+  async saveGwpCriteria() {
+    const payload = { key: 'gwp_criteria', enabled: true, template: JSON.stringify(this.state.gwpCriteria), require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    if (error) { console.error(error); alert('Could not save checklist criteria. Please try again.'); }
+  },
+  async adminAddGwpCriteriaItem(type) {
+    if (!this.gwpCanManageCriteria()) return;
+    const input = document.getElementById(`gwp-admin-${type}-new`);
+    const text = (input?.value || '').trim();
+    if (!text) return;
+    if (!this.state.gwpCriteria) await this.loadGwpCriteria();
+    const id = `custom_${Date.now()}`;
+    this.state.gwpCriteria[type].push({ id, text });
+    await this.saveGwpCriteria();
+    if (input) input.value = '';
+    this.renderGwpAdminPanel();
+  },
+  async adminDeleteGwpCriteriaItem(type, itemId) {
+    if (!this.gwpCanManageCriteria()) return;
+    if (!confirm('Remove this inspection item? Existing submitted checklists keep their saved data, but the item will no longer appear on new checklists.')) return;
+    this.state.gwpCriteria[type] = this.state.gwpCriteria[type].filter(i => i.id !== itemId);
+    await this.saveGwpCriteria();
+    this.renderGwpAdminPanel();
+  },
+  async renderGwpAdminPanel() {
+    const noAccess = document.getElementById('gwp-admin-noaccess');
+    const content = document.getElementById('gwp-admin-content');
+    if (!this.gwpCanManageCriteria()) {
+      if (noAccess) noAccess.classList.remove('hidden');
+      if (content) content.classList.add('hidden');
+      return;
+    }
+    if (noAccess) noAccess.classList.add('hidden');
+    if (content) content.classList.remove('hidden');
+    if (!this.state.gwpCriteria) await this.loadGwpCriteria();
+    const renderList = (type) => {
+      const el = document.getElementById(`gwp-admin-${type}-list`);
+      if (!el) return;
+      const items = this.state.gwpCriteria[type] || [];
+      el.innerHTML = items.map(item => `
+        <div class="flex items-center justify-between gap-2 p-2 border dark:border-slate-700 rounded-lg">
+          <span class="text-sm">${this.escapeHtml(item.text)}</span>
+          <button onclick="App.adminDeleteGwpCriteriaItem('${type}','${item.id}')" class="text-red-600 dark:text-red-400 hover:text-red-800 text-xs font-semibold shrink-0">Delete</button>
+        </div>`).join('') || '<div class="text-sm text-slate-400 italic p-2">No items yet.</div>';
+    };
+    renderList('daily');
+    renderList('forklift');
+  },
+
+  renderGwpDailyZoneTabs() {
+    const el = document.getElementById('gwp-daily-zone-tabs');
+    if (!el) return;
+    el.innerHTML = this.GWP_ZONES.map(z => {
+      const active = z === this.state.gwpDailyZone;
+      return `<button onclick="App.setGwpDailyZone('${z}')" class="px-3 py-2 text-xs sm:text-sm font-semibold ${active ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}">${z}</button>`;
+    }).join('');
+  },
+  setGwpDailyZone(zone) {
+    this.state.gwpDailyZone = zone;
+    this.renderGwpDailyZoneTabs();
+    this.renderGwpDailyForm();
+  },
+  refreshGwpDailyForm() { this.renderGwpDailyForm(); },
+  async loadGwpDailyEntry(zone, date) {
+    try {
+      const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', this.gwpDailyKey(zone, date)).maybeSingle();
+      if (error) { console.error('loadGwpDailyEntry error:', error); return null; }
+      if (!data || !data.template) return null;
+      try { return JSON.parse(data.template); } catch { return null; }
+    } catch (e) { console.error('loadGwpDailyEntry error:', e); return null; }
+  },
+  async renderGwpDailyForm() {
+    if (!this.state.gwpCriteria) await this.loadGwpCriteria();
+    const zone = this.state.gwpDailyZone || this.GWP_ZONES[0];
+    const date = document.getElementById('gwp-daily-date')?.value || this.gwpTodayISO();
+    const itemsWrap = document.getElementById('gwp-daily-items');
+    const badge = document.getElementById('gwp-daily-status-badge');
+    const saveMsg = document.getElementById('gwp-daily-save-msg');
+    if (saveMsg) saveMsg.textContent = '';
+    if (!itemsWrap) return;
+    itemsWrap.innerHTML = '<div class="text-sm text-slate-400 p-3">Loading…</div>';
+    const existing = await this.loadGwpDailyEntry(zone, date);
+    const savedItems = {};
+    (existing?.items || []).forEach(i => { savedItems[i.id] = i; });
+    const items = this.state.gwpCriteria.daily;
+    itemsWrap.innerHTML = items.map(item => {
+      const saved = savedItems[item.id] || {};
+      const opt = (val, label, accent) => `<label class="flex items-center gap-1.5 text-sm"><input type="radio" name="gwp-status-${item.id}" value="${val}" ${saved.status === val ? 'checked' : ''} class="accent-${accent}"> ${label}</label>`;
+      return `<div class="p-3 border dark:border-slate-700 rounded-lg" data-item-id="${item.id}">
+        <div class="font-semibold text-sm mb-2">${this.escapeHtml(item.text)}</div>
+        <div class="flex gap-4 items-center flex-wrap">
+          ${opt('pass', '✓ Compliant', 'emerald-600')}
+          ${opt('fail', '✗ Non-Compliant', 'red-600')}
+          ${opt('na', 'N/A', 'slate-500')}
+          <input type="text" placeholder="Remarks" id="gwp-remarks-${item.id}" value="${this.escapeHtml(saved.remarks || '')}" class="flex-1 min-w-[160px] p-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white">
+        </div>
+      </div>`;
+    }).join('') || '<div class="text-sm text-slate-400 italic p-3">No checklist items configured yet — ask an admin to add some under Manage Criteria.</div>';
+    const remarksEl = document.getElementById('gwp-daily-overall-remarks');
+    if (remarksEl) remarksEl.value = existing?.overallRemarks || '';
+    if (badge) {
+      badge.innerHTML = existing
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">✓ Already submitted by ${this.escapeHtml(existing.submittedBy || '—')} at ${existing.submittedAt ? new Date(existing.submittedAt).toLocaleString() : '—'} — saving again will update it</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⏳ Not yet submitted for ${zone} · ${date}</span>`;
+    }
+  },
+  async saveGwpDailyEntry() {
+    const zone = this.state.gwpDailyZone || this.GWP_ZONES[0];
+    const date = document.getElementById('gwp-daily-date')?.value || this.gwpTodayISO();
+    const items = this.state.gwpCriteria?.daily || [];
+    if (!items.length) return alert('No checklist items configured. Ask an admin to add some under Manage Criteria.');
+    const entryItems = items.map(item => {
+      const checked = document.querySelector(`input[name="gwp-status-${item.id}"]:checked`);
+      const remarks = document.getElementById(`gwp-remarks-${item.id}`)?.value || '';
+      return { id: item.id, text: item.text, status: checked ? checked.value : '', remarks };
+    });
+    if (entryItems.some(i => !i.status)) return alert('Please rate every item (✓ / ✗ / N/A) before submitting.');
+    const entry = {
+      zone, date, items: entryItems,
+      overallRemarks: document.getElementById('gwp-daily-overall-remarks')?.value || '',
+      submittedBy: this.state.currentUser?.username || 'unknown',
+      submittedAt: new Date().toISOString(),
+    };
+    const payload = { key: this.gwpDailyKey(zone, date), enabled: true, template: JSON.stringify(entry), require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    const msg = document.getElementById('gwp-daily-save-msg');
+    if (error) { console.error(error); if (msg) { msg.textContent = '✗ Save failed — try again.'; msg.className = 'text-sm font-semibold text-red-600'; } return; }
+    if (msg) { msg.textContent = '✓ Saved!'; msg.className = 'text-sm font-semibold text-emerald-600'; }
+    this.renderGwpDailyForm();
+  },
+
+  renderGwpForkliftForm() {
+    if (!this.state.gwpCriteria) { this.loadGwpCriteria().then(() => this.renderGwpForkliftForm()); return; }
+    const tbody = document.getElementById('gwp-fk-items');
+    if (!tbody) return;
+    const items = this.state.gwpCriteria.forklift;
+    tbody.innerHTML = items.map(item => `
+      <tr class="border-b dark:border-slate-800" data-item-id="${item.id}">
+        <td class="p-2">${this.escapeHtml(item.text)}</td>
+        <td class="p-2 text-center"><input type="radio" name="gwp-fk-status-${item.id}" value="pass" class="accent-emerald-600"></td>
+        <td class="p-2 text-center"><input type="radio" name="gwp-fk-status-${item.id}" value="fail" class="accent-red-600"></td>
+        <td class="p-2 text-center"><input type="radio" name="gwp-fk-status-${item.id}" value="na" class="accent-slate-500"></td>
+        <td class="p-2"><input type="text" id="gwp-fk-remarks-${item.id}" placeholder="Remarks" class="w-full p-1.5 border rounded-lg text-sm bg-white dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white"></td>
+      </tr>`).join('') || '<tr><td colspan="5" class="p-3 text-sm text-slate-400 italic">No checklist items configured yet — ask an admin to add some under Manage Criteria.</td></tr>';
+    document.querySelectorAll('input[name="gwp-fk-overall"]').forEach(r => { r.checked = false; });
+    document.getElementById('gwp-fk-fail-warning')?.classList.add('hidden');
+    const badge = document.getElementById('gwp-fk-status-badge');
+    if (badge) badge.innerHTML = '';
+    const msg = document.getElementById('gwp-fk-save-msg');
+    if (msg) msg.textContent = '';
+    document.querySelectorAll('input[name="gwp-fk-overall"]').forEach(r => {
+      r.onchange = () => document.getElementById('gwp-fk-fail-warning')?.classList.toggle('hidden', r.value !== 'fail' || !r.checked);
+    });
+  },
+  async loadGwpForkliftIntoForm() {
+    const unit = (document.getElementById('gwp-fk-unit')?.value || '').trim();
+    const date = document.getElementById('gwp-fk-date')?.value || this.gwpTodayISO();
+    if (!unit) return alert('Enter a Forklift Unit No. first.');
+    const { data, error } = await supabaseClient.from('alert_settings').select('*').eq('key', this.gwpForkliftKey(unit, date)).maybeSingle();
+    if (error) { console.error(error); return; }
+    const badge = document.getElementById('gwp-fk-status-badge');
+    if (!data || !data.template) {
+      if (badge) badge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">⏳ No checklist found yet for ${this.escapeHtml(unit)} · ${date} — fill it in below</span>`;
+      return;
+    }
+    let entry; try { entry = JSON.parse(data.template); } catch { return; }
+    document.getElementById('gwp-fk-zone').value = entry.zone || 'BST1';
+    document.getElementById('gwp-fk-operator').value = entry.operator || '';
+    (entry.items || []).forEach(i => {
+      const r = document.querySelector(`input[name="gwp-fk-status-${i.id}"][value="${i.status}"]`);
+      if (r) r.checked = true;
+      const rem = document.getElementById(`gwp-fk-remarks-${i.id}`);
+      if (rem) rem.value = i.remarks || '';
+    });
+    if (entry.overall) {
+      const r = document.querySelector(`input[name="gwp-fk-overall"][value="${entry.overall}"]`);
+      if (r) { r.checked = true; document.getElementById('gwp-fk-fail-warning')?.classList.toggle('hidden', entry.overall !== 'fail'); }
+    }
+    if (badge) badge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">✓ Loaded existing checklist submitted by ${this.escapeHtml(entry.submittedBy || '—')} at ${entry.submittedAt ? new Date(entry.submittedAt).toLocaleString() : '—'}</span>`;
+  },
+  async saveGwpForkliftEntry() {
+    const unit = (document.getElementById('gwp-fk-unit')?.value || '').trim();
+    const zone = document.getElementById('gwp-fk-zone')?.value || 'BST1';
+    const operator = (document.getElementById('gwp-fk-operator')?.value || '').trim();
+    const date = document.getElementById('gwp-fk-date')?.value || this.gwpTodayISO();
+    if (!unit) return alert('Enter a Forklift Unit No.');
+    const items = this.state.gwpCriteria?.forklift || [];
+    const entryItems = items.map(item => {
+      const checked = document.querySelector(`input[name="gwp-fk-status-${item.id}"]:checked`);
+      const remarks = document.getElementById(`gwp-fk-remarks-${item.id}`)?.value || '';
+      return { id: item.id, text: item.text, status: checked ? checked.value : '', remarks };
+    });
+    const overallEl = document.querySelector('input[name="gwp-fk-overall"]:checked');
+    if (entryItems.some(i => !i.status) || !overallEl) return alert('Please rate every item and select an Overall Assessment (PASS/FAIL) before submitting.');
+    const entry = {
+      unit, zone, operator, date, items: entryItems, overall: overallEl.value,
+      submittedBy: this.state.currentUser?.username || 'unknown',
+      submittedAt: new Date().toISOString(),
+    };
+    const payload = { key: this.gwpForkliftKey(unit, date), enabled: true, template: JSON.stringify(entry), require_response: false };
+    const { error } = await supabaseClient.from('alert_settings').upsert(payload, { onConflict: 'key' }).select();
+    const msg = document.getElementById('gwp-fk-save-msg');
+    if (error) { console.error(error); if (msg) { msg.textContent = '✗ Save failed — try again.'; msg.className = 'text-sm font-semibold text-red-600'; } return; }
+    if (msg) { msg.textContent = '✓ Saved!' + (entry.overall === 'fail' ? ' ⚠ Unit tagged FAIL — notify Supervisor/Maintenance.' : ''); msg.className = `text-sm font-semibold ${entry.overall === 'fail' ? 'text-red-600' : 'text-emerald-600'}`; }
+  },
+
+  async fetchGwpEntriesByPrefix(prefix) {
+    const { data, error } = await supabaseClient.from('alert_settings').select('*').like('key', `${prefix}%`);
+    if (error) { console.error(error); return []; }
+    return (data || []).map(row => { try { return JSON.parse(row.template); } catch { return null; } }).filter(Boolean);
+  },
+  gwpDateInRange(dateStr, from, to) { return (!from || dateStr >= from) && (!to || dateStr <= to); },
+  async renderGwpComplianceReport() {
+    const from = document.getElementById('gwp-report-from')?.value || '';
+    const to = document.getElementById('gwp-report-to')?.value || '';
+    const zoneFilter = document.getElementById('gwp-report-zone')?.value || 'all';
+
+    // ── Daily GWP entries ──
+    let dailyEntries = await this.fetchGwpEntriesByPrefix('gwp_entry::daily::');
+    dailyEntries = dailyEntries.filter(e => this.gwpDateInRange(e.date, from, to) && (zoneFilter === 'all' || e.zone === zoneFilter));
+    this.state.gwpReportDailyEntries = dailyEntries;
+
+    const scoreOf = (entry) => {
+      const rated = (entry.items || []).filter(i => i.status === 'pass' || i.status === 'fail');
+      if (!rated.length) return null;
+      const passed = rated.filter(i => i.status === 'pass').length;
+      return Math.round((passed / rated.length) * 100);
+    };
+    // date -> zone -> entry
+    const byDateZone = {};
+    dailyEntries.forEach(e => {
+      byDateZone[e.date] = byDateZone[e.date] || {};
+      byDateZone[e.date][e.zone] = e;
+    });
+    const dates = Object.keys(byDateZone).sort();
+    const zonesToShow = zoneFilter === 'all' ? this.GWP_ZONES : [zoneFilter];
+
+    // Summary cards
+    const totalExpected = dates.length * zonesToShow.length;
+    const totalSubmitted = dates.reduce((sum, d) => sum + zonesToShow.filter(z => byDateZone[d][z]).length, 0);
+    const scores = [];
+    dates.forEach(d => zonesToShow.forEach(z => { const e = byDateZone[d][z]; if (e) { const s = scoreOf(e); if (s !== null) scores.push(s); } }));
+    const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+    const cardsEl = document.getElementById('gwp-report-summary-cards');
+    if (cardsEl) {
+      const card = (label, value, color) => `<div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800">
+        <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1">${label}</div>
+        <div class="text-2xl font-bold" style="color:${color}">${value}</div>
+      </div>`;
+      cardsEl.innerHTML =
+        card('Checklists Submitted', `${totalSubmitted} / ${totalExpected || 0}`, '#2563eb') +
+        card('Avg. Compliance Score', avgScore === null ? '—' : `${avgScore}%`, avgScore === null ? '#64748b' : (avgScore >= 90 ? '#059669' : avgScore >= 70 ? '#d97706' : '#dc2626')) +
+        card('Days in Range', dates.length, '#7c3aed') +
+        card('Missing Submissions', Math.max(totalExpected - totalSubmitted, 0), '#dc2626');
+    }
+
+    // Trend chart — average score per date across shown zones
+    const trendData = dates.map(d => {
+      const dayScores = zonesToShow.map(z => byDateZone[d][z] ? scoreOf(byDateZone[d][z]) : null).filter(v => v !== null);
+      return dayScores.length ? Math.round(dayScores.reduce((a, b) => a + b, 0) / dayScores.length) : null;
+    });
+    this.renderGwpTrendChart(dates, trendData);
+
+    // Daily table (BST1/BST2/CRS1/CRS2 columns always shown for orientation)
+    const tbody = document.getElementById('gwp-report-daily-tbody');
+    const emptyEl = document.getElementById('gwp-report-daily-empty');
+    if (tbody) {
+      const cellFor = (d, z) => {
+        if (zoneFilter !== 'all' && z !== zoneFilter) return `<td class="p-3 text-center text-slate-300 dark:text-slate-600">—</td>`;
+        const e = byDateZone[d]?.[z];
+        if (!e) return `<td class="p-3 text-center"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Missing</span></td>`;
+        const s = scoreOf(e);
+        const color = s === null ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : (s >= 90 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : s >= 70 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300');
+        return `<td class="p-3 text-center"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold ${color}" title="Submitted by ${this.escapeHtml(e.submittedBy || '—')}">${s === null ? 'N/A' : s + '%'}</span></td>`;
+      };
+      tbody.innerHTML = dates.slice().reverse().map(d => `<tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b dark:border-slate-800">
+        <td class="p-3 font-semibold">${d}</td>${this.GWP_ZONES.map(z => cellFor(d, z)).join('')}
+      </tr>`).join('');
+      if (emptyEl) emptyEl.classList.toggle('hidden', dates.length > 0);
+    }
+
+    // ── Forklift entries ──
+    let fkEntries = await this.fetchGwpEntriesByPrefix('gwp_entry::forklift::');
+    fkEntries = fkEntries.filter(e => this.gwpDateInRange(e.date, from, to) && (zoneFilter === 'all' || e.zone === zoneFilter));
+    this.state.gwpReportForkliftEntries = fkEntries;
+    const fkPass = fkEntries.filter(e => e.overall === 'pass').length;
+    const fkFail = fkEntries.filter(e => e.overall === 'fail').length;
+    const fkCardsEl = document.getElementById('gwp-fk-report-cards');
+    if (fkCardsEl) {
+      const card = (label, value, color) => `<div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border dark:border-slate-700">
+        <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1">${label}</div>
+        <div class="text-xl font-bold" style="color:${color}">${value}</div>
+      </div>`;
+      fkCardsEl.innerHTML = card('Checklists Submitted', fkEntries.length, '#2563eb') + card('PASS', fkPass, '#059669') + card('FAIL — Needs Attention', fkFail, '#dc2626');
+    }
+    const fkTbody = document.getElementById('gwp-fk-report-tbody');
+    const fkEmptyEl = document.getElementById('gwp-fk-report-empty');
+    if (fkTbody) {
+      fkTbody.innerHTML = fkEntries.slice().sort((a, b) => (b.date + (b.submittedAt || '')).localeCompare(a.date + (a.submittedAt || ''))).map(e => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 border-b dark:border-slate-800">
+          <td class="p-3">${e.date}</td>
+          <td class="p-3 font-semibold">${this.escapeHtml(e.unit || '—')}</td>
+          <td class="p-3">${this.escapeHtml(e.zone || '—')}</td>
+          <td class="p-3">${this.escapeHtml(e.operator || '—')}</td>
+          <td class="p-3 text-center"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold ${e.overall === 'pass' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}">${(e.overall || '').toUpperCase()}</span></td>
+        </tr>`).join('');
+      if (fkEmptyEl) fkEmptyEl.classList.toggle('hidden', fkEntries.length > 0);
+    }
+  },
+  renderGwpTrendChart(labels, data) {
+    const canvas = document.getElementById('gwpTrendChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
+    if (this.state.gwpTrendChartInstance) this.state.gwpTrendChartInstance.destroy();
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#f1f5f9' : '#334155';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    this.state.gwpTrendChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Avg. Compliance %',
+          data,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.15)',
+          spanGaps: true,
+          tension: 0.3,
+          fill: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: textColor } } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { color: textColor, callback: v => v + '%' }, grid: { color: gridColor } },
+          x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        },
+      },
+    });
+  },
+  exportGwpReportCSV() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
+    const rows = [['Date', 'Zone', 'Item', 'Status', 'Remarks', 'Submitted By', 'Submitted At']];
+    (this.state.gwpReportDailyEntries || []).forEach(e => {
+      (e.items || []).forEach(i => rows.push([e.date, e.zone, i.text, i.status, i.remarks || '', e.submittedBy || '', e.submittedAt || '']));
+    });
+    rows.push([]);
+    rows.push(['Forklift Unit', 'Zone', 'Date', 'Operator', 'Item', 'Status', 'Remarks', 'Overall', 'Submitted By', 'Submitted At']);
+    (this.state.gwpReportForkliftEntries || []).forEach(e => {
+      (e.items || []).forEach(i => rows.push([e.unit, e.zone, e.date, e.operator || '', i.text, i.status, i.remarks || '', e.overall || '', e.submittedBy || '', e.submittedAt || '']));
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `GWP_Report_${this.gwpTodayISO()}.csv`;
+    link.click();
+  },
+  printGwpReport() {
+    if (!this.hasPerm('export_data')) return alert('You do not have permission to print/export. Ask an admin to grant it in User Management.');
+    window.print();
+  },
 };
 // Auto-login from remembered session on page load
 if (!App.checkRememberedSession()) {
@@ -8123,6 +8779,7 @@ window.addEventListener('resize', () => {
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_graph_recap" class="accent-blue-600"> Graph Recap</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_assignment_history" class="accent-blue-600"> Assignment History</label>
         <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_gap_log" class="accent-blue-600"> Delay / Gap Log</label>
+        <label class="flex items-center gap-2 text-sm px-2 py-1.5 border dark:border-slate-700 rounded-lg"><input type="checkbox" id="um-perm-tab_gwp_report" class="accent-blue-600"> GWP Report</label>
       </div>
     </div>
     <div id="um-sensitive-perms" class="mb-4">
