@@ -1369,8 +1369,11 @@
         </div>
         <div id="gwp-report-summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
         <div class="bg-white dark:bg-slate-900 p-4 rounded-xl shadow border dark:border-slate-800 mb-5">
-          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Daily GWP Compliance Trend</h2>
-          <div style="height:260px"><canvas id="gwpTrendChart"></canvas></div>
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-4">Zone Compliance Overview</h2>
+          <div id="gwp-zone-gauges" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+          <h2 class="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide mb-3">Daily Compliance Heatmap</h2>
+          <div id="gwp-heatmap" class="overflow-x-auto pb-1"></div>
+          <div id="gwp-heatmap-empty" class="p-8 text-center text-slate-400 dark:text-slate-500 text-sm hidden">No GWP checklist data for this selection.</div>
         </div>
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow border dark:border-slate-800 overflow-x-auto mb-5">
           <table class="w-full text-sm">
@@ -8597,12 +8600,8 @@ const App = {
         card('Missing Submissions', Math.max(totalExpected - totalSubmitted, 0), '#dc2626');
     }
 
-    // Trend chart — average score per date across shown zones
-    const trendData = dates.map(d => {
-      const dayScores = zonesToShow.map(z => byDateZone[d][z] ? scoreOf(byDateZone[d][z]) : null).filter(v => v !== null);
-      return dayScores.length ? Math.round(dayScores.reduce((a, b) => a + b, 0) / dayScores.length) : null;
-    });
-    this.renderGwpTrendChart(dates, trendData);
+    // Zone gauges + calendar heatmap
+    this.renderGwpComplianceVisuals(dates, byDateZone, zonesToShow, scoreOf, from, to);
 
     // Daily table (BST1/BST2/CRS1/CRS2 columns always shown for orientation)
     const tbody = document.getElementById('gwp-report-daily-tbody');
@@ -8650,38 +8649,110 @@ const App = {
       if (fkEmptyEl) fkEmptyEl.classList.toggle('hidden', fkEntries.length > 0);
     }
   },
-  renderGwpTrendChart(labels, data) {
-    const canvas = document.getElementById('gwpTrendChart');
-    if (!canvas || typeof Chart === 'undefined') return;
-    const ctx = canvas.getContext('2d');
-    if (this.state.gwpTrendChartInstance) this.state.gwpTrendChartInstance.destroy();
+  gwpScoreColor(score) {
+    if (score === null || score === undefined) return { fg: '#94a3b8', bg: '#e2e8f0', bgDark: '#334155', label: 'No data' };
+    if (score >= 90) return { fg: '#059669', bg: '#a7f3d0', bgDark: '#065f46', label: 'Good' };
+    if (score >= 70) return { fg: '#d97706', bg: '#fde68a', bgDark: '#78350f', label: 'Fair' };
+    return { fg: '#dc2626', bg: '#fecaca', bgDark: '#7f1d1d', label: 'Poor' };
+  },
+  renderGwpComplianceVisuals(dates, byDateZone, zonesToShow, scoreOf, from, to) {
     const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#f1f5f9' : '#334155';
-    const gridColor = isDark ? '#334155' : '#e2e8f0';
-    this.state.gwpTrendChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Avg. Compliance %',
-          data,
-          borderColor: '#2563eb',
-          backgroundColor: 'rgba(37,99,235,0.15)',
-          spanGaps: true,
-          tension: 0.3,
-          fill: true,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: textColor } } },
-        scales: {
-          y: { min: 0, max: 100, ticks: { color: textColor, callback: v => v + '%' }, grid: { color: gridColor } },
-          x: { ticks: { color: textColor }, grid: { color: gridColor } },
-        },
-      },
-    });
+
+    // ── Zone gauges: average compliance % per zone across the range ──
+    const gaugesEl = document.getElementById('gwp-zone-gauges');
+    if (gaugesEl) {
+      gaugesEl.innerHTML = zonesToShow.map(z => {
+        const scores = dates.map(d => byDateZone[d]?.[z] ? scoreOf(byDateZone[d][z]) : null).filter(v => v !== null);
+        const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+        const c = this.gwpScoreColor(avg);
+        const pct = avg === null ? 0 : avg;
+        const track = isDark ? '#1e293b' : '#e2e8f0';
+        return `<div class="flex flex-col items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border dark:border-slate-700">
+          <div class="relative w-20 h-20 rounded-full flex items-center justify-center" style="background: conic-gradient(${c.fg} ${pct * 3.6}deg, ${track} ${pct * 3.6}deg 360deg);">
+            <div class="absolute inset-[6px] rounded-full bg-white dark:bg-slate-900 flex items-center justify-center">
+              <span class="text-sm font-bold" style="color:${c.fg}">${avg === null ? '—' : avg + '%'}</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-sm font-bold text-slate-700 dark:text-slate-200">${z}</div>
+            <div class="text-[11px] font-semibold uppercase tracking-wide" style="color:${c.fg}">${c.label}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Calendar heatmap: one cell per day, colored by avg score across shown zones ──
+    const heatmapEl = document.getElementById('gwp-heatmap');
+    const heatmapEmptyEl = document.getElementById('gwp-heatmap-empty');
+    if (!heatmapEl) return;
+    if (!dates.length) {
+      heatmapEl.innerHTML = '';
+      if (heatmapEmptyEl) heatmapEmptyEl.classList.remove('hidden');
+      return;
+    }
+    if (heatmapEmptyEl) heatmapEmptyEl.classList.add('hidden');
+
+    const rangeStart = from || dates[0];
+    const rangeEnd = to || dates[dates.length - 1];
+    const startD = new Date(rangeStart + 'T00:00:00');
+    const endD = new Date(rangeEnd + 'T00:00:00');
+    // Snap the grid to start on a Sunday so weeks line up like a calendar
+    const gridStart = new Date(startD);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const dayScore = (d) => {
+      const dayScores = zonesToShow.map(z => byDateZone[d]?.[z] ? scoreOf(byDateZone[d][z]) : null).filter(v => v !== null);
+      return dayScores.length ? Math.round(dayScores.reduce((a, b) => a + b, 0) / dayScores.length) : null;
+    };
+
+    const weeks = [];
+    let cursor = new Date(gridStart);
+    let week = [];
+    while (cursor <= endD || week.length) {
+      const iso = cursor.toISOString().slice(0, 10);
+      const inRange = cursor >= startD && cursor <= endD;
+      week.push({ iso, inRange, score: inRange ? dayScore(iso) : null });
+      if (week.length === 7) { weeks.push(week); week = []; }
+      cursor.setDate(cursor.getDate() + 1);
+      if (cursor > endD && week.length === 0) break;
+    }
+    if (week.length) { while (week.length < 7) week.push({ iso: null, inRange: false, score: null }); weeks.push(week); }
+
+    const dowLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthLabelFor = (week) => {
+      const first = week.find(c => c.inRange);
+      if (!first) return '';
+      const d = new Date(first.iso + 'T00:00:00');
+      return d.getDate() <= 7 ? d.toLocaleDateString(undefined, { month: 'short' }) : '';
+    };
+
+    const cellsHtml = weeks.map(w => `<div class="flex flex-col gap-1">${w.map(c => {
+      if (!c.inRange) return `<div class="w-4 h-4 rounded-sm"></div>`;
+      const col = this.gwpScoreColor(c.score);
+      const bg = isDark ? col.bgDark : col.bg;
+      const title = `${c.iso}: ${c.score === null ? 'No submission' : c.score + '% compliant'}`;
+      return `<div class="w-4 h-4 rounded-sm cursor-default" style="background:${bg}; border:1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}" title="${title}"></div>`;
+    }).join('')}</div>`).join('');
+
+    const monthsHtml = weeks.map(w => `<div class="w-4 text-[10px] text-slate-400 dark:text-slate-500">${monthLabelFor(w)}</div>`).join('');
+
+    heatmapEl.innerHTML = `
+      <div class="inline-block min-w-full">
+        <div class="flex gap-1 mb-1 pl-8">${monthsHtml}</div>
+        <div class="flex gap-1">
+          <div class="flex flex-col gap-1 pr-1">${dowLabels.map((l, i) => `<div class="w-6 h-4 text-[10px] leading-4 text-slate-400 dark:text-slate-500">${i % 2 === 1 ? l : ''}</div>`).join('')}</div>
+          <div class="flex gap-1">${cellsHtml}</div>
+        </div>
+        <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-500 dark:text-slate-400">
+          <span>Less compliant</span>
+          <span class="w-3.5 h-3.5 rounded-sm" style="background:${isDark ? this.gwpScoreColor(50).bgDark : this.gwpScoreColor(50).bg}"></span>
+          <span class="w-3.5 h-3.5 rounded-sm" style="background:${isDark ? this.gwpScoreColor(75).bgDark : this.gwpScoreColor(75).bg}"></span>
+          <span class="w-3.5 h-3.5 rounded-sm" style="background:${isDark ? this.gwpScoreColor(95).bgDark : this.gwpScoreColor(95).bg}"></span>
+          <span>More compliant</span>
+          <span class="ml-3 w-3.5 h-3.5 rounded-sm" style="background:${isDark ? '#1e293b' : '#e2e8f0'}"></span>
+          <span>No submission</span>
+        </div>
+      </div>`;
   },
   exportGwpReportCSV() {
     if (!this.hasPerm('export_data')) return alert('You do not have permission to export data. Ask an admin to grant it in User Management.');
