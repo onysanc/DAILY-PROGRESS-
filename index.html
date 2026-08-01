@@ -8352,8 +8352,8 @@ const App = {
       let parsed = null;
       if (data && data.template) { try { parsed = JSON.parse(data.template); } catch { parsed = null; } }
       this.state.gwpCriteria = {
-        daily: (parsed && Array.isArray(parsed.daily) && parsed.daily.length) ? parsed.daily : this.GWP_DEFAULT_DAILY_ITEMS.slice(),
-        forklift: (parsed && Array.isArray(parsed.forklift) && parsed.forklift.length) ? parsed.forklift : this.GWP_DEFAULT_FORKLIFT_ITEMS.slice(),
+        daily: (parsed && Array.isArray(parsed.daily)) ? parsed.daily : this.GWP_DEFAULT_DAILY_ITEMS.slice(),
+        forklift: (parsed && Array.isArray(parsed.forklift)) ? parsed.forklift : this.GWP_DEFAULT_FORKLIFT_ITEMS.slice(),
       };
     } catch (e) {
       console.error('loadGwpCriteria error:', e);
