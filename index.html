@@ -1295,11 +1295,11 @@
             </div>
             <div>
               <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Zone / Area</label>
-              <select id="gwp-fk-zone" onchange="App.renderGwpForkliftOperatorOptions()" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm"></select>
+              <select id="gwp-fk-zone" onchange="App.setGwpForkliftOperatorField()" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm"></select>
             </div>
             <div>
-              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Operator</label>
-              <select id="gwp-fk-operator" class="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 dark:border-slate-800 text-slate-900 dark:text-white text-sm"></select>
+              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Operator <span class="text-slate-400 font-normal normal-case">(auto-assigned by area)</span></label>
+              <input type="text" id="gwp-fk-operator" readonly class="w-full p-2 border rounded-lg bg-slate-100 dark:bg-slate-800 dark:border-slate-700 text-slate-900 dark:text-white text-sm cursor-not-allowed">
             </div>
             <div>
               <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">Date</label>
@@ -8497,7 +8497,7 @@ const App = {
     if (zoneEl && !zoneEl.options.length) {
       zoneEl.innerHTML = this.GWP_FORKLIFT_ZONES.map(z => `<option value="${z}">${z.replace('_', ' ')}</option>`).join('');
     }
-    this.renderGwpForkliftOperatorOptions();
+    this.setGwpForkliftOperatorField();
     const tbody = document.getElementById('gwp-fk-items');
     if (!tbody) return;
     const items = this.state.gwpCriteria.forklift;
@@ -8519,22 +8519,14 @@ const App = {
       r.onchange = () => document.getElementById('gwp-fk-fail-warning')?.classList.toggle('hidden', r.value !== 'fail' || !r.checked);
     });
   },
-  // Populates the Operator dropdown with the operator(s) assigned to whichever
-  // Zone/Area is currently selected. If preserveOperator is passed and isn't part of
-  // that area's roster (e.g. an older entry saved before the roster existed, or before
-  // an operator was reassigned), it's added as an extra option so existing data still
-  // displays and re-saves correctly.
-  renderGwpForkliftOperatorOptions(preserveOperator) {
+  // Auto-fills the read-only Operator field with every operator assigned to whichever
+  // Zone/Area is currently selected (e.g. "S. GELITO / J. YOCOR"). No manual pick needed.
+  setGwpForkliftOperatorField() {
     const zoneEl = document.getElementById('gwp-fk-zone');
     const opEl = document.getElementById('gwp-fk-operator');
     if (!zoneEl || !opEl) return;
-    const zone = zoneEl.value;
-    const prior = preserveOperator !== undefined ? preserveOperator : opEl.value;
-    const roster = (this.GWP_FORKLIFT_ZONE_OPERATORS[zone] || []).slice();
-    if (prior && !roster.includes(prior)) roster.push(prior);
-    opEl.innerHTML = roster.map(name => `<option value="${this.escapeHtml(name)}">${this.escapeHtml(name)}</option>`).join('')
-      || '<option value="">— No operator assigned to this area —</option>';
-    if (prior && roster.includes(prior)) opEl.value = prior;
+    const roster = this.GWP_FORKLIFT_ZONE_OPERATORS[zoneEl.value] || [];
+    opEl.value = roster.length ? roster.join(' / ') : '— No operator assigned to this area —';
   },
   async loadGwpForkliftIntoForm() {
     const unit = (document.getElementById('gwp-fk-unit')?.value || '').trim();
@@ -8549,7 +8541,7 @@ const App = {
     }
     let entry; try { entry = JSON.parse(data.template); } catch { return; }
     document.getElementById('gwp-fk-zone').value = entry.zone || this.GWP_FORKLIFT_ZONES[0];
-    this.renderGwpForkliftOperatorOptions(entry.operator || '');
+    document.getElementById('gwp-fk-operator').value = entry.operator || '';
     (entry.items || []).forEach(i => {
       const r = document.querySelector(`input[name="gwp-fk-status-${i.id}"][value="${i.status}"]`);
       if (r) r.checked = true;
