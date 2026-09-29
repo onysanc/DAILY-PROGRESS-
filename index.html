@@ -5429,7 +5429,7 @@ const App = {
           },
           tooltip: { enabled: false },
           datalabels: {
-            anchor: 'end', align: 'end', clamp: true, offset: (ctx) => App.chartLabelOffset(ctx),
+            anchor: 'end', align: 'end', clamp: true, offset: 5,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
             padding: { top: 3, bottom: 3, left: 6, right: 6 },
             font: { size: 13, weight: 'bold' }, color: '#fff',
@@ -5442,41 +5442,6 @@ const App = {
     const stepSel = document.getElementById('chart-ystep-select');
     if (stepSel) stepSel.value = String(this.state.chartYStep || 1);
     this.positionChartRemark();
-  },
-  // Keeps the count badges on the timeline charts from hiding each other. Neighbouring bars
-  // in the same hour are only a few px apart, so badges for close values (e.g. PGI 5 / Staged 4)
-  // used to sit on top of one another and one of them disappeared. For the bar being labelled,
-  // this lays out every visible badge in that hour lowest-value-first and lifts any badge that
-  // would collide with one already placed (needs horizontal AND vertical overlap) just above it.
-  // Returns the datalabels offset (px above the bar top) for the requested dataset.
-  chartLabelOffset(ctx) {
-    const BASE = 5, H = 24, GAP = 2;
-    const chart = ctx.chart, idx = ctx.dataIndex, yScale = chart.scales.y;
-    const items = [];
-    chart.data.datasets.forEach((ds, i) => {
-      if (ds.type !== 'bar' || !chart.isDatasetVisible(i)) return;
-      const v = ds.data[idx];
-      if (v === null || v === undefined || v === 0) return;
-      const el = chart.getDatasetMeta(i).data[idx];
-      if (!el) return;
-      items.push({ i, v, x: el.x, w: 14 + 8 * String(v).length, natTop: yScale.getPixelForValue(v) - BASE - H });
-    });
-    items.sort((a, b) => a.v - b.v || b.i - a.i);
-    const placed = [];
-    let mine = BASE;
-    items.forEach(it => {
-      let top = it.natTop, moved = true, guard = 0;
-      while (moved && guard++ < 20) {
-        moved = false;
-        for (const p of placed) {
-          if (Math.abs(p.x - it.x) < (p.w + it.w) / 2 && top < p.top + H && top + H > p.top) { top = p.top - H - GAP; moved = true; }
-        }
-      }
-      it.top = top;
-      placed.push(it);
-      if (it.i === ctx.datasetIndex) mine = BASE + (it.natTop - top);
-    });
-    return mine;
   },
   getChartHourLabels() {
     return Array.from({ length: 24 }, (_, i) => `${(i + 5) % 24}:00`);
@@ -8197,7 +8162,7 @@ const App = {
           },
           tooltip: { enabled: false },
           datalabels: {
-            anchor: 'end', align: 'end', clamp: true, offset: (ctx) => App.chartLabelOffset(ctx),
+            anchor: 'end', align: 'end', clamp: true, offset: 5,
             backgroundColor: (ctx) => ctx.dataset.backgroundColor, borderRadius: 8,
             padding: { top: 3, bottom: 3, left: 6, right: 6 },
             font: { size: 13, weight: 'bold' }, color: '#fff',
